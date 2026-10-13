@@ -1,0 +1,178 @@
+# This file is auto-generated from the current state of the database. Instead
+# of editing this file, please use the migrations feature of Active Record to
+# incrementally modify your database, and then regenerate this schema definition.
+#
+# This file is the source Rails uses to define your schema when running `bin/rails
+# db:schema:load`. When creating a new database, `bin/rails db:schema:load` tends to
+# be faster and is potentially less error prone than running all of your
+# migrations from scratch. Old migrations may fail to apply correctly if those
+# migrations use external dependencies or application code.
+#
+# It's strongly recommended that you check this file into your version control system.
+
+ActiveRecord::Schema[8.1].define(version: 2026_09_15_190724) do
+  create_table "active_storage_attachments", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.bigint "record_id", null: false
+    t.string "record_type", null: false
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
+  end
+
+  create_table "active_storage_blobs", force: :cascade do |t|
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.string "content_type"
+    t.datetime "created_at", null: false
+    t.string "filename", null: false
+    t.string "key", null: false
+    t.text "metadata"
+    t.string "service_name", null: false
+    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
+  end
+
+  create_table "active_storage_variant_records", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.string "variation_digest", null: false
+    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "attendance_records", force: :cascade do |t|
+    t.date "attendance_date", null: false
+    t.datetime "created_at", null: false
+    t.integer "enrollment_id", null: false
+    t.text "notes"
+    t.integer "professor_id", null: false
+    t.string "status", default: "present", null: false
+    t.datetime "updated_at", null: false
+    t.index ["enrollment_id", "attendance_date"], name: "index_attendance_records_on_enrollment_and_date", unique: true
+    t.index ["enrollment_id"], name: "index_attendance_records_on_enrollment_id"
+    t.index ["professor_id"], name: "index_attendance_records_on_professor_id"
+  end
+
+  create_table "classrooms", force: :cascade do |t|
+    t.boolean "active"
+    t.integer "course_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "grade_level_id", null: false
+    t.string "name"
+    t.integer "professor_id", null: false
+    t.integer "school_year"
+    t.string "shift"
+    t.datetime "updated_at", null: false
+    t.index ["course_id"], name: "index_classrooms_on_course_id"
+    t.index ["grade_level_id"], name: "index_classrooms_on_grade_level_id"
+    t.index ["professor_id"], name: "index_classrooms_on_professor_id"
+  end
+
+  create_table "course_disciplines", force: :cascade do |t|
+    t.integer "course_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "position", default: 0, null: false
+    t.boolean "required", default: true, null: false
+    t.integer "school_course_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["course_id"], name: "index_course_disciplines_on_course_id"
+    t.index ["school_course_id", "course_id"], name: "index_course_disciplines_unique_link", unique: true
+    t.index ["school_course_id"], name: "index_course_disciplines_on_school_course_id"
+  end
+
+  create_table "courses", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.string "knowledge_area", default: "matematica", null: false
+    t.string "name", null: false
+    t.integer "professor_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["knowledge_area"], name: "index_courses_on_knowledge_area"
+    t.index ["professor_id"], name: "index_courses_on_professor_id"
+  end
+
+  create_table "enrollments", force: :cascade do |t|
+    t.integer "classroom_id", null: false
+    t.datetime "created_at", null: false
+    t.date "enrolled_on", null: false
+    t.integer "professor_id", null: false
+    t.string "status", default: "active", null: false
+    t.integer "student_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["classroom_id"], name: "index_enrollments_on_classroom_id"
+    t.index ["professor_id"], name: "index_enrollments_on_professor_id"
+    t.index ["student_id", "classroom_id"], name: "index_enrollments_on_student_and_classroom", unique: true
+    t.index ["student_id"], name: "index_enrollments_on_student_id"
+  end
+
+  create_table "grade_levels", force: :cascade do |t|
+    t.boolean "active"
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.string "name"
+    t.integer "professor_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["professor_id"], name: "index_grade_levels_on_professor_id"
+  end
+
+  create_table "professors", force: :cascade do |t|
+    t.text "bio"
+    t.datetime "created_at", null: false
+    t.string "email", default: "", null: false
+    t.string "encrypted_password", default: "", null: false
+    t.string "name"
+    t.string "phone"
+    t.datetime "remember_created_at"
+    t.datetime "reset_password_sent_at"
+    t.string "reset_password_token"
+    t.string "school_name"
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_professors_on_email", unique: true
+    t.index ["reset_password_token"], name: "index_professors_on_reset_password_token", unique: true
+  end
+
+  create_table "school_courses", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.string "name", null: false
+    t.integer "professor_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["professor_id", "name"], name: "index_school_courses_on_professor_id_and_name", unique: true
+    t.index ["professor_id"], name: "index_school_courses_on_professor_id"
+  end
+
+  create_table "students", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.integer "classroom_id"
+    t.integer "course_id"
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.integer "professor_id", null: false
+    t.string "registration_number"
+    t.string "series"
+    t.datetime "updated_at", null: false
+    t.index ["classroom_id"], name: "index_students_on_classroom_id"
+    t.index ["course_id"], name: "index_students_on_course_id"
+    t.index ["professor_id"], name: "index_students_on_professor_id"
+  end
+
+  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "attendance_records", "enrollments"
+  add_foreign_key "attendance_records", "professors"
+  add_foreign_key "classrooms", "courses"
+  add_foreign_key "classrooms", "grade_levels"
+  add_foreign_key "classrooms", "professors"
+  add_foreign_key "course_disciplines", "courses"
+  add_foreign_key "course_disciplines", "school_courses"
+  add_foreign_key "courses", "professors"
+  add_foreign_key "enrollments", "classrooms"
+  add_foreign_key "enrollments", "professors"
+  add_foreign_key "enrollments", "students"
+  add_foreign_key "grade_levels", "professors"
+  add_foreign_key "school_courses", "professors"
+  add_foreign_key "students", "classrooms"
+  add_foreign_key "students", "courses"
+  add_foreign_key "students", "professors"
+end

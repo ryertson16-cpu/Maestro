@@ -1,0 +1,8 @@
+<article class="lira-bubble lira-bubble-<%= message.role %>" id="<%= dom_id(message) %>">
+  <% if message.assistant? %>
+    <%= render "lira/chats/assistant_id" %>
+  <% else %>
+    <strong>Você</strong>
+  <% end %>
+  <%= simple_format(message.body) %>
+</article>

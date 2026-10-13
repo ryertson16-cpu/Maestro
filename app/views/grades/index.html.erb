@@ -1,0 +1,318 @@
+<div class="page-header">
+  <div class="activities-page-title">
+    <%= maestro_icon :activities, size: :lg %>
+    <h1>Notas e médias bimestrais</h1>
+
+    <p>
+      <%= @classroom.name %> —
+      organize as atividades, acompanhe as notas e feche o bimestre.
+    </p>
+  </div>
+
+  <div class="page-header-actions">
+    <%= link_to "Fechamento guiado",
+                bimester_closing_path(
+                  classroom_id: @classroom.id,
+                  bimester: @bimester
+                ),
+                class: "button button-secondary" %>
+
+    <%= link_to "Exportar boletim",
+                grades_report_path(
+                  classroom_id: @classroom.id,
+                  bimester: @bimester
+                ),
+                class: "button button-secondary",
+                target: "_blank" %>
+
+    <%= link_to "Exportar 3 unidades para o SIAGE",
+                siage_grades_export_path(
+                  classroom_id: @classroom.id,
+                  bimester: @bimester
+                ),
+                class: "button button-secondary" %>
+
+    <%= link_to "Voltar para atividades",
+                grade_levels_path(
+                  classroom_id: @classroom.id
+                ),
+                class: "button button-secondary" %>
+  </div>
+</div>
+
+<section class="grades-bimester-navigation">
+  <% (1..4).each do |number| %>
+    <%= link_to "#{number}º Bimestre",
+                grades_path(
+                  classroom_id: @classroom.id,
+                  bimester: number
+                ),
+                class: [
+                  "grades-bimester-tab",
+                  ("active" if @bimester == number)
+                ].compact.join(" ") %>
+  <% end %>
+</section>
+
+<section class="grades-summary-grid">
+  <div class="classroom-summary-card summary-purple">
+    <span class="summary-label">Alunos</span>
+    <strong><%= @statistics[:students] %></strong>
+  </div>
+
+  <div class="classroom-summary-card summary-blue">
+    <span class="summary-label">Atividades</span>
+    <strong><%= @statistics[:activities] %></strong>
+  </div>
+
+  <div class="classroom-summary-card summary-green">
+    <span class="summary-label">Média da turma</span>
+    <strong>
+      <%= @statistics[:average].present? ?
+          number_with_precision(
+            @statistics[:average],
+            precision: 2
+          ) :
+          "—" %>
+    </strong>
+  </div>
+
+  <div class="classroom-summary-card summary-orange">
+    <span class="summary-label">Aprovados</span>
+    <strong><%= @statistics[:approved] %></strong>
+  </div>
+
+  <div class="classroom-summary-card summary-red">
+    <span class="summary-label">Recuperação</span>
+    <strong><%= @statistics[:recovery] %></strong>
+  </div>
+</section>
+
+<section class="data-card grades-settings-card">
+  <div class="section-header">
+    <div>
+      <h2>Configuração do bimestre</h2>
+
+      <p>
+        Média mínima atual:
+        <strong>
+          <%= number_with_precision(
+                @setting.minimum_score,
+                precision: 1
+              ) %>
+        </strong>
+      </p>
+    </div>
+
+    <% if @setting.closed? %>
+      <span class="status-badge status-inactive">
+        Bimestre fechado
+      </span>
+    <% else %>
+      <span class="status-badge status-active">
+        Bimestre aberto
+      </span>
+    <% end %>
+  </div>
+
+  <%= form_with url: save_bimester_settings_grades_path,
+                method: :post,
+                local: true,
+                class: "grades-settings-form" do %>
+
+    <%= hidden_field_tag :classroom_id, @classroom.id %>
+    <%= hidden_field_tag :bimester, @bimester %>
+
+    <div>
+      <%= label_tag :minimum_score, "Média mínima" %>
+
+      <%= number_field_tag :minimum_score,
+                           @setting.minimum_score,
+                           min: 0,
+                           max: 10,
+                           step: 0.1 %>
+    </div>
+
+    <%= submit_tag "Salvar configuração",
+                   class: "button button-primary" %>
+  <% end %>
+
+  <%= form_with url: close_bimester_grades_path,
+                method: :post,
+                local: true,
+                class: "grades-close-form" do %>
+
+    <%= hidden_field_tag :classroom_id, @classroom.id %>
+    <%= hidden_field_tag :bimester, @bimester %>
+    <%= hidden_field_tag :minimum_score, @setting.minimum_score %>
+
+    <%= submit_tag(
+          @setting.closed? ?
+            "Reabrir bimestre" :
+            "Fechar bimestre",
+          class: @setting.closed? ?
+            "button button-secondary" :
+            "button button-danger",
+          data: {
+            turbo_confirm: @setting.closed? ?
+              "Deseja reabrir este bimestre?" :
+              "Deseja fechar este bimestre?"
+          }
+        ) %>
+  <% end %>
+</section>
+
+<section class="data-card">
+  <div class="section-header">
+    <div>
+      <h2>Notas do <%= @bimester %>º bimestre</h2>
+
+      <p>
+        A média ponderada inclui nota 0. Só fica de fora atividade sem nota lançada.
+        Para o SIAGE, exporte as 3 unidades e na extensão escolha salvar parcialmente ou lançar.
+      </p>
+    </div>
+  </div>
+
+  <% if @activities.any? %>
+    <div class="table-wrapper">
+      <table class="grades-table">
+        <thead>
+          <tr>
+            <th>Aluno</th>
+
+            <% @activities.each do |activity| %>
+              <th>
+                <%= activity.title %>
+                <small>
+                  Peso: <%= activity.weight %>
+                </small>
+              </th>
+            <% end %>
+
+            <th>Média</th>
+            <th>Recuperação</th>
+            <th>Nota final</th>
+            <th>Situação</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <% @rows.each do |row| %>
+            <tr>
+              <td>
+                <strong><%= row[:student].name %></strong>
+              </td>
+
+              <% row[:grades].each do |grade| %>
+                <td>
+                  <% if grade[:score].present? %>
+                    <%= number_with_precision(
+                          grade[:score],
+                          precision: 1
+                        ) %>
+
+                    <% if grade[:recovery_applied] %>
+                      <small class="table-secondary-text">
+                        REC aplicada; nota original:
+                        <%= number_with_precision(
+                              grade[:original_score],
+                              precision: 1
+                            ) %>
+                      </small>
+                    <% end %>
+                  <% else %>
+                    <span class="muted-text">—</span>
+                  <% end %>
+                </td>
+              <% end %>
+
+              <td>
+                <strong>
+                  <%= row[:average].present? ?
+                      number_with_precision(
+                        row[:average],
+                        precision: 2
+                      ) :
+                      "—" %>
+                </strong>
+              </td>
+
+              <td>
+                <%= row[:recovery]&.score.present? ?
+                    number_with_precision(
+                      row[:recovery].score,
+                      precision: 1
+                    ) :
+                    "—" %>
+              </td>
+
+              <td>
+                <strong>
+                  <%= row[:final_score].present? ?
+                      number_with_precision(
+                        row[:final_score],
+                        precision: 1
+                      ) :
+                      "—" %>
+                </strong>
+              </td>
+
+              <td>
+                <% case row[:situation] %>
+                <% when :approved %>
+                  <span class="status-badge status-active">
+                    Aprovado
+                  </span>
+                <% when :recovery %>
+                  <span class="status-badge status-inactive">
+                    Recuperação
+                  </span>
+                <% else %>
+                  <span class="muted-text">
+                    Sem notas
+                  </span>
+                <% end %>
+              </td>
+
+              <td>
+                <%= form_with(
+                      url: save_recovery_grade_path(
+                        @classroom.id,
+                        row[:student].id
+                      ),
+                      method: :post,
+                      local: true,
+                      class: "recovery-form"
+                    ) do %>
+
+                  <%= hidden_field_tag :bimester, @bimester %>
+
+                  <%= number_field_tag :score,
+                                       row[:recovery]&.score,
+                                       min: 0,
+                                       max: 10,
+                                       step: 0.1,
+                                       placeholder: "Rec.",
+                                       class: "recovery-score-input" %>
+
+                  <%= submit_tag "Salvar",
+                                 class: "button button-small" %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <strong>Nenhuma atividade neste bimestre.</strong>
+
+      <p>
+        Defina o bimestre das atividades em Atividades.
+      </p>
+    </div>
+  <% end %>
+</section>

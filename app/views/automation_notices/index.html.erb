@@ -1,0 +1,46 @@
+<% content_for :title, "Avisos | Maestro" %>
+
+<div class="page-header">
+  <div class="avisos-page-title">
+    <%= maestro_icon :bell, size: :lg %>
+    <h1>Avisos do Maestro</h1>
+    <p>
+      O agente lê o caderno neste computador e deixa recados. Nada disso vai para a nuvem.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <% if @notices.unread.any? %>
+      <%= button_to "Marcar todos como lidos",
+                    mark_all_read_automation_notices_path,
+                    method: :patch,
+                    class: "button button-secondary",
+                    form: { data: { skip_confirm: true } } %>
+    <% end %>
+    <%= link_to "Ajustar automações",
+                settings_path(anchor: "automacoes"),
+                class: "button button-primary" %>
+  </div>
+</div>
+
+<section class="courses-section">
+  <% if @notices.any? %>
+    <div class="discipline-catalog-list">
+      <% @notices.each do |notice| %>
+        <%= link_to automation_notice_path(notice),
+                    class: "discipline-catalog-item#{' is-unread' if notice.unread?}" do %>
+          <div>
+            <h3><%= notice.title %></h3>
+            <p><%= notice.body %></p>
+            <p class="section-eyebrow"><%= l(notice.created_at) %></p>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <%= maestro_icon :bell, size: :lg %>
+      <p>Nenhum aviso gerado ainda. Deixe o Maestro aberto no horário das regras.</p>
+    </div>
+  <% end %>
+</section>

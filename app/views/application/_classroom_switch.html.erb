@@ -1,0 +1,27 @@
+<% classrooms = maestro_switchable_classrooms %>
+<% if classrooms.any? %>
+  <% selected_id = maestro_classroom_switch_selected_id.to_s %>
+  <div class="classroom-switch-bar">
+    <label class="classroom-switch-label" for="classroom-switch">Turma</label>
+    <select id="classroom-switch"
+            class="classroom-switch-select"
+            data-classroom-switch
+            data-skip-confirm
+            title="Trocar de turma"
+            aria-label="Trocar de turma sem sair desta tela">
+      <% if maestro_classroom_switch_allow_all? %>
+        <option value="<%= maestro_classroom_switch_all_path %>"
+                <%= "selected" if selected_id.blank? %>>
+          <%= maestro_classroom_switch_all_label %>
+        </option>
+      <% end %>
+      <% classrooms.each do |classroom| %>
+        <option value="<%= maestro_classroom_switch_path(classroom.id) %>"
+                <%= "selected" if selected_id == classroom.id.to_s %>>
+          <%= classroom.name %>
+          <%= " (inativa)" unless classroom.active? %>
+        </option>
+      <% end %>
+    </select>
+  </div>
+<% end %>

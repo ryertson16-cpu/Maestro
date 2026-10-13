@@ -1,0 +1,67 @@
+<% content_for :title, "Catálogo de disciplinas | Maestro" %>
+
+<div class="page-header">
+  <div>
+    <%= link_to "← Voltar para cursos",
+                courses_path,
+                class: "back-link" %>
+    <div class="courses-page-title">
+      <%= maestro_icon :courses, size: :lg %>
+      <h1>Catálogo de disciplinas</h1>
+      <p>
+        Marque as disciplinas que você leciona. Elas entram no seu cadastro já
+        ligadas à área do conhecimento. A Base Técnica só aparece se o nível
+        Integral Técnica estiver ativo.
+      </p>
+    </div>
+  </div>
+</div>
+
+<% unless @technical_base_available %>
+  <p class="today-briefing-note">
+    Para ver a área <strong>Base Técnica</strong>, cadastre o nível de ensino
+    <%= link_to "Integral Técnica", new_grade_level_path %>.
+  </p>
+<% end %>
+
+<%= form_with url: import_catalog_courses_path, method: :post, local: true do %>
+  <div class="card discipline-selection-card">
+    <% @grouped_catalog.each do |area_key, entries| %>
+      <% color = Course::KNOWLEDGE_AREA_COLORS.fetch(area_key) %>
+      <h2 class="discipline-area-heading">
+        <span class="knowledge-area-tag knowledge-area-<%= color %>">
+          <%= Course.knowledge_area_names.fetch(area_key) %>
+        </span>
+      </h2>
+
+      <div class="discipline-selection-list">
+        <% entries.each do |entry| %>
+          <% key = Courses::Catalog.key_for(entry) %>
+          <% already = @existing_keys.any? { |item| item.casecmp?(key) } %>
+
+          <label class="discipline-selection-item<%= " is-disabled" if already %>">
+            <%= check_box_tag "catalog_keys[]",
+                              key,
+                              already,
+                              disabled: already,
+                              id: "catalog_#{area_key}_#{entry.name.parameterize}" %>
+            <span class="discipline-selection-content">
+              <strong><%= entry.name %></strong>
+              <% if already %>
+                <small>Já está no seu cadastro.</small>
+              <% end %>
+            </span>
+          </label>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="form-actions">
+      <%= submit_tag "Adicionar disciplinas",
+                     class: "button button-primary" %>
+      <%= link_to "Cancelar",
+                  courses_path,
+                  class: "button button-ghost" %>
+    </div>
+  </div>
+<% end %>

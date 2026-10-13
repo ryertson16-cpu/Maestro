@@ -1,0 +1,15 @@
+<div class="page-header">
+  <div class="classrooms-page-title">
+    <%= maestro_icon :classrooms, size: :lg %>
+    <h1>Editar turma</h1>
+    <p>Atualize os dados da turma.</p>
+  </div>
+</div>
+
+<div class="card form-card">
+  <%= render "form", classroom: @classroom %>
+</div>
+
+<%= link_to "Voltar para a turma",
+            classroom_path(@classroom),
+            class: "back-link" %>

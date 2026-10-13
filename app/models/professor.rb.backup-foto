@@ -1,0 +1,16 @@
+class Professor < ApplicationRecord
+  devise :database_authenticatable,
+         :registerable,
+         :recoverable,
+         :rememberable,
+         :validatable
+
+  has_many :courses, dependent: :destroy
+  has_many :grade_levels, dependent: :destroy
+  has_many :classrooms, dependent: :destroy
+  has_many :students, dependent: :destroy
+  has_many :enrollments, dependent: :destroy
+  has_many :attendance_records, dependent: :destroy
+
+  validates :name, presence: true
+end

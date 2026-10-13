@@ -1,0 +1,48 @@
+<% content_for :title, "Assinatura | Maestro" %>
+
+<div class="page-header">
+  <div>
+    <h1>Assinatura</h1>
+    <p>O caderno pleno no site, no PC e no WhatsApp fica liberado com a mensalidade em dia.</p>
+  </div>
+</div>
+
+<section class="data-card">
+  <span class="section-eyebrow">Plano</span>
+  <h2>Maestro mensal — R$ <%= number_with_precision(Billing::Config::MONTHLY_PRICE, precision: 2) %></h2>
+  <p>
+    <% if @subscription %>
+      Situação: <strong><%= @subscription.label %></strong>
+      <% if @subscription.current_period_end.present? %>
+        · válido até <%= l(@subscription.current_period_end, format: :long) %>
+      <% end %>
+    <% else %>
+      Nenhuma assinatura nesta conta.
+    <% end %>
+  </p>
+  <p>
+    <% if @full_access %>
+      Você está usando o Maestro em sua forma plena.
+    <% else %>
+      Sem assinatura ativa o caderno, o WhatsApp e o atalho do PC ficam bloqueados.
+    <% end %>
+  </p>
+
+  <% unless @subscription&.complimentary? || @subscription&.active? %>
+    <%= button_to "Assinar com PIX",
+                  assinatura_path,
+                  method: :post,
+                  class: "button button-primary",
+                  form: { data: { skip_confirm: true } } %>
+  <% end %>
+
+  <% if @subscription&.asaas_checkout_url.present? && !@full_access %>
+    <p>
+      <%= link_to "Concluir PIX no Asaas",
+                  @subscription.asaas_checkout_url,
+                  class: "button button-secondary",
+                  target: "_blank",
+                  rel: "noopener" %>
+    </p>
+  <% end %>
+</section>

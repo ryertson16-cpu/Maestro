@@ -1,0 +1,104 @@
+<section class="dashboard-hero">
+  <h1>
+    Olá,
+    <%= current_professor.name.presence ||
+        current_professor.email.split("@").first.capitalize %>!
+  </h1>
+
+  <p>
+    Bem-vindo ao Maestro. Organize sua rotina escolar em um só lugar.
+  </p>
+</section>
+
+<div class="page-header">
+  <div>
+    <h2>Acesso rápido</h2>
+    <p>Escolha uma área para continuar.</p>
+  </div>
+</div>
+
+<section class="dashboard-grid">
+  <article class="dashboard-card">
+    <div>
+      <div class="dashboard-card-icon">✓</div>
+      <h2>Diário de classe</h2>
+      <p>Registre a frequência e acompanhe suas turmas.</p>
+    </div>
+
+    <%= link_to "Abrir diário →",
+                attendance_records_path,
+                class: "dashboard-card-link" %>
+  </article>
+
+  <article class="dashboard-card">
+    <div>
+      <div class="dashboard-card-icon">T</div>
+      <h2>Turmas</h2>
+      <p>Gerencie as turmas vinculadas ao seu trabalho.</p>
+    </div>
+
+    <%= link_to "Gerenciar turmas →",
+                classrooms_path,
+                class: "dashboard-card-link" %>
+  </article>
+
+  <article class="dashboard-card">
+    <div>
+      <div class="dashboard-card-icon">C</div>
+      <h2>Cursos</h2>
+      <p>Cadastre e organize os cursos da instituição.</p>
+    </div>
+
+    <%= link_to "Gerenciar cursos →",
+                courses_path,
+                class: "dashboard-card-link" %>
+  </article>
+
+  <article class="dashboard-card">
+    <div>
+      <div class="dashboard-card-icon">N</div>
+      <h2>Níveis de ensino</h2>
+      <p>Configure os níveis disponíveis para as turmas.</p>
+    </div>
+
+    <%= link_to "Gerenciar níveis →",
+                grade_levels_path,
+                class: "dashboard-card-link" %>
+  </article>
+
+  <article class="dashboard-card">
+    <div>
+      <div class="dashboard-card-icon">A</div>
+      <h2>Alunos</h2>
+      <p>Consulte e mantenha os dados dos alunos.</p>
+    </div>
+
+    <%= link_to "Gerenciar alunos →",
+                students_path,
+                class: "dashboard-card-link" %>
+  </article>
+
+  <article class="dashboard-card">
+    <div>
+      <div class="dashboard-card-icon">M</div>
+      <h2>Matrículas</h2>
+      <p>Organize os alunos matriculados em cada turma.</p>
+    </div>
+
+    <%= link_to "Gerenciar matrículas →",
+                enrollments_path,
+                class: "dashboard-card-link" %>
+  </article>
+
+  <article class="dashboard-card">
+    <div>
+      <div class="dashboard-card-icon">P</div>
+      <h2>Meu perfil</h2>
+      <p>Atualize seus dados pessoais e sua foto.</p>
+    </div>
+
+    <%= link_to "Acessar perfil →",
+                profile_path,
+                class: "dashboard-card-link" %>
+  </article>
+</section>

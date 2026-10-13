@@ -1,0 +1,216 @@
+<div class="page-header page-header-with-action">
+  <div class="diary-page-title">
+    <%= maestro_icon :diary, size: :lg %>
+    <span class="section-eyebrow">Diário</span>
+    <h1>Diário de classe</h1>
+    <p>Aula, chamada e JSON do SIAGE. Cada tempo tem a sua chamada. Atraso não é falta.</p>
+  </div>
+
+  <nav class="diary-header-links" aria-label="Atalhos do diário">
+    <%= link_to siage_ledger_path,
+                class: "button button-secondary button-small button-with-badge" do %>
+      Livro SIAGE
+      <% if @siage_pending_count.to_i.positive? %>
+        <span class="pending-count-badge" aria-label="<%= pluralize(@siage_pending_count, "pendência", "pendências") %>">
+          <%= @siage_pending_count %>
+        </span>
+      <% end %>
+    <% end %>
+    <%= link_to "Calendário",
+                school_calendar_path(classroom_id: @classroom&.id),
+                class: "button button-ghost button-small" %>
+    <%= link_to "Planos",
+                lesson_plan_templates_path,
+                class: "button button-ghost button-small" %>
+    <%= link_to "Ajuda SIAGE",
+                siage_help_path,
+                class: "button button-ghost button-small" %>
+  </nav>
+</div>
+
+<% if @classrooms.blank? %>
+  <section class="empty-state">
+    <strong>Nenhuma turma no caderno.</strong>
+    <p>Cadastre uma turma para registrar aula e chamada.</p>
+    <%= link_to "Gerenciar turmas", classrooms_path, class: "button button-primary" %>
+  </section>
+<% else %>
+  <section class="attendance-filter diary-context">
+    <h2>Turma e data</h2>
+
+    <%= form_with(
+      url: attendance_records_path,
+      method: :get,
+      local: true
+    ) do |form| %>
+      <div>
+        <%= form.label :classroom_id, "Turma" %>
+        <%= form.collection_select :classroom_id,
+                                  @classrooms,
+                                  :id,
+                                  :name,
+                                  { selected: @classroom&.id },
+                                  { required: true } %>
+      </div>
+
+      <div>
+        <%= form.label :attendance_date, "Data" %>
+        <%= form.date_field(
+          :attendance_date,
+          value: @attendance_date,
+          required: true
+        ) %>
+      </div>
+
+      <div>
+        <%= form.submit "Carregar diário" %>
+      </div>
+    <% end %>
+  </section>
+<% end %>
+
+<% if @classroom.present? %>
+  <% if @export_lesson.present? %>
+    <%= link_to "Baixar JSON SIAGE",
+                siage_lesson_export_path(@export_lesson, format: :json),
+                hidden: true,
+                download: true,
+                data: { siage_auto_download: true } %>
+  <% end %>
+
+  <%= form_with(
+    url: save_attendance_records_path,
+    method: :post,
+    local: true
+  ) do |form| %>
+    <%= hidden_field_tag :classroom_id, @classroom.id %>
+    <%= hidden_field_tag :attendance_date, @attendance_date %>
+    <%= hidden_field_tag :status, @status_filter if @status_filter.present? %>
+    <%= hidden_field_tag "lesson[classroom_id]", @classroom.id, id: "lesson_classroom_id" %>
+    <%= hidden_field_tag "lesson[lesson_date]", @attendance_date, id: "lesson_lesson_date" %>
+
+    <div class="diary-workbar">
+      <% if @diary_lessons.size > 1 %>
+        <nav class="diary-tempo-nav" aria-label="Tempos deste dia">
+          <% @diary_lessons.each do |lesson| %>
+            <% slot_key = lesson.persisted? ? lesson.id : "new" %>
+            <%= link_to "##{ "tempo-#{slot_key}" }",
+                        class: [
+                          "button button-small",
+                          (lesson == @lesson ? "button-secondary" : "button-ghost")
+                        ].join(" ") do %>
+              <%= lesson.siage_time_slot.presence || "1º tempo" %>
+            <% end %>
+          <% end %>
+        </nav>
+      <% else %>
+        <p class="diary-workbar-label">
+          <%= @classroom.name %>
+          ·
+          <%= l(@attendance_date, format: :long) %>
+        </p>
+      <% end %>
+
+      <div class="attendance-status-filter diary-day-filter">
+        <span>Filtrar</span>
+        <%= link_to "Todos",
+                    attendance_records_path(classroom_id: @classroom.id, attendance_date: @attendance_date),
+                    class: @status_filter.blank? ? "button button-secondary button-small" : "button button-ghost button-small" %>
+        <%= link_to "Presentes",
+                    attendance_records_path(classroom_id: @classroom.id, attendance_date: @attendance_date, status: "present"),
+                    class: @status_filter == "present" ? "button button-secondary button-small" : "button button-ghost button-small" %>
+        <%= link_to "Ausentes",
+                    attendance_records_path(classroom_id: @classroom.id, attendance_date: @attendance_date, status: "absent"),
+                    class: @status_filter == "absent" ? "button button-secondary button-small" : "button button-ghost button-small" %>
+        <%= link_to "Justificados",
+                    attendance_records_path(classroom_id: @classroom.id, attendance_date: @attendance_date, status: "justified"),
+                    class: @status_filter == "justified" ? "button button-secondary button-small" : "button button-ghost button-small" %>
+        <%= link_to "Atraso (não é falta)",
+                    attendance_records_path(classroom_id: @classroom.id, attendance_date: @attendance_date, status: "late"),
+                    class: @status_filter == "late" ? "button button-secondary button-small" : "button button-ghost button-small",
+                    title: "Atraso entra como presente no SIAGE" %>
+      </div>
+    </div>
+
+    <% @diary_lessons.each_with_index do |lesson, index| %>
+      <% slot_key = lesson.persisted? ? lesson.id : "new" %>
+      <% records = @attendance_by_lesson[slot_key] || {} %>
+      <% block_enrollments =
+           if @status_filter.present?
+             @all_enrollments.select { |enrollment| records[enrollment.id]&.status == @status_filter }
+           else
+             @all_enrollments
+           end %>
+      <%= render "tempo_block",
+                 lesson: lesson,
+                 slot_key: slot_key,
+                 first: index.zero?,
+                 show_pdf: index.zero?,
+                 enrollments: block_enrollments,
+                 records: records,
+                 status_filter: @status_filter,
+                 summary: @summaries_by_lesson[slot_key] %>
+    <% end %>
+
+    <div class="attendance-actions diary-day-save">
+      <%= form.submit "Salvar frequência de todos os tempos",
+                      class: "button button-primary" %>
+    </div>
+  <% end %>
+
+  <details class="data-card siage-lessons-card diary-history-card">
+    <summary>
+      Histórico da turma e exportação de várias aulas
+    </summary>
+
+    <p>
+      Use o botão abaixo só se quiser mandar várias datas de uma vez
+      para a extensão. No dia a dia, use
+      <strong>Salvar e baixar este tempo</strong> em cada bloco.
+    </p>
+
+    <%= link_to "Exportar todas as aulas (JSON)",
+                siage_classroom_lessons_export_path(@classroom, format: :json),
+                class: "button button-secondary" %>
+
+    <% if @classroom_lessons.any? %>
+      <div class="activity-table-wrapper">
+        <table class="activity-tracking-table siage-lessons-table">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Período</th>
+              <th>Tempo</th>
+              <th>Disciplina</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @classroom_lessons.each do |lesson| %>
+              <tr>
+                <td><%= lesson.lesson_date.strftime("%d/%m/%Y") %></td>
+                <td><%= lesson.siage_period.presence || "—" %></td>
+                <td><%= lesson.siage_time_slot.presence || "1º tempo" %></td>
+                <td><%= lesson.course&.name.presence || "—" %></td>
+                <td>
+                  <%= link_to "Editar",
+                              edit_lesson_path(lesson),
+                              class: "button button-secondary button-small" %>
+                  <%= link_to "JSON",
+                              siage_lesson_export_path(lesson, format: :json),
+                              class: "button button-secondary button-small" %>
+                  <%= render "lessons/delete_button",
+                             lesson: lesson,
+                             return_to: "diary",
+                             compact: true %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p>Nenhuma aula registrada nesta turma ainda.</p>
+    <% end %>
+  </details>
+<% end %>

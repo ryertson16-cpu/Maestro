@@ -1,0 +1,361 @@
+<% content_for :title, "Calendário letivo | Maestro" %>
+<% selected_iso = @selected_day.iso8601 %>
+<% selected_cell = @year_view.months[@selected_day.month - 1].days.find { |cell| cell.date == @selected_day } %>
+<% marked = @days.find { |item| item.day == @selected_day } %>
+
+<div class="page-header page-header-with-action">
+  <div>
+    <span class="section-eyebrow">Escola</span>
+    <h1>Calendário letivo</h1>
+    <p>Clique no dia para marcá-lo. Grade e PDF da turma ficam abaixo do ano.</p>
+  </div>
+
+  <nav class="diary-header-links" aria-label="Atalhos do calendário">
+    <%= link_to "Diário",
+                @classroom.present? ? attendance_records_path(classroom_id: @classroom.id) : attendance_records_path,
+                class: "button button-ghost button-small" %>
+  </nav>
+</div>
+
+<section class="attendance-filter diary-context">
+  <h2>Ano e turma</h2>
+
+  <%= form_with url: school_calendar_path, method: :get, local: true do |form| %>
+    <div>
+      <%= form.label :year, "Ano" %>
+      <%= form.number_field :year, value: @year, min: 2020, max: 2100, required: true %>
+    </div>
+
+    <% if @classrooms.any? %>
+      <div>
+        <%= form.label :classroom_id, "Turma" %>
+        <%= form.collection_select :classroom_id,
+                                  @classrooms,
+                                  :id,
+                                  :name,
+                                  { selected: @classroom&.id },
+                                  { required: true } %>
+      </div>
+    <% end %>
+
+    <div>
+      <%= form.submit "Abrir" %>
+    </div>
+  <% end %>
+</section>
+
+<section class="data-card year-calendar-card"
+         data-school-calendar
+         data-selected-day="<%= selected_iso %>"
+         data-tempos="<%= ERB::Util.html_escape(@tempos_by_weekday.to_json) %>"
+         data-weekdays="<%= ERB::Util.html_escape(SchoolCalendar::LessonPrompt::WEEKDAYS.to_json) %>">
+  <div class="section-heading">
+    <div>
+      <span class="section-eyebrow">Ano letivo</span>
+      <h2>Calendário de <%= @year %></h2>
+    </div>
+    <%= button_to "Aplicar calendário #{@year}",
+                  apply_school_calendar_holidays_path,
+                  method: :post,
+                  params: { year: @year, classroom_id: @classroom&.id, day: selected_iso },
+                  class: "button button-secondary" %>
+  </div>
+
+  <div class="diary-workbar calendar-day-bar">
+    <%= form_with url: school_calendar_days_path, method: :post, local: true, class: "form-grid year-mark-form", data: { calendar_mark_form: true } do %>
+      <%= hidden_field_tag :classroom_id, @classroom&.id %>
+      <%= hidden_field_tag :year, @year %>
+      <div class="form-field">
+        <%= label_tag :day, "Dia selecionado" %>
+        <%= date_field_tag :day, @selected_day, data: { calendar_date: true } %>
+      </div>
+      <div class="form-field">
+        <%= label_tag :kind, "Marcar como" %>
+        <%= select_tag :kind, options_for_select([
+          ["Feriado", "holiday"],
+          ["Sábado letivo", "saturday_school"],
+          ["Recesso", "no_class"],
+          ["Planejamento", "planning"],
+          ["Marco letivo", "milestone"]
+        ], selected_cell&.kind), data: { calendar_kind: true } %>
+      </div>
+      <div class="form-field">
+        <%= label_tag :name, "Nome" %>
+        <%= text_field_tag :name, selected_cell&.name, placeholder: "Ex.: Recesso de Páscoa", data: { calendar_name: true } %>
+      </div>
+      <%= submit_tag "Salvar marca", class: "button button-primary" %>
+    <% end %>
+    <% if marked %>
+      <%= button_to "Limpar marca",
+                    school_calendar_day_path(marked, classroom_id: @classroom&.id),
+                    method: :delete,
+                    class: "button button-secondary" %>
+    <% end %>
+  </div>
+
+  <ul class="year-legend">
+    <li><span class="year-swatch is-bimester-1"></span> 1º bimestre</li>
+    <li><span class="year-swatch is-bimester-2"></span> 2º bimestre</li>
+    <li><span class="year-swatch is-bimester-3"></span> 3º bimestre</li>
+    <li><span class="year-swatch is-bimester-4"></span> 4º bimestre</li>
+    <li><span class="year-swatch is-milestone"></span> Início, término ou marco</li>
+    <li><span class="year-swatch is-holiday"></span> Feriado</li>
+    <li><span class="year-swatch is-recess"></span> Recesso ou férias</li>
+    <li><span class="year-swatch is-planning"></span> Planejamento ou formação</li>
+    <li><span class="year-swatch is-saturday"></span> Sábado letivo</li>
+  </ul>
+
+  <div class="year-months">
+    <% @year_view.months.each do |month| %>
+      <article class="year-month" data-month="<%= month.number %>">
+        <header>
+          <h3><%= month.name %></h3>
+          <span><%= month.school_days %> dias letivos</span>
+        </header>
+        <div class="year-weekdays">
+          <% SchoolCalendar::YearView::WEEKDAYS.each do |label| %>
+            <span><%= label %></span>
+          <% end %>
+        </div>
+        <div class="year-grid">
+          <% month.leading_blanks.times do %>
+            <span class="year-day is-blank"></span>
+          <% end %>
+          <% month.days.each do |cell| %>
+            <% iso = cell.date.iso8601 %>
+            <% bimester = SchoolCalendar::LessonPrompt.bimester_number(cell.date) %>
+            <button type="button"
+                    class="year-day <%= cell.css %> <%= "is-selected" if cell.date == @selected_day %>"
+                    data-calendar-day
+                    data-date="<%= iso %>"
+                    data-kind="<%= cell.kind %>"
+                    data-name="<%= cell.name %>"
+                    data-school="<%= cell.school_day %>"
+                    data-cwday="<%= cell.date.cwday %>"
+                    data-bimester="<%= bimester %>"
+                    title="<%= [
+                      l(cell.date),
+                      SchoolCalendar::LessonPrompt.bimester_label(cell.date),
+                      cell.name.presence,
+                      SchoolCalendarDay::KIND_LABELS[cell.kind]
+                    ].compact.join(" · ") %>"
+                    aria-pressed="<%= cell.date == @selected_day %>">
+              <%= cell.label %>
+            </button>
+          <% end %>
+        </div>
+      </article>
+    <% end %>
+  </div>
+
+  <details class="year-summary-details">
+    <summary>Totais de dias letivos (seg. a sex.)</summary>
+    <div class="table-wrapper year-summary-wrap">
+      <table class="year-summary">
+        <thead>
+          <tr>
+            <th>Dia</th>
+            <% SchoolCalendar::YearView::MONTHS.each_with_index do |name, index| %>
+              <th class="<%= "is-muted" if @year_view.skip_january_in_summary? && index.zero? %>">
+                <%= name[0, 3] %>
+              </th>
+            <% end %>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% %w[Seg Ter Qua Qui Sex].each_with_index do |label, row| %>
+            <tr>
+              <th><%= label %></th>
+              <% @year_view.weekday_matrix[row].each_with_index do |count, month_index| %>
+                <td class="<%= "is-muted" if @year_view.skip_january_in_summary? && month_index.zero? %>">
+                  <%= count.positive? ? count : "—" %>
+                </td>
+              <% end %>
+              <td><strong><%= @year_view.weekday_totals[row] %></strong></td>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot>
+          <tr>
+            <th>Letivos</th>
+            <% @year_view.month_totals.each_with_index do |count, month_index| %>
+              <td class="<%= "is-muted" if @year_view.skip_january_in_summary? && month_index.zero? %>">
+                <%= @year_view.skip_january_in_summary? && month_index.zero? ? "—" : count %>
+              </td>
+            <% end %>
+            <td><strong><%= @year_view.weekday_year_total %></strong></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <% if @year_view.skip_january_in_summary? %>
+      <p class="classroom-pending-help">
+        Janeiro aparece no calendário, mas o total de <%= @year_view.weekday_year_total %> dias letivos (seg. a sex.) não inclui janeiro.
+      </p>
+    <% end %>
+  </details>
+</section>
+
+<% if @classroom %>
+  <section class="data-card" data-turma-block>
+    <div class="section-heading">
+      <div>
+        <span class="section-eyebrow">Turma</span>
+        <h2>Grade de <%= @classroom.name %></h2>
+        <p class="classroom-pending-help">
+          Grade desta turma: dia da semana, tempo e disciplina. Isso não é o
+          PDF do horário da escola.
+        </p>
+      </div>
+    </div>
+
+    <%= form_with url: school_calendar_entries_path, method: :post, local: true, class: "form-grid" do %>
+      <%= hidden_field_tag :classroom_id, @classroom.id %>
+      <%= hidden_field_tag :year, @year %>
+      <%= hidden_field_tag :day, selected_iso, data: { calendar_date: true } %>
+      <div class="form-field">
+        <%= label_tag :weekday, "Dia da semana" %>
+        <%= select_tag :weekday,
+                       options_for_select(
+                         TimetableEntry::WEEKDAY_LABELS.map { |value, label| [label, value] },
+                         (1..6).cover?(@selected_day.cwday) ? @selected_day.cwday : 1
+                       ),
+                       data: { grade_weekday: true } %>
+      </div>
+      <div class="form-field">
+        <%= label_tag :period, "Tempo" %>
+        <%= number_field_tag :period, 1, min: 1, max: 9, data: { grade_period: true } %>
+      </div>
+      <div class="form-field">
+        <%= label_tag :course_id, "Disciplina" %>
+        <%= select_tag :course_id,
+                       options_from_collection_for_select(@courses, :id, :name),
+                       include_blank: "Opcional",
+                       data: { grade_course: true } %>
+      </div>
+      <%= submit_tag "Adicionar na grade", class: "button button-primary" %>
+    <% end %>
+
+    <% if @entries.any? %>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Dia da semana</th>
+              <th>Tempo</th>
+              <th>Disciplina</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @entries.each do |entry| %>
+              <tr>
+                <td><%= entry.weekday_label %></td>
+                <td><%= entry.time_slot_label %></td>
+                <td><%= entry.course&.name || "—" %></td>
+                <td>
+                  <%= button_to "Remover",
+                                school_calendar_entry_path(entry),
+                                method: :delete,
+                                params: { year: @year, day: selected_iso },
+                                class: "button button-secondary button-small" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="classroom-pending-help">
+        Ainda não há linhas nesta grade. Use Adicionar na grade ou o PDF do horário da escola, abaixo.
+      </p>
+    <% end %>
+
+    <%= form_with url: generate_school_calendar_lessons_path,
+                  method: :post,
+                  local: true,
+                  html: { id: "generate-calendar-lessons", class: "form-grid year-generate-form" } do %>
+      <%= hidden_field_tag :classroom_id, @classroom.id %>
+      <%= hidden_field_tag :lesson_date, selected_iso, data: { calendar_date: true } %>
+      <%= hidden_field_tag :period, 1, data: { generate_period: true } %>
+      <%= hidden_field_tag :course_id, nil, data: { generate_course: true } %>
+      <p>
+        Gerar as aulas desta grade no dia
+        <strong data-calendar-selected-label><%= l(@selected_day) %></strong>.
+      </p>
+      <button type="button" class="button button-secondary" data-generate-open>
+        Gerar aulas desta grade neste dia
+      </button>
+    <% end %>
+  </section>
+
+  <details class="data-card timetable-import-card calendar-secondary" data-calendar-pdf>
+    <summary>
+      <span class="section-eyebrow">Horário da escola</span>
+      <strong>Gerar aula pelo PDF</strong>
+    </summary>
+    <p class="classroom-pending-help">
+      Anexe o PDF do horário da escola, confira o dia pintado e confirme.
+      Diferente da grade acima: aqui a aula entra no diário no Sim.
+    </p>
+
+    <div class="form-grid">
+      <div class="form-field">
+        <%= label_tag :pdf_course_id, "Disciplina (se o PDF tiver mais de uma)" %>
+        <%= select_tag :pdf_course_id,
+                       options_from_collection_for_select(@courses, :id, :name),
+                       include_blank: "Detectar no PDF",
+                       id: "calendar_pdf_course_id" %>
+      </div>
+    </div>
+
+    <div class="timetable-import-actions">
+      <label class="button button-secondary timetable-file-label">
+        Anexar PDF do horário da escola
+        <%= file_field_tag :timetable,
+                           accept: "application/pdf",
+                           data: { calendar_pdf_file: true } %>
+      </label>
+      <button type="button"
+              class="button button-primary"
+              data-calendar-pdf-open
+              data-timetable-url="<%= school_calendar_timetable_lesson_path %>">
+        Gerar aula pelo horário da escola
+      </button>
+    </div>
+    <p class="timetable-file-name" data-calendar-pdf-filename>Nenhum arquivo anexado.</p>
+    <p class="timetable-status" data-calendar-pdf-status hidden></p>
+  </details>
+<% elsif @classrooms.blank? %>
+  <section class="empty-state">
+    <strong>Nenhuma turma no caderno.</strong>
+    <p>O ano letivo acima já pode ser marcado. Cadastre uma turma para montar a grade e gerar aula pelo PDF.</p>
+    <%= link_to "Gerenciar turmas", classrooms_path, class: "button button-primary" %>
+  </section>
+<% end %>
+
+<% if @classroom %>
+<dialog class="calendar-confirm" data-generate-confirm>
+  <div class="calendar-confirm-body">
+    <h2>Confirmar aulas da grade</h2>
+    <p data-generate-confirm-copy><%= SchoolCalendar::LessonPrompt.confirm_phrase(date: @selected_day, time_slots: @selected_slots) %></p>
+    <div class="calendar-confirm-actions">
+      <button type="button" class="button button-secondary" data-generate-cancel>Não</button>
+      <button type="submit" form="generate-calendar-lessons" class="button button-primary">Sim</button>
+    </div>
+  </div>
+</dialog>
+<% end %>
+
+<dialog class="calendar-confirm" data-calendar-confirm>
+  <form method="dialog" class="calendar-confirm-body">
+    <h2>Confirmar aula pelo horário da escola</h2>
+    <p data-calendar-confirm-copy></p>
+    <div class="calendar-confirm-preview" data-calendar-confirm-month></div>
+    <div class="calendar-confirm-actions">
+      <button value="cancel" class="button button-secondary">Não</button>
+      <button type="button" class="button button-primary" data-calendar-confirm-create>Sim</button>
+    </div>
+  </form>
+</dialog>

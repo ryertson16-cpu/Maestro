@@ -1,0 +1,19 @@
+<nav class="bottom-nav" aria-label="Navegação no celular">
+  <% maestro_bottom_nav_items.each do |item| %>
+    <% active = maestro_bottom_nav_section == item[:key] %>
+    <%= link_to item[:href],
+                class: [
+                  "bottom-nav-link",
+                  ("is-active" if active),
+                  ("is-siage" if item[:key] == :siage)
+                ].compact.join(" ") do %>
+      <span class="bottom-nav-icon">
+        <%= maestro_icon item[:icon], size: :sm %>
+        <% if item[:badge].to_i.positive? %>
+          <span class="pending-count-badge"><%= item[:badge] %></span>
+        <% end %>
+      </span>
+      <span class="bottom-nav-label"><%= item[:label] %></span>
+    <% end %>
+  <% end %>
+</nav>

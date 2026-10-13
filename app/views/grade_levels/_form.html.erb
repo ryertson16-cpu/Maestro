@@ -1,0 +1,32 @@
+<%= form_with model: grade_level do |form| %>
+  <% if grade_level.errors.any? %>
+    <div>
+      <h2><%= pluralize(grade_level.errors.count, "erro") %> impediram o salvamento:</h2>
+
+      <ul>
+        <% grade_level.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :name, "Nome" %>
+    <%= form.text_field :name, required: true %>
+  </div>
+
+  <div>
+    <%= form.label :description, "Descrição" %>
+    <%= form.text_area :description %>
+  </div>
+
+  <div>
+    <%= form.label :active, "Ativo" %>
+    <%= form.check_box :active %>
+  </div>
+
+  <div>
+    <%= form.submit %>
+  </div>
+<% end %>

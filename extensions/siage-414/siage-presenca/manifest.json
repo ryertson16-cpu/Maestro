@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "SIAGE Presença Automática",
+  "version": "4.1.4",
+  "description": "Registra a frequência de várias aulas e turmas no SIAGE a partir de uma planilha (data, tempos, turma, componente).",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["https://professor.see.pb.gov.br/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    { "matches": ["https://professor.see.pb.gov.br/*"], "js": ["runner.js"], "run_at": "document_idle" }
+  ],
+  "action": { "default_title": "Registrar frequência", "default_popup": "popup.html" }
+}

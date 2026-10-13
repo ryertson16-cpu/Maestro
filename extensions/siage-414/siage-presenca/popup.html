@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: system-ui, sans-serif; width: 360px; margin: 0; padding: 14px; color: #1f2937; }
+  h1 { font-size: 15px; margin: 0 0 8px; }
+  p.dica { font-size: 12px; color: #4b5563; margin: 0 0 6px; }
+  .bloco { font-size: 13px; margin-bottom: 10px; }
+  textarea { width: 100%; box-sizing: border-box; height: 90px; font: 12px ui-monospace, monospace; padding: 6px; }
+  input[type=password] { width: 100%; box-sizing: border-box; padding: 6px; margin-top: 3px; }
+  #previa { font-size: 12px; color: #374151; margin: 6px 0 10px; max-height: 130px; overflow: auto; white-space: pre-line; }
+  .erro { color: #b91c1c; } .ok { color: #15803d; }
+  label.opt { display: flex; gap: 6px; align-items: flex-start; font-size: 13px; margin: 0 0 10px; }
+  button.principal { width: 100%; padding: 10px; font-size: 14px; font-weight: 600; border: 0; border-radius: 8px; background: #15803d; color: #fff; cursor: pointer; }
+  button.principal:hover { background: #166534; }
+  button.sec { padding: 6px 10px; border: 1px solid #9ca3af; background: #fff; border-radius: 6px; cursor: pointer; }
+  #trabalho { display: none; background: #f3f4f6; border-radius: 8px; padding: 8px; font-size: 12px; margin-bottom: 10px; }
+  #status { margin-top: 10px; font-size: 13px; white-space: pre-line; }
+  small { color: #6b7280; }
+</style>
+</head>
+<body>
+  <h1>SIAGE · Registrar frequência</h1>
+
+  <div id="trabalho">
+    <div id="trabalhoTexto"></div>
+    <div style="display:flex;gap:6px;margin-top:6px">
+      <button class="sec" id="continuar">Continuar</button>
+      <button class="sec" id="limpar">Descartar</button>
+    </div>
+  </div>
+
+  <div class="bloco">
+    <b>Planilha de aulas</b> <small>(colunas Data, Tempos, Turma, Componente)</small><br>
+    <input type="file" id="arquivo" accept=".xlsx,.xls,.csv,.txt" style="margin:4px 0">
+    <p class="dica">Ou cole as linhas aqui (copiadas do Excel). Sem a coluna Turma, as aulas vão para a turma aberta na tela.</p>
+    <textarea id="lista" placeholder="Data	Tempos	Turma	Componente
+23/07/2026	1,2	2ª SÉRIE H	Biologia"></textarea>
+  </div>
+  <div class="bloco">Registrar só as aulas de
+    <input type="date" id="de"> até <input type="date" id="ate">
+    <br><small>"Até" começa em hoje, para não lançar aulas que ainda não aconteceram.</small>
+  </div>
+  <label class="opt" style="align-items:center">Período:
+    <select id="periodo">
+      <option value="auto">Automático pela data</option>
+      <option value="1">1º Período</option><option value="2">2º Período</option>
+      <option value="3">3º Período</option><option value="4">4º Período</option>
+    </select>
+  </label>
+  <div id="previa"></div>
+  <div class="bloco">Senha do SIAGE (para confirmar cada registro):
+    <input type="password" id="senha" autocomplete="off">
+    <small>Fica só na memória do Chrome até terminar; nunca é gravada em disco.</small>
+  </div>
+  <label class="opt"><input type="checkbox" id="teste"> Modo teste: abrir a primeira turma e preencher só a primeira aula, sem salvar</label>
+  <button class="principal" id="iniciar">Registrar aulas</button>
+  <div id="status"></div>
+  <script src="xlsx.mini.min.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

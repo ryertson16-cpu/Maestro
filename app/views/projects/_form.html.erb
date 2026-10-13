@@ -1,0 +1,100 @@
+<%= form_with model: project do |form| %>
+  <% if project.errors.any? %>
+    <div class="form-errors">
+      <h2>
+        <%= pluralize(project.errors.count, "erro", "erros") %>
+        impediram o salvamento:
+      </h2>
+      <ul>
+        <% project.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="field">
+    <%= form.label :title, "Título" %>
+    <%= form.text_field :title, required: true, placeholder: "Ex.: Feira de ciências · Professor Nota 10 2026" %>
+  </div>
+
+  <div class="field-grid">
+    <div class="field">
+      <%= form.label :kind, "Tipo" %>
+      <%= form.select :kind, Project::KINDS.map { |value, label| [label, value] } %>
+    </div>
+
+    <div class="field">
+      <%= form.label :kind_other, "Se for outro, descreva" %>
+      <%= form.text_field :kind_other, placeholder: "Nome do programa ou do projeto" %>
+    </div>
+  </div>
+
+  <div class="field-grid">
+    <div class="field">
+      <%= form.label :audience, "Alcance" %>
+      <%= form.select :audience, Project::AUDIENCES.map { |value, label| [label, value] } %>
+    </div>
+
+    <div class="field">
+      <%= form.label :status, "Situação" %>
+      <%= form.select :status, Project::STATUSES.map { |value, label| [label, value] } %>
+    </div>
+  </div>
+
+  <div class="field-grid">
+    <div class="field">
+      <%= form.label :starts_on, "Início" %>
+      <%= form.date_field :starts_on %>
+    </div>
+    <div class="field">
+      <%= form.label :ends_on, "Término" %>
+      <%= form.date_field :ends_on %>
+    </div>
+  </div>
+
+  <fieldset class="field">
+    <legend>Turmas</legend>
+    <p class="field-hint">
+      Uma turma exige uma seleção; várias turmas exigem pelo menos duas.
+      Escola ou somente o professor podem ficar sem turma.
+    </p>
+    <% @classrooms.each do |classroom| %>
+      <label class="checkbox-row">
+        <%= check_box_tag "project[classroom_ids][]",
+                          classroom.id,
+                          project.classroom_ids.include?(classroom.id) %>
+        <%= classroom.name %>
+      </label>
+    <% end %>
+    <%= hidden_field_tag "project[classroom_ids][]", "" %>
+    <% if @classrooms.blank? %>
+      <p>Cadastre uma turma para vincular alunos ao projeto.</p>
+    <% end %>
+  </fieldset>
+
+  <div class="field">
+    <%= form.label :objective, "Objetivo" %>
+    <%= form.text_area :objective, rows: 3 %>
+  </div>
+
+  <div class="field">
+    <%= form.label :justification, "Justificativa" %>
+    <%= form.text_area :justification, rows: 3 %>
+  </div>
+
+  <div class="field">
+    <%= form.label :skills, "Habilidades" %>
+    <%= form.text_area :skills, rows: 3, placeholder: "BNCC, competências do programa ou habilidades da disciplina" %>
+  </div>
+
+  <div class="field">
+    <%= form.label :team_notes, "Equipe e parceiros" %>
+    <%= form.text_area :team_notes, rows: 2 %>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit project.persisted? ? "Salvar ficha" : "Criar projeto",
+                    class: "button button-primary" %>
+  </div>
+<% end %>

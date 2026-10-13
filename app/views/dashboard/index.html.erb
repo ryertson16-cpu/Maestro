@@ -1,0 +1,167 @@
+<section class="dashboard-hero">
+  <div class="dashboard-hero-identity">
+    <div class="dashboard-hero-crest">
+      <% if current_professor.school&.crest&.attached? %>
+        <%= image_tag current_professor.school.crest,
+                      alt: current_professor.school.name %>
+      <% else %>
+        <span class="brand-mark">M</span>
+      <% end %>
+    </div>
+
+    <div class="dashboard-hero-copy">
+      <h1>
+        Olá,
+        <%= current_professor.greeting_name.presence ||
+            current_professor.name.presence ||
+            current_professor.email.split("@").first.capitalize %>!
+      </h1>
+
+      <p>
+        <% if current_professor.school.present? %>
+          <%= current_professor.school.name %>
+          <% if current_professor.school.regional_label.present? %>
+            · <%= current_professor.school.regional_label %>
+          <% end %>
+        <% else %>
+          Bem-vindo ao Maestro. Cadastre sua escola em Configurações.
+        <% end %>
+      </p>
+    </div>
+
+    <div class="dashboard-hero-photo">
+      <% if current_professor.profile_photo.attached? %>
+        <%= image_tag current_professor.profile_photo,
+                      alt: current_professor.name %>
+      <% else %>
+        <span><%= current_professor.initials %></span>
+      <% end %>
+    </div>
+  </div>
+</section>
+
+<%= render "dashboard/today_briefing" %>
+
+<% if @current_classroom.present? %>
+  <section class="data-card dashboard-continue" aria-label="Turma em uso">
+    <div class="dashboard-continue-copy">
+      <span class="section-eyebrow">Turma em uso</span>
+      <h2>Continuar em <%= @current_classroom.name %></h2>
+      <p>Diário, notas, matrículas e SIAGE desta turma.</p>
+      <div class="dashboard-continue-links">
+        <%= link_to "Diário",
+                    attendance_records_path(classroom_id: @current_classroom.id),
+                    class: "today-chip" %>
+        <%= link_to "Atividades",
+                    grade_levels_path(classroom_id: @current_classroom.id),
+                    class: "today-chip" %>
+        <%= link_to "Livro SIAGE",
+                    siage_ledger_path,
+                    class: "today-chip" %>
+      </div>
+    </div>
+    <%= link_to "Abrir turma →",
+                classroom_path(@current_classroom),
+                class: "dashboard-card-link" %>
+  </section>
+<% end %>
+
+<% if @school_setup_pending %>
+  <section class="data-card dashboard-setup" aria-label="Configurar escola">
+    <div>
+      <%= maestro_icon :folder %>
+      <div>
+        <span class="section-eyebrow">Escola</span>
+        <h2>Falta o brasão no caderno</h2>
+        <p>Cadastre a escola, a regional e o brasão para aparecerem no Maestro e nos PDFs.</p>
+      </div>
+    </div>
+    <%= link_to "Abrir configurações →",
+                settings_path,
+                class: "dashboard-card-link" %>
+  </section>
+<% end %>
+
+<section class="dashboard-launch" aria-label="Caderno">
+  <div class="page-header">
+    <div>
+      <span class="section-eyebrow">Caderno</span>
+      <h2>Áreas do caderno</h2>
+      <p>Diário, turmas, notas e o que não é o trabalho de hoje.</p>
+    </div>
+  </div>
+
+  <div class="dashboard-launch-grid">
+    <%= link_to @current_classroom.present? ? attendance_records_path(classroom_id: @current_classroom.id) : attendance_records_path,
+                class: "dashboard-launch-tile#{' has-work' if @siage_pending_count.to_i.positive?}" do %>
+      <%= maestro_icon :diary %>
+      <h2>Diário</h2>
+      <p>
+        Aula, chamada e JSON do SIAGE.
+        <% if @siage_pending_count.to_i.positive? %>
+          <%= @siage_pending_count %> pendente(s) no livro.
+        <% end %>
+      </p>
+    <% end %>
+
+    <%= link_to grade_levels_path, class: "dashboard-launch-tile" do %>
+      <%= maestro_icon :clipboard %>
+      <h2>Atividades</h2>
+      <p>Entregas, notas e acompanhamento das turmas.</p>
+    <% end %>
+
+    <%= link_to @current_classroom.present? ? monitoring_path(classroom_id: @current_classroom.id) : monitoring_path,
+                class: "dashboard-launch-tile dashboard-launch-monitoring#{' has-work' if @monitoring_alert_count.to_i.positive?}" do %>
+      <%= maestro_icon :monitoring %>
+      <h2>Monitoramento</h2>
+      <p>
+        <% if @monitoring_alert_count.to_i.positive? %>
+          <%= @monitoring_alert_count %>
+          <%= @monitoring_alert_count == 1 ? "aluno em alerta neste mês." : "alunos em alerta neste mês." %>
+        <% else %>
+          Pendências, notas e frequência.
+        <% end %>
+      </p>
+    <% end %>
+
+    <%= link_to projects_path,
+                class: "dashboard-launch-tile#{' has-work' if @overdue_projects_count.to_i.positive?}" do %>
+      <%= maestro_icon :projects %>
+      <h2>Projetos</h2>
+      <p>
+        Turma, Professor Nota 10 e Escola Nota 10. Não entram no SIAGE.
+        <% if @overdue_projects_count.to_i.positive? %>
+          <%= @overdue_projects_count %>
+          <%= @overdue_projects_count == 1 ? "etapa atrasada." : "etapas atrasadas." %>
+        <% elsif @active_projects_count.to_i.positive? %>
+          <%= @active_projects_count %>
+          <%= @active_projects_count == 1 ? "projeto em aberto." : "projetos em aberto." %>
+        <% end %>
+      </p>
+    <% end %>
+
+    <%= link_to classrooms_path, class: "dashboard-launch-tile" do %>
+      <%= maestro_icon :classrooms %>
+      <h2>Turmas</h2>
+      <p>Turmas, matrículas e acompanhamento.</p>
+    <% end %>
+
+    <%= link_to students_path, class: "dashboard-launch-tile" do %>
+      <%= maestro_icon :students %>
+      <h2>Alunos</h2>
+      <p>Lista, cadastro e importação de matrículas.</p>
+    <% end %>
+
+    <%= link_to courses_path, class: "dashboard-launch-tile" do %>
+      <%= maestro_icon :courses %>
+      <h2>Cursos</h2>
+      <p>Cursos, disciplinas e níveis de ensino.</p>
+    <% end %>
+
+    <%= link_to lira_path, class: "dashboard-launch-tile" do %>
+      <%= maestro_assistant_mark(size: :sm) %>
+      <h2>Conversar</h2>
+      <p>Aulas, chamada, SIAGE e alertas com o Maestro.</p>
+    <% end %>
+  </div>
+</section>

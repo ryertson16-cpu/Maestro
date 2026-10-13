@@ -1,0 +1,44 @@
+<% content_for :title, "Editar aula | Maestro" %>
+
+<%
+  diary_path_for_lesson = attendance_records_path(
+    classroom_id: @lesson.classroom_id,
+    attendance_date: @lesson.lesson_date
+  )
+%>
+
+<div class="page-header classroom-show-header">
+  <div>
+    <span class="section-eyebrow">Aula</span>
+    <h1><%= @lesson.theme.presence || "Editar aula" %></h1>
+    <p>
+      <%= @lesson.classroom.name %>
+      <span class="hero-separator">•</span>
+      <%= l(@lesson.lesson_date, format: :long) %>
+      <% if @lesson.course.present? %>
+        <span class="hero-separator">•</span>
+        <%= @lesson.course.name %>
+      <% end %>
+    </p>
+  </div>
+</div>
+
+<div class="classroom-show-actions">
+  <%= link_to "Voltar ao diário",
+              diary_path_for_lesson,
+              class: "button button-primary" %>
+
+  <%= link_to "Ver chamada",
+              diary_path_for_lesson,
+              class: "button button-secondary" %>
+
+  <%= link_to "Baixar JSON",
+              siage_lesson_export_path(@lesson, format: :json),
+              class: "button button-secondary" %>
+
+  <%= render "lessons/delete_button",
+             lesson: @lesson,
+             return_to: "diary" %>
+</div>
+
+<%= render "form", lesson: @lesson %>

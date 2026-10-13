@@ -1,0 +1,14 @@
+<div class="auth-or" role="separator">Ou continue com</div>
+
+<div class="auth-social">
+  <% OauthHelper::OAUTH_BUTTONS.each do |button| %>
+    <%= button_to oauth_authorize_path_for(button[:provider]),
+                  method: :post,
+                  class: "auth-social-button",
+                  form_class: "auth-social-form",
+                  data: { turbo: false, skip_confirm: true },
+                  aria: { label: button[:label] } do %>
+      <%= oauth_brand_icon(button[:brand]) %>
+    <% end %>
+  <% end %>
+</div>

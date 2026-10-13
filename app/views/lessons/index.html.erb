@@ -1,0 +1,80 @@
+<div class="page-header page-header-with-action">
+  <div class="diary-page-title">
+    <%= maestro_icon :diary, size: :lg %>
+    <h1>Aulas registradas</h1>
+    <p>Consulte o histórico do diário de classe.</p>
+  </div>
+
+  <%= link_to(
+    "Registrar aula",
+    new_lesson_path({ classroom_id: params[:classroom_id] }.compact),
+    class: "button button-primary"
+  ) %>
+</div>
+
+<% if @lessons.any? %>
+  <section class="lesson-list">
+    <% @lessons.each do |lesson| %>
+      <article class="lesson-list-card">
+        <div class="lesson-list-card-main">
+          <span class="lesson-date">
+            <%= l(lesson.lesson_date, format: :long) %>
+          </span>
+
+          <h2>
+            <%= link_to lesson.theme, lesson_path(lesson) %>
+          </h2>
+
+          <p>
+            <strong>Turma:</strong>
+            <%= lesson.classroom.name %>
+          </p>
+
+          <p>
+            <strong>Disciplina:</strong>
+            <%= lesson.course&.name || "Não informada" %>
+          </p>
+
+          <% if lesson.activity.present? %>
+            <span class="lesson-activity-badge">
+              Atividade:
+              <%= lesson.activity.activity_type %>
+            </span>
+          <% end %>
+        </div>
+
+        <div class="lesson-list-card-actions">
+          <%= link_to(
+            "Ver aula",
+            lesson_path(lesson),
+            class: "button button-secondary"
+          ) %>
+
+          <%= link_to(
+            "Frequência",
+            attendance_records_path(
+              classroom_id: lesson.classroom_id,
+              attendance_date: lesson.lesson_date
+            ),
+            class: "button button-primary"
+          ) %>
+
+          <%= render "lessons/delete_button",
+                     lesson: lesson,
+                     compact: true %>
+        </div>
+      </article>
+    <% end %>
+  </section>
+<% else %>
+  <section class="empty-state">
+    <strong>Nenhuma aula registrada.</strong>
+    <p>Comece registrando a primeira aula do diário.</p>
+
+    <%= link_to(
+      "Registrar primeira aula",
+      new_lesson_path,
+      class: "button button-primary"
+    ) %>
+  </section>
+<% end %>

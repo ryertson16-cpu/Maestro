@@ -1,0 +1,47 @@
+<dialog id="maestro-quick"
+        class="maestro-quick"
+        data-maestro-quick
+        data-mark-url="<%= asset_path("maestro-assistant.png") %>"
+        data-create-url="<%= reminders_path %>"
+        data-list-url="<%= reminders_path %>"
+        data-due-url="<%= due_reminders_path %>"
+        aria-labelledby="maestro-quick-title">
+  <div class="maestro-quick-header">
+    <%= maestro_assistant_mark(size: :sm) %>
+    <div>
+      <h2 id="maestro-quick-title">Maestro</h2>
+      <p>Lembrete ou um recado rápido. Sem abrir o histórico.</p>
+    </div>
+    <button type="button" class="maestro-quick-close" data-maestro-quick-close aria-label="Fechar">×</button>
+  </div>
+
+  <div class="maestro-quick-result" data-maestro-quick-result></div>
+
+  <div class="maestro-quick-chips" role="group" aria-label="Atalhos">
+    <button type="button" class="lira-chip" data-maestro-quick-chip="lembrete">Lembrete</button>
+    <button type="button" class="lira-chip" data-maestro-quick-chip="hoje">Hoje</button>
+    <button type="button" class="lira-chip" data-maestro-quick-chip="avisos">Avisos</button>
+  </div>
+
+  <form class="maestro-quick-form" data-maestro-quick-form>
+    <textarea name="body"
+              rows="2"
+              required
+              placeholder="Ex.: me lembra da reunião de pais amanhã às 19h"
+              data-maestro-quick-input></textarea>
+    <div class="maestro-quick-actions">
+      <button type="button"
+              class="button button-secondary"
+              data-maestro-quick-mic
+              aria-label="Falar com o Maestro">
+        Falar
+      </button>
+      <button type="submit" class="button button-primary">Enviar</button>
+    </div>
+  </form>
+
+  <div class="maestro-quick-footer">
+    <button type="button" class="maestro-quick-link" data-maestro-quick-list>Ver lembretes</button>
+    <%= link_to "Abrir conversa", lira_path, class: "maestro-quick-link", data: { maestro_quick_close: true } %>
+  </div>
+</dialog>

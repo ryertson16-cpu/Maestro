@@ -1,0 +1,69 @@
+<section class="auth-card">
+  <div class="auth-mark-wrap">
+    <%= maestro_assistant_mark(size: :hero) %>
+  </div>
+
+  <h1>Bem-vindo de volta</h1>
+  <p class="auth-lead">Entre para continuar</p>
+
+  <%= form_for(resource, as: resource_name, url: session_path(resource_name), html: { class: "auth-form" }) do |f| %>
+    <div class="auth-field">
+      <%= f.label :email, "E-mail", class: "visually-hidden" %>
+      <div class="auth-input">
+        <%= maestro_icon :user, size: :sm, html_class: "auth-input-icon" %>
+        <%= f.email_field :email,
+                          autofocus: true,
+                          autocomplete: "email",
+                          required: true,
+                          placeholder: "E-mail" %>
+      </div>
+    </div>
+
+    <div class="auth-field">
+      <%= f.label :password, "Senha", class: "visually-hidden" %>
+      <div class="auth-input">
+        <%= maestro_icon :lock, size: :sm, html_class: "auth-input-icon" %>
+        <%= f.password_field :password,
+                             autocomplete: "current-password",
+                             required: true,
+                             placeholder: "Senha",
+                             id: "professor_password" %>
+        <button
+          type="button"
+          class="auth-password-toggle"
+          data-password-toggle="professor_password"
+          aria-label="Mostrar senha"
+        >
+          <%= maestro_icon :eye, size: :sm, html_class: "auth-eye" %>
+          <%= maestro_icon :eye_off, size: :sm, html_class: "auth-eye-off" %>
+        </button>
+      </div>
+    </div>
+
+    <div class="auth-row">
+      <% if devise_mapping.rememberable? %>
+        <label class="auth-remember">
+          <%= f.check_box :remember_me %>
+          <span>Lembrar de mim</span>
+        </label>
+      <% end %>
+
+      <% if devise_mapping.recoverable? %>
+        <%= link_to "Esqueci a senha?", new_password_path(resource_name), class: "auth-forgot" %>
+      <% end %>
+    </div>
+
+    <%= f.button class: "auth-submit" do %>
+      <span>Entrar</span>
+      <%= maestro_icon :arrow, size: :sm %>
+    <% end %>
+  <% end %>
+
+  <%= render "devise/shared/oauth" %>
+
+  <p class="auth-signup">
+    Ainda não tem o Maestro?
+    <%= link_to "Criar conta", new_professor_registration_path %>
+  </p>
+  <p class="auth-tagline">Caderno digital do professor</p>
+</section>

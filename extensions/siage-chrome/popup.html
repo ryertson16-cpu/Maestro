@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <title>Maestro → SIAGE</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <h1>Maestro → SIAGE</h1>
+    <p>Carregue o JSON do Maestro. A extensão preenche a tela e confirma no SIAGE.</p>
+
+    <label for="payload-file">Arquivo JSON</label>
+    <input id="payload-file" type="file" accept="application/json,.json">
+
+    <p id="payload-status" class="status">Nenhum arquivo carregado.</p>
+
+    <button id="fill-button" type="button" disabled>Preencher esta página</button>
+    <p id="fill-result" class="status"></p>
+
+    <small>
+      Só funciona em professor.see.pb.gov.br, já logado.
+      Frequência e notas são salvas automaticamente.
+    </small>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,64 @@
+<%= form_with model: student, local: true do |form| %>
+  <% if student.errors.any? %>
+    <div class="form-errors">
+      <h2>
+        <%= pluralize(student.errors.count, "erro") %>
+        impediram o salvamento:
+      </h2>
+
+      <ul>
+        <% student.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-grid">
+    <div class="form-field form-field-wide">
+      <%= form.label :name, "Nome completo" %>
+      <%= form.text_field :name, required: true, autofocus: true %>
+    </div>
+
+    <div class="form-field">
+      <%= form.label :registration_number, "Número de matrícula" %>
+      <%= form.text_field :registration_number %>
+    </div>
+
+    <div class="form-field">
+      <%= form.label :series, "Série ou ano" %>
+      <%= form.text_field :series %>
+    </div>
+
+    <% if show_classroom %>
+      <div class="form-field form-field-wide">
+        <%= label_tag "student_classroom_id", "Adicionar a uma turma" %>
+
+        <%= select_tag "student[classroom_id]",
+              options_from_collection_for_select(
+                classrooms,
+                :id,
+                :name
+              ),
+              include_blank: "Cadastrar sem turma" %>
+
+        <small class="field-help">
+          O aluno poderá ser matriculado em outras turmas posteriormente.
+        </small>
+      </div>
+    <% end %>
+
+    <div class="form-field form-field-wide checkbox-field">
+      <%= form.check_box :active %>
+      <%= form.label :active, "Aluno ativo" %>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit "Salvar aluno", class: "button button-primary" %>
+
+    <%= link_to "Cancelar",
+                students_path,
+                class: "button button-secondary" %>
+  </div>
+<% end %>

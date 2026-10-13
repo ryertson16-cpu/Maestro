@@ -1,0 +1,20 @@
+<div class="theme-switch<%= " is-compact" if local_assigns[:compact] %>">
+  <% unless local_assigns[:compact] %>
+    <div class="theme-switch-copy">
+      <strong data-theme-mode-label>Modo dia</strong>
+      <span>Escolha as cores do Maestro neste aparelho.</span>
+    </div>
+  <% end %>
+
+  <button
+    type="button"
+    class="attendance-switch"
+    data-theme-toggle
+    role="switch"
+    aria-checked="false"
+    aria-label="Modo noturno"
+  >
+    <span class="attendance-switch-track"></span>
+    <span class="attendance-switch-knob"></span>
+  </button>
+</div>

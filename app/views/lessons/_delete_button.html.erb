@@ -1,0 +1,11 @@
+<%# locals: lesson:, return_to: nil, compact: false %>
+<%= link_to "Excluir aula",
+            lesson_path(lesson, return_to: local_assigns[:return_to]),
+            class: [
+              "button button-danger",
+              ("button-small" if local_assigns[:compact])
+            ].compact.join(" "),
+            data: {
+              turbo_method: :delete,
+              confirm_message: "Excluir esta aula também apaga a chamada deste tempo. Deseja continuar?"
+            } %>

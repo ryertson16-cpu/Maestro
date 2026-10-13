@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  school_course: one
+  course: one
+  position: 1
+  required: false
+
+two:
+  school_course: two
+  course: two
+  position: 1
+  required: false

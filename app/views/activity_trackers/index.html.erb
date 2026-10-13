@@ -1,0 +1,173 @@
+<div class="page-header page-header-with-action">
+  <div class="activities-page-title">
+    <%= maestro_icon :activities, size: :lg %>
+    <h1>Rastreador de Atividades</h1>
+    <p>
+      Consulte as atividades que ainda não foram entregues pelos alunos.
+    </p>
+  </div>
+
+  <%= link_to(
+    "Voltar para alunos",
+    students_path,
+    class: "button button-secondary"
+  ) %>
+</div>
+
+<section class="activity-tracker-card">
+  <div class="activity-tracker-header">
+    <div>
+      <span class="section-eyebrow">Turma selecionada</span>
+
+      <h2>
+        <%= @selected_classroom&.name || "Selecione uma turma" %>
+      </h2>
+    </div>
+  </div>
+
+  <% if @selected_classroom.present? %>
+    <%= form_with(
+      url: activity_tracker_path,
+      method: :get,
+      local: true,
+      class: "activity-tracker-student-form"
+    ) do %>
+      <%= hidden_field_tag(
+        :classroom_id,
+        @selected_classroom.id
+      ) %>
+
+      <div>
+        <%= label_tag :student_id, "Aluno" %>
+
+        <%= select_tag(
+          :student_id,
+          options_from_collection_for_select(
+            @students,
+            :id,
+            :name,
+            @student&.id
+          ),
+          include_blank: "Selecione um aluno",
+          onchange: "this.form.submit();"
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+</section>
+
+<% if @selected_classroom.blank? %>
+  <section class="empty-state">
+    <strong>Turma não encontrada.</strong>
+    <p>Volte para a página de alunos e escolha uma turma válida.</p>
+  </section>
+<% elsif @student.blank? %>
+  <section class="empty-state">
+    <strong>Selecione um aluno.</strong>
+    <p>
+      Escolha um aluno acima para visualizar suas atividades pendentes.
+    </p>
+  </section>
+<% else %>
+  <section class="activity-tracker-card">
+    <div class="activity-tracker-heading">
+      <div>
+        <span class="section-eyebrow">Aluno selecionado</span>
+
+        <h2><%= @student.name %></h2>
+
+        <% if @student.registration_number.present? %>
+          <p>
+            Matrícula:
+            <%= @student.registration_number %>
+          </p>
+        <% end %>
+      </div>
+
+      <span class="activity-tracker-count">
+        <%= @pending_activities.size %>
+        <%= @pending_activities.size == 1 ? "pendência" : "pendências" %>
+      </span>
+    </div>
+
+    <% if @pending_activities.any? %>
+      <div class="activity-tracker-table-wrapper">
+        <table class="activity-tracker-table">
+          <thead>
+            <tr>
+              <th>Aluno</th>
+              <th>Atividade</th>
+              <th>Disciplina</th>
+              <th>Status</th>
+              <th>Data limite</th>
+              <th>Dias em atraso</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <% @pending_activities.each do |activity| %>
+              <% days_late =
+                   if activity.due_date.present?
+                     [Date.current - activity.due_date, 0].max.to_i
+                   else
+                     0
+                   end %>
+
+              <tr>
+                <td>
+                  <strong><%= @student.name %></strong>
+                </td>
+
+                <td>
+                  <strong><%= activity.title %></strong>
+
+                  <small class="table-secondary-text">
+                    <%= activity.activity_type %>
+                  </small>
+                </td>
+
+                <td>
+                  <%= activity.lesson.course&.name || "Não informada" %>
+                </td>
+
+                <td>
+                  <span class="activity-status-tag status-not_delivered">
+                    Atividade Pendente
+                  </span>
+                </td>
+
+                <td>
+                  <% if activity.due_date.present? %>
+                    <%= l(activity.due_date, format: :long) %>
+                  <% else %>
+                    Não informada
+                  <% end %>
+                </td>
+
+                <td>
+                  <% if days_late.positive? %>
+                    <strong class="activity-days-late">
+                      <%= days_late %>
+                      <%= days_late == 1 ? "dia" : "dias" %>
+                    </strong>
+                  <% else %>
+                    <span class="activity-on-time">
+                      No prazo
+                    </span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <strong>Nenhuma atividade pendente.</strong>
+        <p>
+          Este aluno entregou todas as atividades desta turma.
+        </p>
+      </div>
+    <% end %>
+  </section>
+<% end %>

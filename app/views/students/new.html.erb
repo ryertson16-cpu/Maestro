@@ -1,0 +1,14 @@
+<div class="page-header">
+  <div class="students-page-title">
+    <%= maestro_icon :students, size: :lg %>
+    <h1>Adicionar aluno</h1>
+    <p>Cadastre um aluno e, opcionalmente, vincule-o a uma turma.</p>
+  </div>
+</div>
+
+<section class="form-card">
+  <%= render "form",
+             student: @student,
+             classrooms: @classrooms,
+             show_classroom: true %>
+</section>

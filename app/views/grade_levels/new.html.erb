@@ -1,0 +1,16 @@
+<div class="page-header">
+  <div class="courses-page-title">
+    <%= maestro_icon :courses, size: :lg %>
+    <h1>Novo nível de ensino</h1>
+
+    <p>
+      Cadastre um nível para utilizar nas suas turmas.
+    </p>
+  </div>
+</div>
+
+<%= render "form", grade_level: @grade_level %>
+
+<%= link_to "Voltar para Cursos",
+            courses_path,
+            class: "button button-secondary" %>

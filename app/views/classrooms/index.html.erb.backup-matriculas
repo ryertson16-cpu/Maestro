@@ -1,0 +1,44 @@
+<h1>Turmas</h1>
+
+<p>
+  <%= link_to "Nova turma", new_classroom_path %>
+</p>
+
+<% if @classrooms.any? %>
+  <table>
+    <thead>
+      <tr>
+        <th>Turma</th>
+        <th>Curso</th>
+        <th>Nível</th>
+        <th>Ano</th>
+        <th>Turno</th>
+        <th>Status</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <% @classrooms.each do |classroom| %>
+        <tr>
+          <td><%= classroom.name %></td>
+          <td><%= classroom.course.name %></td>
+          <td><%= classroom.grade_level.name %></td>
+          <td><%= classroom.school_year %></td>
+          <td><%= classroom.shift.presence || "Não informado" %></td>
+          <td><%= classroom.active? ? "Ativa" : "Inativa" %></td>
+          <td>
+            <%= link_to "Editar", edit_classroom_path(classroom) %>
+
+            <%= button_to "Excluir",
+                          classroom_path(classroom),
+                          method: :delete,
+                          data: { turbo_confirm: "Deseja excluir esta turma?" } %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <p>Nenhuma turma cadastrada.</p>
+<% end %>

@@ -1,0 +1,53 @@
+<h1>Meu perfil</h1>
+
+<% if @professor.errors.any? %>
+  <div>
+    <h2>
+      <%= pluralize(@professor.errors.count, "erro") %>
+      impediram o salvamento:
+    </h2>
+
+    <ul>
+      <% @professor.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+
+<%= form_with model: @professor,
+              url: profile_path,
+              method: :patch do |form| %>
+  <div>
+    <%= form.label :email, "E-mail de login" %>
+    <%= form.email_field :email, disabled: true %>
+  </div>
+
+  <div>
+    <%= form.label :name, "Nome completo" %>
+    <%= form.text_field :name, required: true %>
+  </div>
+
+  <div>
+    <%= form.label :phone, "Telefone" %>
+    <%= form.telephone_field :phone %>
+  </div>
+
+  <div>
+    <%= form.label :school_name, "Escola ou instituição" %>
+    <%= form.text_field :school_name %>
+  </div>
+
+  <div>
+    <%= form.label :bio, "Apresentação profissional" %>
+    <%= form.text_area :bio, rows: 5 %>
+  </div>
+
+  <div>
+    <%= form.submit "Salvar perfil" %>
+  </div>
+<% end %>
+
+<p>
+  <%= link_to "Voltar para o perfil", profile_path %>
+</p>

@@ -1,0 +1,517 @@
+<% content_for :title, "Monitoramento | Maestro" %>
+
+<%
+  monitoring_query = ->(overrides = {}) {
+    {
+      classroom_id: @selected_classroom&.id,
+      month: @monitoring_month.strftime("%Y-%m"),
+      filter: @alert_filter,
+      activity_id: @selected_activity&.id
+    }.merge(overrides).compact
+  }
+%>
+
+<div class="page-header page-header-with-action">
+  <div class="monitoring-page-title">
+    <%= maestro_icon :monitoring, size: :lg %>
+    <span class="section-eyebrow">Monitoramento</span>
+    <h1>Monitoramento</h1>
+    <p>Quem precisa de ajuda neste mês: atividades, notas e frequência. Atraso não é falta. Projetos não entram no SIAGE.</p>
+  </div>
+
+  <% if @selected_classroom.present? %>
+    <nav class="diary-header-links" aria-label="Atalhos de monitoramento">
+      <%= link_to "Conselho de classe",
+                  council_notes_path(classroom_id: @selected_classroom.id),
+                  class: "button button-ghost button-small" %>
+    </nav>
+  <% end %>
+</div>
+
+<% if @overdue_projects.present? %>
+  <section class="projects-overdue-banner">
+    <%= maestro_icon :target, size: :sm %>
+    <div>
+      <strong>Etapas de projeto atrasadas</strong>
+      <p>
+        <%= @overdue_projects.map(&:title).to_sentence %>
+        · isso não altera notas nem frequência do SIAGE.
+      </p>
+    </div>
+    <%= link_to "Ver projetos", projects_path, class: "button button-secondary button-small" %>
+  </section>
+<% end %>
+
+<% if @classrooms.blank? %>
+  <section class="empty-state">
+    <%= maestro_icon :classrooms %>
+    <strong>Nenhuma turma cadastrada.</strong>
+    <p>Cadastre uma turma para iniciar o monitoramento.</p>
+    <%= link_to "Cadastrar turma", new_classroom_path, class: "button button-primary" %>
+  </section>
+<% else %>
+  <section class="attendance-filter diary-context">
+    <h2>Filtrar turma e mês</h2>
+
+    <%= form_with url: monitoring_path, method: :get, local: true do |form| %>
+      <%= hidden_field_tag :filter, @alert_filter %>
+      <% if @selected_activity.present? %>
+        <%= hidden_field_tag :activity_id, @selected_activity.id %>
+      <% end %>
+
+      <div>
+        <%= form.label :classroom_id, "Turma" %>
+        <%= form.collection_select :classroom_id,
+                                  @classrooms,
+                                  :id,
+                                  :name,
+                                  { selected: @selected_classroom&.id },
+                                  { required: true } %>
+      </div>
+
+      <div>
+        <%= label_tag :month, "Mês" %>
+        <%= month_field_tag :month,
+                            @monitoring_month.strftime("%Y-%m"),
+                            required: true,
+                            onchange: "this.form.submit()" %>
+      </div>
+
+      <div>
+        <%= form.submit "Abrir" %>
+      </div>
+    <% end %>
+  </section>
+
+  <section class="monitoring-classrooms-section">
+    <details class="classroom-picker-details" <%= "open" if @selected_classroom.blank? %>>
+      <summary>Alertas por turma</summary>
+
+      <div class="monitoring-classrooms-grid">
+        <% @classrooms.each do |classroom| %>
+          <% alert_count = @classroom_alert_counts[classroom.id] || 0 %>
+          <% student_count = @classroom_student_counts[classroom.id] || 0 %>
+
+          <%= link_to monitoring_path(
+                        classroom_id: classroom.id,
+                        month: @monitoring_month.strftime("%Y-%m"),
+                        filter: "all"
+                      ),
+                      class: [
+                        "monitoring-classroom-card",
+                        ("selected" if @selected_classroom&.id == classroom.id)
+                      ].compact.join(" ") do %>
+            <div class="monitoring-classroom-card-top">
+              <div>
+                <%= maestro_icon :classrooms, size: :sm %>
+                <h3><%= classroom.name %></h3>
+              </div>
+              <% if alert_count.positive? %>
+                <span class="monitoring-classroom-badge">
+                  <%= alert_count %> em atenção
+                </span>
+              <% else %>
+                <span class="monitoring-classroom-badge is-ok">Em dia</span>
+              <% end %>
+            </div>
+
+            <div class="monitoring-classroom-card-info">
+              <% if classroom.grade_level.present? %>
+                <span><%= classroom.grade_level.name %></span>
+              <% end %>
+              <span><%= pluralize(student_count, "aluno", "alunos") %></span>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    </details>
+  </section>
+<% end %>
+
+<% if @selected_classroom.present? %>
+  <section class="data-card monitoring-board">
+    <div class="section-heading">
+      <div>
+        <span class="section-eyebrow"><%= @selected_classroom.name %></span>
+        <h2>Alunos em acompanhamento</h2>
+        <p class="classroom-pending-help">
+          Frequência de <strong><%= @report.month_label %></strong>.
+        </p>
+      </div>
+    </div>
+
+    <section class="attendance-summary monitoring-summary" aria-label="Resumo de alertas">
+      <article class="summary-card summary-total">
+        <span class="summary-label">Em alerta</span>
+        <strong><%= @alert_summary[:total] %></strong>
+      </article>
+      <article class="summary-card summary-absent">
+        <span class="summary-label">Cuidado</span>
+        <strong><%= @alert_summary[:danger] %></strong>
+      </article>
+      <article class="summary-card summary-late">
+        <span class="summary-label">Atenção</span>
+        <strong><%= @alert_summary[:warning] %></strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Atividades</span>
+        <strong><%= @alert_summary[:activities] %></strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Notas</span>
+        <strong><%= @alert_summary[:grades] %></strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Frequência</span>
+        <strong><%= @alert_summary[:attendance] %></strong>
+      </article>
+    </section>
+
+    <div class="diary-workbar activity-filter-bar">
+      <div class="monitoring-chip-row" role="navigation" aria-label="Filtrar alertas">
+        <%
+          filter_options = [
+            ["all", "Todos", @alert_summary[:total]],
+            ["danger", "Cuidado", @alert_summary[:danger]],
+            ["activities", "Atividades", @alert_summary[:activities]],
+            ["grades", "Notas", @alert_summary[:grades]],
+            ["attendance", "Frequência", @alert_summary[:attendance]]
+          ]
+        %>
+        <% filter_options.each do |value, label, count| %>
+          <%= link_to monitoring_path(monitoring_query.call(filter: value)),
+                      class: [
+                        "monitoring-filter-chip",
+                        ("is-active" if @alert_filter == value)
+                      ].compact.join(" ") do %>
+            <%= label %>
+            <span><%= count %></span>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+
+    <% if @student_rows.empty? %>
+      <div class="empty-state monitoring-empty-state">
+        <%= maestro_icon :students %>
+        <strong>Nenhum aluno matriculado.</strong>
+        <p>Matricule alunos nesta turma para visualizar o monitoramento.</p>
+      </div>
+    <% elsif !@has_alerts %>
+      <div class="empty-state monitoring-empty-state monitoring-empty-ok">
+        <%= maestro_icon :check, html_class: "maestro-icon-success" %>
+        <strong>Nenhum aluno em alerta neste mês.</strong>
+        <p>Atividades, notas e frequência desta turma estão em dia.</p>
+      </div>
+    <% elsif @visible_rows.any? %>
+      <div class="monitoring-students-list">
+        <% @visible_rows.each do |row| %>
+          <article class="monitoring-student-card"
+                   id="monitoring-student-<%= row.student.id %>">
+            <div class="monitoring-student-header">
+              <div>
+                <h3><%= row.student.name %></h3>
+                <% if row.student.registration_number.present? %>
+                  <p>Matrícula: <%= row.student.registration_number %></p>
+                <% end %>
+                <div class="monitoring-tag-row">
+                  <% row.tags.each do |tag| %>
+                    <span class="monitoring-status-badge monitoring-status-<%= tag[:tone] %>">
+                      <%= tag[:label] %>
+                    </span>
+                  <% end %>
+                </div>
+              </div>
+
+              <div class="monitoring-student-actions" data-controller="clipboard">
+                <label class="visually-hidden" for="monitoring-recado-<%= row.student.id %>">
+                  Recado
+                </label>
+                <textarea id="monitoring-recado-<%= row.student.id %>"
+                          class="visually-hidden"
+                          readonly
+                          data-clipboard-target="source"><%= row.recado_text %></textarea>
+
+                <%= link_to "Ver aluno",
+                            student_path(row.student),
+                            class: "button button-secondary button-small" %>
+
+                <% if row.attendance_alert.present? || row.late_alert.present? %>
+                  <%= link_to "Diário",
+                              attendance_records_path(
+                                classroom_id: @selected_classroom.id,
+                                attendance_date: @monitoring_month
+                              ),
+                              class: "button button-secondary button-small" %>
+                <% end %>
+
+                <button type="button"
+                        class="button button-secondary button-small"
+                        data-action="clipboard#copy">
+                  Copiar recado
+                </button>
+
+                <%= link_to "WhatsApp",
+                            row.whatsapp_url,
+                            class: "button button-primary button-small",
+                            target: "_blank",
+                            rel: "noopener noreferrer" %>
+              </div>
+            </div>
+
+            <details class="monitoring-student-details">
+              <summary>Ver detalhes</summary>
+
+              <div class="monitoring-alert-grid">
+                <% if row.pending_activities.any? %>
+                  <div class="monitoring-alert-panel monitoring-panel-danger">
+                    <div class="monitoring-panel-heading">
+                      <div>
+                        <%= maestro_icon :clipboard, size: :sm, html_class: "maestro-icon-danger" %>
+                        <h4>Atividades não entregues</h4>
+                      </div>
+                      <strong><%= row.pending_activities.size %></strong>
+                    </div>
+                    <div class="monitoring-activity-list">
+                      <% row.pending_activities.each do |item| %>
+                        <% activity = item[:activity] %>
+                        <div class="monitoring-activity-item">
+                          <div>
+                            <strong><%= activity.title %></strong>
+                            <span><%= activity.lesson.course&.name || "Disciplina não informada" %></span>
+                          </div>
+                          <small>
+                            Limite:
+                            <%= activity.due_date.present? ? l(activity.due_date, format: :short) : "Não informado" %>
+                          </small>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+
+                <% if row.unscored_activities.any? %>
+                  <div class="monitoring-alert-panel monitoring-panel-danger">
+                    <div class="monitoring-panel-heading">
+                      <div>
+                        <%= maestro_icon :chart, size: :sm, html_class: "maestro-icon-danger" %>
+                        <h4>Notas não lançadas</h4>
+                      </div>
+                      <strong><%= row.unscored_activities.size %></strong>
+                    </div>
+                    <div class="monitoring-activity-list">
+                      <% row.unscored_activities.each do |item| %>
+                        <% activity = item[:activity] %>
+                        <div class="monitoring-activity-item">
+                          <div>
+                            <strong><%= activity.title %></strong>
+                            <span><%= activity.lesson.course&.name || "Disciplina não informada" %></span>
+                          </div>
+                          <small>
+                            <%= activity.bimester %>º bimestre
+                          </small>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+
+                <% if row.grade_alerts.any? %>
+                  <div class="monitoring-alert-panel monitoring-panel-warning">
+                    <div class="monitoring-panel-heading">
+                      <div>
+                        <%= maestro_icon :chart, size: :sm, html_class: "maestro-icon-warning" %>
+                        <h4>Notas abaixo do esperado</h4>
+                      </div>
+                      <strong><%= row.grade_alerts.size %></strong>
+                    </div>
+                    <div class="monitoring-grade-list">
+                      <% row.grade_alerts.each do |grade_alert| %>
+                        <div class="monitoring-grade-item">
+                          <span><%= grade_alert[:bimester] %>º Bimestre</span>
+                          <strong>
+                            <%= number_with_precision(grade_alert[:final_score], precision: 1) %>
+                          </strong>
+                          <span class="monitoring-status-badge monitoring-status-<%= grade_alert[:severity] %>">
+                            <%= grade_alert[:label] %>
+                          </span>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+
+                <% if row.attendance_alert.present? || row.late_alert.present? %>
+                  <div class="monitoring-alert-panel <%= row.attendance_alert&.dig(:severity) == :danger ? "monitoring-panel-danger" : "monitoring-panel-warning" %>">
+                    <div class="monitoring-panel-heading">
+                      <div>
+                        <%= maestro_icon :students, size: :sm %>
+                        <h4>Frequência</h4>
+                      </div>
+                      <% if row.attendance_percentage.present? %>
+                        <strong><%= number_with_precision(row.attendance_percentage, precision: 1) %>%</strong>
+                      <% end %>
+                    </div>
+                    <% if row.attendance_alert.present? %>
+                      <p class="monitoring-attendance-message">
+                        <%= row.attendance_alert[:reason] %>
+                      </p>
+                    <% end %>
+                    <% if row.late_alert.present? %>
+                      <p class="monitoring-attendance-message">
+                        <%= row.late_alert[:reason] %>
+                      </p>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
+            </details>
+          </article>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="empty-state monitoring-empty-state">
+        <strong>Nenhum alerta neste filtro.</strong>
+        <p>Não há alunos com esse tipo de pendência nesta turma.</p>
+      </div>
+    <% end %>
+  </section>
+
+  <details class="data-card monitoring-tools">
+    <summary>Ferramentas: PDF, e-mail e feedback</summary>
+
+    <%= form_with url: monitoring_path,
+                  method: :get,
+                  local: true,
+                  class: "monitoring-filter-form" do %>
+      <%= hidden_field_tag :classroom_id, @selected_classroom.id %>
+      <%= hidden_field_tag :filter, @alert_filter %>
+      <%= hidden_field_tag :month, @monitoring_month.strftime("%Y-%m") %>
+      <div>
+        <%= label_tag :activity_id, "Atividade" %>
+        <%= select_tag :activity_id,
+                       options_from_collection_for_select(
+                         @activities,
+                         :id,
+                         :title,
+                         @selected_activity&.id
+                       ),
+                       include_blank: "Selecione uma atividade",
+                       onchange: "this.form.submit()" %>
+      </div>
+    <% end %>
+
+    <div class="monitoring-tool-block">
+      <h3>Importar notas de um PDF</h3>
+      <p>As notas só serão gravadas depois da conferência.</p>
+      <% if @selected_activity.present? %>
+        <%= form_with url: import_monitoring_results_path,
+                      method: :post,
+                      multipart: true,
+                      local: true do %>
+          <%= hidden_field_tag :classroom_id, @selected_classroom.id %>
+          <%= hidden_field_tag :activity_id, @selected_activity.id %>
+          <div>
+            <%= label_tag :results_pdf, "Relatório em PDF" %>
+            <%= file_field_tag :results_pdf, accept: "application/pdf,.pdf", required: true %>
+          </div>
+          <%= submit_tag "Conferir PDF", class: "button button-primary" %>
+        <% end %>
+      <% else %>
+        <p>Selecione uma atividade acima para importar as notas.</p>
+      <% end %>
+    </div>
+
+    <% if @has_alerts %>
+      <div class="monitoring-tool-block">
+        <h3>Resumo por e-mail</h3>
+        <p>Envia o recorte desta turma para o seu e-mail (<%= current_professor.email %>).</p>
+        <%= button_to "Enviar resumo",
+                      email_digest_monitoring_path,
+                      method: :post,
+                      params: {
+                        classroom_id: @selected_classroom.id,
+                        month: @monitoring_month.strftime("%Y-%m"),
+                        filter: @alert_filter
+                      },
+                      class: "button button-secondary" %>
+      </div>
+    <% end %>
+
+    <div class="monitoring-tool-block">
+      <h3>Feedback pós-correção</h3>
+      <% if @selected_activity.present? %>
+        <div class="monitoring-feedback"
+             data-controller="feedback"
+             data-feedback-activity-title-value="<%= @selected_activity.title %>">
+          <div>
+            <label for="feedback-student">Aluno</label>
+            <select id="feedback-student"
+                    data-feedback-target="studentSelect"
+                    data-action="change->feedback#selectStudent">
+              <option value="">Selecione o aluno</option>
+              <% @student_rows.each do |row| %>
+                <% submission = @activity_submissions_by_student[row.student.id] %>
+                <option value="<%= row.student.id %>"
+                        data-student-name="<%= row.student.name %>"
+                        data-score="<%= submission&.score %>">
+                  <%= row.student.name %>
+                </option>
+              <% end %>
+            </select>
+          </div>
+
+          <form data-action="submit->feedback#generate">
+            <div>
+              <label for="feedback-strength">O que o aluno fez bem?</label>
+              <textarea id="feedback-strength"
+                        data-feedback-target="strength"
+                        rows="2"></textarea>
+            </div>
+            <div>
+              <label for="feedback-improvement">O que precisa ser revisto?</label>
+              <textarea id="feedback-improvement"
+                        data-feedback-target="improvement"
+                        rows="2"></textarea>
+            </div>
+            <div>
+              <label for="feedback-guidance">Qual orientação concreta oferecer?</label>
+              <textarea id="feedback-guidance"
+                        data-feedback-target="guidance"
+                        rows="2"></textarea>
+            </div>
+            <div>
+              <label for="feedback-reflection">Pergunta para reflexão</label>
+              <textarea id="feedback-reflection"
+                        data-feedback-target="reflection"
+                        rows="2"></textarea>
+            </div>
+            <button type="button"
+                    class="button button-secondary"
+                    data-action="click->feedback#prepare">
+              Preencher sugestões
+            </button>
+            <button type="submit" class="button button-primary">
+              Montar rascunho
+            </button>
+            <div data-feedback-target="result" hidden>
+              <label for="feedback-output">Rascunho para revisar</label>
+              <textarea id="feedback-output"
+                        data-feedback-target="output"
+                        rows="8"
+                        readonly></textarea>
+            </div>
+          </form>
+        </div>
+      <% else %>
+        <p>Selecione uma atividade acima para preparar o feedback de um aluno.</p>
+      <% end %>
+    </div>
+  </details>
+<% elsif @classrooms.any? %>
+  <section class="empty-state monitoring-empty-state">
+    <%= maestro_icon :classrooms %>
+    <strong>Selecione uma turma.</strong>
+    <p>Escolha uma turma acima para ver os alunos em alerta.</p>
+  </section>
+<% end %>

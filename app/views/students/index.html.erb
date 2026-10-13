@@ -1,0 +1,317 @@
+<% content_for :title, "Alunos | Maestro" %>
+
+<%
+  students_query = ->(overrides = {}) {
+    {
+      classroom_id: @selected_classroom&.id,
+      month: @attendance_month.strftime("%Y-%m"),
+      search: @search.presence
+    }.merge(overrides).compact
+  }
+%>
+
+<div class="page-header page-header-with-action">
+  <div class="students-page-title">
+    <%= maestro_icon :students, size: :lg %>
+    <h1>Alunos</h1>
+    <p>Consulte a turma, abra a ficha e acompanhe a frequência do mês.</p>
+  </div>
+
+  <div class="page-header-actions">
+    <%= link_to "Importar alunos",
+                import_enrollments_path,
+                class: "button button-secondary" %>
+
+    <%= link_to "Adicionar aluno",
+                new_student_path,
+                class: "button button-primary" %>
+  </div>
+</div>
+
+<section class="monitoring-classrooms-section">
+  <details class="classroom-picker-details" <%= "open" if @selected_classroom.blank? %>>
+    <summary>Ver todas as turmas</summary>
+  <div class="section-heading">
+    <div>
+      <span class="section-eyebrow">Turmas</span>
+      <h2>Filtrar por turma</h2>
+    </div>
+  </div>
+
+  <% if @classrooms.any? %>
+    <div class="monitoring-classrooms-grid">
+      <%= link_to students_path(students_query.call(classroom_id: nil)),
+                  class: [
+                    "monitoring-classroom-card",
+                    ("selected" if @selected_classroom.blank?)
+                  ].compact.join(" ") do %>
+        <div class="monitoring-classroom-card-top">
+          <div>
+            <%= maestro_icon :students, size: :sm %>
+            <h3>Todos os alunos</h3>
+          </div>
+        </div>
+        <div class="monitoring-classroom-card-info">
+          <span><%= pluralize(@total_student_count, "aluno", "alunos") %></span>
+        </div>
+      <% end %>
+
+      <% @classrooms.each do |classroom| %>
+        <% student_count = @classroom_student_counts[classroom.id] || 0 %>
+
+        <%= link_to students_path(students_query.call(classroom_id: classroom.id)),
+                    class: [
+                      "monitoring-classroom-card",
+                      ("selected" if @selected_classroom&.id == classroom.id)
+                    ].compact.join(" ") do %>
+          <div class="monitoring-classroom-card-top">
+            <div>
+              <%= maestro_icon :classrooms, size: :sm %>
+              <h3><%= classroom.name %></h3>
+            </div>
+          </div>
+          <div class="monitoring-classroom-card-info">
+            <% if classroom.grade_level.present? %>
+              <span><%= classroom.grade_level.name %></span>
+            <% end %>
+            <span><%= pluralize(student_count, "aluno", "alunos") %></span>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <%= maestro_icon :classrooms %>
+      <strong>Nenhuma turma cadastrada.</strong>
+      <p>Cadastre uma turma para organizar as matrículas.</p>
+      <%= link_to "Cadastrar turma",
+                  new_classroom_path,
+                  class: "button button-primary" %>
+    </div>
+  <% end %>
+  </details>
+</section>
+
+<section class="data-card student-hub-list">
+  <div class="section-header">
+    <div>
+      <span class="section-eyebrow">Lista</span>
+      <h2>
+        <% if @selected_classroom.present? %>
+          <%= @selected_classroom.name %>
+        <% else %>
+          Todos os alunos
+        <% end %>
+      </h2>
+      <p>
+        <%= pluralize(@students.size, "aluno encontrado", "alunos encontrados") %>.
+      </p>
+    </div>
+  </div>
+
+  <%= form_with url: students_path,
+                method: :get,
+                local: true,
+                class: "classroom-filter-form" do %>
+    <%= hidden_field_tag :classroom_id, @selected_classroom&.id %>
+    <%= hidden_field_tag :month, @attendance_month.strftime("%Y-%m") %>
+
+    <div class="filter-search-field">
+      <%= label_tag :search, "Buscar aluno" %>
+      <%= text_field_tag :search,
+                         @search,
+                         placeholder: "Nome ou matrícula" %>
+    </div>
+
+    <div class="classroom-filter-actions">
+      <%= submit_tag "Buscar", class: "button button-primary" %>
+      <%= link_to "Limpar",
+                  students_path(classroom_id: @selected_classroom&.id, month: @attendance_month.strftime("%Y-%m")),
+                  class: "button button-secondary" %>
+    </div>
+  <% end %>
+
+  <% if @students.any? %>
+    <div class="student-hub-grid">
+      <% @students.each do |student| %>
+        <%
+          classroom_names =
+            if @selected_classroom.present?
+              [@selected_classroom.name]
+            else
+              student.enrollments
+                     .select { |enrollment| enrollment.status == "active" }
+                     .filter_map { |enrollment| enrollment.classroom&.name }
+                     .uniq
+            end
+          percentage = @monthly_percentages[student.id]
+        %>
+
+        <article class="student-hub-card">
+          <div>
+            <h3>
+              <%= link_to student.name, student_path(student) %>
+            </h3>
+            <p>
+              <% if student.registration_number.present? %>
+                Matrícula <%= student.registration_number %>
+                <span class="hero-separator">•</span>
+              <% end %>
+              <% if classroom_names.any? %>
+                <%= classroom_names.join(", ") %>
+              <% else %>
+                Sem turma ativa
+              <% end %>
+            </p>
+          </div>
+
+          <div class="student-hub-card-meta">
+            <% if student.active? %>
+              <span class="status-badge status-active">Ativo</span>
+            <% else %>
+              <span class="status-badge status-inactive">Inativo</span>
+            <% end %>
+
+            <% if percentage.present? %>
+              <span class="student-hub-frequency"><%= percentage %>%</span>
+            <% end %>
+
+            <%= link_to "Ver aluno",
+                        student_path(student),
+                        class: "button button-secondary button-small" %>
+          </div>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <%= maestro_icon :students %>
+      <% if @search.present? %>
+        <strong>Nenhum aluno encontrado.</strong>
+        <p>Tente outro nome ou matrícula.</p>
+      <% else %>
+        <strong>Nenhum aluno nesta lista.</strong>
+        <p>Cadastre um aluno ou escolha outra turma.</p>
+        <%= link_to "Adicionar aluno",
+                    new_student_path,
+                    class: "button button-primary" %>
+      <% end %>
+    </div>
+  <% end %>
+</section>
+
+<% if @selected_classroom.present? %>
+  <details class="data-card student-month-tools">
+    <summary>Frequência do mês</summary>
+
+    <div class="student-month-toolbar">
+      <%= form_with url: students_path,
+                    method: :get,
+                    local: true,
+                    class: "monitoring-month-form" do %>
+        <%= hidden_field_tag :classroom_id, @selected_classroom.id %>
+        <%= hidden_field_tag :search, @search %>
+        <%= label_tag :month, "Mês" %>
+        <%= month_field_tag :month,
+                            @attendance_month.strftime("%Y-%m"),
+                            onchange: "this.form.submit()" %>
+      <% end %>
+
+      <%= link_to "Diário",
+                  attendance_records_path(classroom_id: @selected_classroom.id),
+                  class: "button button-secondary" %>
+    </div>
+
+    <% if @enrollments.any? %>
+      <div class="monthly-attendance-wrapper">
+        <table class="monthly-attendance-table">
+          <thead>
+            <tr>
+              <th rowspan="3" class="student-number-column">Nº</th>
+              <th rowspan="3" class="student-name-column">Aluno</th>
+              <% @month_dates.group_by { |date| (date.day - 1) / 7 + 1 }.each do |week_number, dates| %>
+                <th colspan="<%= dates.length %>" class="week-header">S<%= week_number %></th>
+              <% end %>
+              <th rowspan="3" class="percentage-column">Frequência (%)</th>
+            </tr>
+            <tr>
+              <% @month_dates.each do |date| %>
+                <th class="weekday-header">
+                  <%= %w[DOM SEG TER QUA QUI SEX SAB][date.wday] %>
+                </th>
+              <% end %>
+            </tr>
+            <tr>
+              <% @month_dates.each do |date| %>
+                <th class="date-header"><%= date.strftime("%d/%m") %></th>
+              <% end %>
+            </tr>
+          </thead>
+          <tbody>
+            <% @enrollments.each_with_index do |enrollment, index| %>
+              <% percentage = @monthly_percentages[enrollment.student_id] %>
+              <tr>
+                <td class="student-number"><%= index + 1 %></td>
+                <td class="student-name">
+                  <strong>
+                    <%= link_to enrollment.student.name, student_path(enrollment.student) %>
+                  </strong>
+                  <% if enrollment.student.registration_number.present? %>
+                    <small>Matrícula: <%= enrollment.student.registration_number %></small>
+                  <% end %>
+                </td>
+                <% @month_dates.each do |date| %>
+                  <% record = @attendance_records[[enrollment.id, date]] %>
+                  <% status = record&.status %>
+                  <td class="attendance-cell">
+                    <div class="attendance-cell-control status-<%= status || "pending" %>"
+                         data-attendance-cell
+                         data-classroom-id="<%= @selected_classroom.id %>"
+                         data-enrollment-id="<%= enrollment.id %>"
+                         data-attendance-date="<%= date %>">
+                      <button type="button"
+                              class="attendance-icon-button"
+                              data-attendance-button
+                              aria-label="Selecionar frequência">
+                        <%= render "attendance_icon", status: status %>
+                      </button>
+                      <%= select_tag "attendance_status_#{enrollment.id}_#{date}",
+                                     options_for_select(
+                                       [
+                                         ["Selecionar", ""],
+                                         ["Presença", "present"],
+                                         ["Falta", "absent"],
+                                         ["Falta justificada", "justified"],
+                                         ["Atraso", "late"]
+                                       ],
+                                       status
+                                     ),
+                                     class: "attendance-status-dropdown",
+                                     data: { attendance_select: true } %>
+                    </div>
+                  </td>
+                <% end %>
+                <td class="attendance-percentage" data-percentage-for="<%= enrollment.id %>">
+                  <%= percentage.present? ? "#{percentage}%" : "—" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="attendance-legend">
+        <span><span class="legend-icon legend-present">✓</span> Presença</span>
+        <span><span class="legend-icon legend-absent">×</span> Falta</span>
+        <span><span class="legend-icon legend-justified">▤</span> Falta justificada</span>
+        <span><span class="legend-icon legend-late">◷</span> Atraso</span>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <%= maestro_icon :students %>
+        <strong>Nenhum aluno matriculado nesta turma.</strong>
+        <p>Matricule alunos para ver a frequência do mês.</p>
+      </div>
+    <% end %>
+  </details>
+<% end %>

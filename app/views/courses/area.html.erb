@@ -1,0 +1,92 @@
+<div class="page-header">
+  <div>
+    <%= link_to "← Voltar para áreas",
+                courses_path,
+                class: "back-link" %>
+
+    <h1><%= @knowledge_area_name %></h1>
+
+    <p>
+      Disciplinas que pertencem a esta área do conhecimento.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <%= link_to "Catálogo de disciplinas",
+                catalog_courses_path,
+                class: "button button-secondary" %>
+
+    <%= link_to "Nova disciplina",
+                new_course_path,
+                class: "button button-primary" %>
+  </div>
+</div>
+
+<div class="area-title-line area-title-<%= @knowledge_area_color %>">
+  <span class="knowledge-area-tag">
+    <%= @knowledge_area_name %>
+  </span>
+
+  <span>
+    <%= pluralize(
+          @courses.count,
+          "disciplina cadastrada",
+          "disciplinas cadastradas"
+        ) %>
+  </span>
+</div>
+
+<% if @courses.any? %>
+  <div class="discipline-grid">
+    <% @courses.each do |course| %>
+      <article class="discipline-card">
+        <div class="discipline-card-content">
+          <span class="discipline-status <%= course.active? ? "active" : "inactive" %>">
+            <%= course.active? ? "Ativa" : "Inativa" %>
+          </span>
+
+          <h2><%= course.name %></h2>
+
+          <% if course.description.present? %>
+            <p><%= course.description %></p>
+          <% else %>
+            <p class="muted-text">
+              Nenhuma descrição informada.
+            </p>
+          <% end %>
+        </div>
+
+        <div class="discipline-card-actions">
+          <%= link_to "Editar",
+                      edit_course_path(course),
+                      class: "button button-secondary button-small" %>
+
+          <%= button_to "Excluir",
+                        course_path(course),
+                        method: :delete,
+                        class: "button button-danger button-small",
+                        data: {
+                          turbo_confirm: "Deseja excluir esta disciplina?"
+                        } %>
+        </div>
+      </article>
+    <% end %>
+  </div>
+<% else %>
+  <div class="empty-state">
+    <strong>Nenhuma disciplina cadastrada nesta área.</strong>
+
+    <p>
+      Cadastre a primeira disciplina para
+      <%= @knowledge_area_name %>.
+    </p>
+
+    <%= link_to "Escolher do catálogo",
+                catalog_courses_path,
+                class: "button button-primary" %>
+
+    <%= link_to "Cadastrar disciplina",
+                new_course_path,
+                class: "button button-secondary" %>
+  </div>
+<% end %>

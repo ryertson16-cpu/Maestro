@@ -1,0 +1,103 @@
+<div class="profile-page">
+  <div class="profile-header">
+    <div class="profile-photo-area">
+      <% if @professor.profile_photo.attached? %>
+        <%= image_tag @professor.profile_photo,
+                      class: "profile-photo",
+                      alt: "Foto de #{@professor.name}" %>
+      <% else %>
+        <div class="profile-photo-placeholder">
+          <span>
+            <%= @professor.name.presence&.first&.upcase || "P" %>
+          </span>
+        </div>
+      <% end %>
+
+      <p class="profile-photo-label">Foto do professor</p>
+    </div>
+
+    <div class="profile-header-content">
+      <h1>Meu perfil</h1>
+
+      <%= link_to "Editar perfil",
+                  edit_profile_path,
+                  class: "button button-primary" %>
+    </div>
+  </div>
+
+  <section class="profile-card">
+    <h2>Dados pessoais</h2>
+
+    <dl class="profile-details">
+      <div>
+        <dt>Nome</dt>
+        <dd><%= @professor.name.presence || "Não informado" %></dd>
+      </div>
+
+      <div>
+        <dt>E-mail</dt>
+        <dd><%= @professor.email %></dd>
+      </div>
+
+      <div>
+        <dt>Telefone</dt>
+        <dd><%= @professor.phone.presence || "Não informado" %></dd>
+      </div>
+
+      <div>
+        <dt>WhatsApp do Maestro</dt>
+        <dd><%= @professor.whatsapp_number.presence || "Não vinculado" %></dd>
+      </div>
+
+      <div>
+        <dt>Escola ou instituição</dt>
+        <dd><%= @professor.school_name.presence || "Não informado" %></dd>
+      </div>
+
+      <div>
+        <dt>Apresentação</dt>
+        <dd>
+          <%= simple_format(
+                @professor.bio.presence ||
+                "Nenhuma apresentação cadastrada."
+              ) %>
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="profile-card">
+    <div class="profile-section-header">
+      <div>
+        <h2>Disciplinas que leciono</h2>
+        <p>Disciplinas associadas ao seu perfil.</p>
+      </div>
+
+      <%= link_to "Gerenciar disciplinas",
+                  courses_path,
+                  class: "button button-secondary" %>
+    </div>
+
+    <% if @courses.any? %>
+      <div class="course-list">
+        <% @courses.each do |course| %>
+          <div class="course-item">
+            <strong><%= course.name %></strong>
+
+            <% if course.description.present? %>
+              <span><%= course.description %></span>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="profile-empty-state">
+        <p>Nenhuma disciplina cadastrada.</p>
+
+        <%= link_to "Escolher do catálogo",
+                    catalog_courses_path,
+                    class: "button button-primary" %>
+      </div>
+    <% end %>
+  </section>
+</div>

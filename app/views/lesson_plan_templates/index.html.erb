@@ -1,0 +1,45 @@
+<% content_for :title, "Banco de planos | Maestro" %>
+
+<div class="page-header page-header-with-action">
+  <div>
+    <h1>Banco de planos</h1>
+    <p>Reaproveite tema, objetivo, conteúdo, metodologia e habilidades nas aulas.</p>
+  </div>
+  <%= link_to "Novo plano", new_lesson_plan_template_path, class: "button button-primary" %>
+</div>
+
+<section class="data-card">
+  <% if @templates.any? %>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Título</th>
+            <th>Disciplina</th>
+            <th>Habilidades</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @templates.each do |template| %>
+            <tr>
+              <td><%= template.title %></td>
+              <td><%= template.course&.name || "Qualquer" %></td>
+              <td><%= template.skills.presence || "—" %></td>
+              <td class="page-header-actions">
+                <%= link_to "Editar", edit_lesson_plan_template_path(template), class: "button button-secondary button-small" %>
+                <%= button_to "Excluir",
+                              lesson_plan_template_path(template),
+                              method: :delete,
+                              class: "button button-secondary button-small",
+                              data: { turbo_confirm: "Excluir este plano?" } %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p>Nenhum plano salvo. Crie o primeiro para reutilizar no diário.</p>
+  <% end %>
+</section>

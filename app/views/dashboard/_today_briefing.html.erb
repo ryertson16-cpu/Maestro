@@ -1,0 +1,170 @@
+<section class="today-briefing" aria-label="O que fazer hoje">
+  <div class="page-header">
+    <div>
+      <span class="section-eyebrow">Caderno de hoje</span>
+      <h2>Hoje</h2>
+      <p>
+        <%= l(@today.date, format: :long) %>
+        <% if @today.period_label.present? %>
+          <span class="hero-separator">•</span>
+          <%= @today.period_label %>
+        <% end %>
+        <% if @today.calendar_day.present? %>
+          <span class="hero-separator">•</span>
+          <%= @today.calendar_day.kind_label %>
+          <% if @today.calendar_day.name.present? %>
+            (<%= @today.calendar_day.name %>)
+          <% end %>
+        <% end %>
+      </p>
+
+      <ol class="today-week" aria-label="Semana de <%= l(@today.week_days.first.date, format: :long) %> a <%= l(@today.week_days.last.date, format: :long) %>">
+        <% @today.week_days.each do |day| %>
+          <li class="today-week-day<%= " is-current" if day.current %><%= " is-past" if day.past %><%= " is-future" unless day.current || day.past %><%= " is-off" unless day.school_day %>">
+            <span class="today-week-name"><%= day.short_label %></span>
+            <span class="today-week-dot"<% if day.current %> aria-current="date"<% end %>>
+              <span class="visually-hidden"><%= day.name %>, </span>
+              <%= day.date.day %>
+            </span>
+          </li>
+        <% end %>
+      </ol>
+    </div>
+  </div>
+
+  <% unless @today.school_day? %>
+    <p class="today-briefing-note">
+      Não há aula prevista neste dia. As pendências do SIAGE e os alertas continuam abaixo.
+    </p>
+  <% end %>
+
+  <div class="today-notice-row">
+    <%= link_to @current_classroom.present? ? attendance_records_path(classroom_id: @current_classroom.id, attendance_date: @today.date) : attendance_records_path(attendance_date: @today.date),
+                class: "today-notice#{' has-work' if @today.classrooms_waiting_call.any?}" do %>
+      <%= maestro_icon :diary, size: :sm %>
+      <span>
+        <strong><%= @today.classrooms_waiting_call.size %></strong>
+        <small>sem chamada hoje</small>
+      </span>
+    <% end %>
+
+    <%= link_to siage_ledger_path,
+                class: "today-notice today-notice-siage#{' has-work' if @today.siage_pending_count.positive? || @today.siage_failed_count.positive?}" do %>
+      <%= maestro_icon :siage, size: :sm %>
+      <span>
+        <strong><%= @today.siage_pending_count %></strong>
+        <small>
+          <% if @today.siage_failed_count.positive? %>
+            pendentes no SIAGE
+            ·
+            <%= @today.siage_failed_count %>
+            <%= @today.siage_failed_count == 1 ? "falha" : "falhas" %>
+          <% else %>
+            pendentes no SIAGE
+          <% end %>
+        </small>
+      </span>
+    <% end %>
+
+    <%= link_to @current_classroom.present? ? monitoring_path(classroom_id: @current_classroom.id) : monitoring_path,
+                class: "today-notice today-notice-alerts#{' has-work' if @today.monitoring_alert_count.positive?}" do %>
+      <%= maestro_icon :monitoring, size: :sm %>
+      <span>
+        <strong><%= @today.monitoring_alert_count %></strong>
+        <small>alunos em alerta</small>
+      </span>
+    <% end %>
+  </div>
+
+  <% if @today.classrooms_waiting_call.any? %>
+    <div class="today-chip-block">
+      <p>Chamada de hoje</p>
+      <div class="today-chip-row">
+        <% @today.classrooms_waiting_call.each do |classroom| %>
+          <%= link_to classroom.name,
+                      attendance_records_path(
+                        classroom_id: classroom.id,
+                        attendance_date: @today.date
+                      ),
+                      class: "today-chip" %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <% if @today.siage_pending_rows.any? %>
+    <div class="today-chip-block">
+      <p>
+        SIAGE
+        ·
+        <%= link_to "Livro", siage_ledger_path %>
+        ·
+        <%= link_to "Ajuda", siage_help_path %>
+      </p>
+      <div class="today-chip-row">
+        <% @today.siage_pending_rows.each do |row| %>
+          <%= link_to attendance_records_path(
+                        classroom_id: row.classroom.id,
+                        attendance_date: row.lesson.lesson_date
+                      ),
+                      class: "today-chip#{' is-failed' if row.status == 'failed'}" do %>
+            <%= row.classroom.name %>
+            ·
+            <%= l(row.lesson.lesson_date, format: :short) %>
+            <% if row.status == "failed" %>
+              · falhou
+            <% end %>
+          <% end %>
+        <% end %>
+        <% extra = @today.siage_pending_count + @today.siage_failed_count - @today.siage_pending_rows.size %>
+        <% if extra.positive? %>
+          <%= link_to "+#{extra} no livro",
+                      siage_ledger_path,
+                      class: "today-chip today-chip-more" %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <% if @today.slots.any? %>
+    <section class="data-card today-schedule">
+      <div class="section-header">
+        <div>
+          <span class="section-eyebrow">Horário</span>
+          <h2>Tempos de hoje</h2>
+          <p>Do calendário da turma. A chamada e o SIAGE saem do diário de cada tempo.</p>
+        </div>
+      </div>
+
+      <ul class="today-schedule-list">
+        <% @today.slots.each do |slot| %>
+          <% entry = slot.entry %>
+          <li>
+            <%= link_to attendance_records_path(
+                          classroom_id: entry.classroom_id,
+                          attendance_date: @today.date
+                        ),
+                        class: "today-schedule-item#{' is-done' if slot.called}" do %>
+              <strong><%= entry.time_slot_label %></strong>
+              <span>
+                <%= entry.classroom.name %>
+                <% if entry.course.present? %>
+                  · <%= entry.course.name %>
+                <% end %>
+              </span>
+              <em>
+                <% if slot.called %>
+                  Chamada lançada
+                <% elsif slot.lesson.present? %>
+                  Aula registrada · falta conferir chamada
+                <% else %>
+                  Registrar aula e chamada
+                <% end %>
+              </em>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+</section>

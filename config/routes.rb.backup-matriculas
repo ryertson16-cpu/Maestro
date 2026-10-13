@@ -1,0 +1,17 @@
+Rails.application.routes.draw do
+  devise_for :professors
+
+  resources :courses
+  resources :grade_levels
+  resources :classrooms
+  resources :students
+  resources :enrollments
+
+  resources :attendance_records, only: [:index] do
+    collection do
+      post :save
+    end
+  end
+
+  root "dashboard#index"
+end

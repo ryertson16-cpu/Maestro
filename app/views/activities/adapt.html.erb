@@ -1,0 +1,112 @@
+<% content_for :title, @adapted.persisted? ? "Editar atividade adaptada | Maestro" : "Nova atividade adaptada | Maestro" %>
+
+<% parent = @parent || @adapted.parent_activity %>
+
+<div class="page-header page-header-with-action">
+  <div class="activities-page-title">
+    <%= maestro_icon :activities, size: :lg %>
+    <span class="section-eyebrow">Atividades</span>
+    <h1><%= @adapted.persisted? ? "Editar atividade adaptada" : "Nova atividade adaptada" %></h1>
+    <p>
+      Versão para alunos específicos da turma
+      <%= @classroom.name %><% if parent.present? %>, a partir de <%= parent.title %><% end %>.
+    </p>
+  </div>
+
+  <%= link_to "Voltar para atividades",
+              grade_levels_path(classroom_id: @classroom.id, kind: "adapted"),
+              class: "button button-secondary" %>
+</div>
+
+<section class="data-card">
+  <%= form_with model: @adapted,
+                url: @adapted.persisted? ? activity_path(@adapted) : activities_path,
+                method: @adapted.persisted? ? :patch : :post,
+                local: true,
+                class: "form-grid" do |form| %>
+    <%= hidden_field_tag :kind, "adapted" %>
+    <%= form.hidden_field :parent_activity_id, value: parent&.id %>
+
+    <% if @adapted.errors.any? %>
+      <div class="form-field form-field-wide">
+        <p class="muted-text"><%= @adapted.errors.full_messages.to_sentence %></p>
+      </div>
+    <% end %>
+
+    <div class="form-field form-field-wide">
+      <%= form.label :title, "Título" %>
+      <%= form.text_field :title %>
+    </div>
+
+    <div class="form-field">
+      <%= form.label :activity_type, "Tipo" %>
+      <%= form.select :activity_type,
+                       grouped_options_for_select(
+                         Lesson.activity_type_grouped_options,
+                         @adapted.activity_type
+                       ),
+                       { include_blank: "Selecione o tipo" } %>
+    </div>
+
+    <div class="form-field">
+      <%= form.label :adaptation_kind, "Tipo de adaptação" %>
+      <%= form.select :adaptation_kind,
+                       Activity::ADAPTATION_KINDS.map { |value, label| [label, value] } %>
+    </div>
+
+    <div class="form-field">
+      <%= form.label :due_date, "Data de entrega" %>
+      <%= form.date_field :due_date %>
+    </div>
+
+    <div class="form-field">
+      <%= form.label :maximum_score, "Pontuação máxima" %>
+      <%= form.number_field :maximum_score, min: 0, step: 0.01 %>
+    </div>
+
+    <div class="form-field form-field-wide">
+      <span class="activity-type-hint">Nota na média da turma</span>
+      <div class="adapted-mode-list">
+        <% Activity::GRADE_MODES.each do |value, label| %>
+          <label>
+            <%= form.radio_button :grade_mode, value %>
+            <span><%= label %></span>
+          </label>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="form-field form-field-wide">
+      <%= form.label :description, "Questões da atividade" %>
+      <%= form.text_area :description,
+                         rows: 6,
+                         placeholder: "Uma questão por linha. Elas saem no PDF com timbrado." %>
+    </div>
+
+    <div class="form-field form-field-wide">
+      <%= form.label :instructions, "Instruções para os alunos" %>
+      <%= form.text_area :instructions, rows: 4 %>
+    </div>
+
+    <div class="form-field form-field-wide">
+      <span class="form-label">Alunos destinatários</span>
+      <p class="activity-type-hint">Só esses alunos aparecem no lançamento desta versão.</p>
+      <div class="adapted-recipient-list">
+        <% @students.each do |student| %>
+          <label class="adapted-recipient-item">
+            <%= check_box_tag "activity[student_ids][]",
+                              student.id,
+                              @adapted.recipient_student_ids.include?(student.id),
+                              id: "adapted-student-#{student.id}" %>
+            <span><%= student.name %></span>
+          </label>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="form-field form-field-wide">
+      <%= form.submit @adapted.persisted? ? "Salvar atividade adaptada" : "Criar atividade adaptada",
+                      class: "button button-primary" %>
+    </div>
+  <% end %>
+</section>

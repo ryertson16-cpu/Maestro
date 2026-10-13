@@ -1,0 +1,21 @@
+<div class="page-header">
+  <div class="courses-page-title">
+    <%= maestro_icon :courses, size: :lg %>
+    <h1>Editar curso</h1>
+    <p>Atualize os dados básicos do curso.</p>
+  </div>
+</div>
+
+<div class="card form-card">
+  <%= render "form", school_course: @school_course %>
+</div>
+
+<div class="page-actions">
+  <%= link_to "Organizar disciplinas",
+              edit_disciplines_school_course_path(@school_course),
+              class: "button button-secondary" %>
+
+  <%= link_to "Voltar para cursos",
+              courses_path,
+              class: "button button-ghost" %>
+</div>

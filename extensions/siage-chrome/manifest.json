@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Maestro → SIAGE (SEE-PB)",
+  "version": "1.7.6",
+  "description": "Preenche e confirma frequência e notas do Maestro no portal do professor da SEE-PB.",
+  "action": {
+    "default_title": "Maestro → SIAGE",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["https://professor.see.pb.gov.br/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://professor.see.pb.gov.br/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": ["https://professor.see.pb.gov.br/*"],
+      "js": ["page.js"],
+      "run_at": "document_idle",
+      "all_frames": true,
+      "world": "MAIN"
+    }
+  ]
+}

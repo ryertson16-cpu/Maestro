@@ -1,0 +1,15 @@
+<div class="page-header">
+  <div class="courses-page-title">
+    <%= maestro_icon :courses, size: :lg %>
+    <h1>Novo curso</h1>
+    <p>Cadastre um curso para depois vincular suas disciplinas.</p>
+  </div>
+</div>
+
+<div class="card form-card">
+  <%= render "form", school_course: @school_course %>
+</div>
+
+<%= link_to "Voltar para cursos",
+            courses_path,
+            class: "back-link" %>

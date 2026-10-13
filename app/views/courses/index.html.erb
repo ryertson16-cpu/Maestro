@@ -1,0 +1,288 @@
+<div class="page-header">
+  <div class="courses-page-title">
+    <%= maestro_icon :courses, size: :lg %>
+    <h1>Cursos e disciplinas</h1>
+
+    <p>
+      Organize cursos, níveis de ensino e disciplinas da sua instituição.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <%= link_to "Catálogo de disciplinas",
+                catalog_courses_path,
+                class: "button button-primary" %>
+
+    <%= link_to "Novo curso",
+                new_school_course_path,
+                class: "button button-secondary" %>
+
+    <%= link_to "Nova disciplina",
+                new_course_path,
+                class: "button button-secondary" %>
+
+    <%= link_to "Novo nível de ensino",
+                new_grade_level_path,
+                class: "button button-secondary" %>
+  </div>
+</div>
+
+<section class="courses-section">
+  <div class="section-heading">
+    <div>
+      <h2>Níveis de ensino</h2>
+
+      <p>
+        Cadastre os níveis utilizados nas suas turmas.
+      </p>
+    </div>
+
+    <%= link_to "Novo nível de ensino",
+                new_grade_level_path,
+                class: "button button-primary" %>
+  </div>
+
+  <% if @grade_levels.any? %>
+    <div class="grade-levels-grid">
+      <% @grade_levels.each do |grade_level| %>
+        <article class="grade-level-card">
+          <div class="grade-level-card-content">
+            <div class="grade-level-card-header">
+              <h3><%= grade_level.name %></h3>
+
+              <span class="discipline-status <%= grade_level.active? ? "active" : "inactive" %>">
+                <%= grade_level.active? ? "Ativo" : "Inativo" %>
+              </span>
+            </div>
+
+            <% if grade_level.description.present? %>
+              <p><%= grade_level.description %></p>
+            <% else %>
+              <p class="muted-text">
+                Nenhuma descrição informada.
+              </p>
+            <% end %>
+
+            <p class="grade-level-classroom-count">
+              <strong><%= grade_level.classrooms.count %></strong>
+              <%= "turma".pluralize(grade_level.classrooms.count) %>
+            </p>
+          </div>
+
+          <div class="grade-level-actions">
+            <%= link_to "Editar",
+                        edit_grade_level_path(grade_level),
+                        class: "button button-secondary button-small" %>
+
+            <%= button_to "Excluir",
+                          grade_level_path(grade_level),
+                          method: :delete,
+                          class: "button button-danger button-small",
+                          data: {
+                            turbo_confirm: "Deseja excluir este nível de ensino?"
+                          } %>
+          </div>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <strong>Nenhum nível de ensino cadastrado.</strong>
+
+      <p>
+        Cadastre um nível de ensino para utilizá-lo nas turmas.
+      </p>
+
+      <%= link_to "Cadastrar primeiro nível",
+                  new_grade_level_path,
+                  class: "button button-primary" %>
+    </div>
+  <% end %>
+</section>
+
+<section class="courses-section">
+  <div class="section-heading">
+    <div>
+      <h2>Cursos cadastrados</h2>
+
+      <p>
+        Selecione um curso para organizar suas disciplinas.
+      </p>
+    </div>
+  </div>
+
+  <% if @school_courses.any? %>
+    <div class="school-courses-grid">
+      <% @school_courses.each do |school_course| %>
+        <article class="school-course-card">
+          <div>
+            <div class="school-course-card-header">
+              <h3><%= school_course.name %></h3>
+
+              <span class="discipline-status <%= school_course.active? ? "active" : "inactive" %>">
+                <%= school_course.active? ? "Ativo" : "Inativo" %>
+              </span>
+            </div>
+
+            <% if school_course.description.present? %>
+              <p><%= school_course.description %></p>
+            <% end %>
+
+            <p class="school-course-count">
+              <strong><%= school_course.courses.count %></strong>
+              <%= "disciplina".pluralize(school_course.courses.count) %>
+            </p>
+          </div>
+
+          <div class="school-course-actions">
+            <%= link_to "Organizar disciplinas",
+                        edit_disciplines_school_course_path(school_course),
+                        class: "button button-primary button-small" %>
+
+            <%= link_to "Editar curso",
+                        edit_school_course_path(school_course),
+                        class: "button button-secondary button-small" %>
+
+            <%= button_to "Excluir",
+                          school_course_path(school_course),
+                          method: :delete,
+                          class: "button button-danger button-small",
+                          data: {
+                            turbo_confirm: "Deseja excluir este curso?"
+                          } %>
+          </div>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <strong>Nenhum curso cadastrado.</strong>
+
+      <p>
+        Crie o primeiro curso para começar a organizar as disciplinas.
+      </p>
+
+      <%= link_to "Criar primeiro curso",
+                  new_school_course_path,
+                  class: "button button-primary" %>
+    </div>
+  <% end %>
+</section>
+
+<section class="courses-section">
+  <div class="section-heading">
+    <div>
+      <h2>Áreas do conhecimento</h2>
+
+      <p>
+        Acesse as disciplinas cadastradas em cada área.
+        <% unless @technical_base_available %>
+          A Base Técnica fica visível quando o nível Integral Técnica está ativo.
+        <% end %>
+      </p>
+    </div>
+  </div>
+
+  <div class="knowledge-areas-grid">
+    <% @available_knowledge_areas.each do |key, label| %>
+      <% area_courses = @courses.where(knowledge_area: key) %>
+      <% color = Course::KNOWLEDGE_AREA_COLORS.fetch(key) %>
+
+      <%= link_to area_courses_path(key),
+                  class: "knowledge-area-card knowledge-area-#{color}" do %>
+        <div class="knowledge-area-card-top">
+          <span class="knowledge-area-tag">
+            <%= label %>
+          </span>
+
+          <span class="knowledge-area-arrow" aria-hidden="true">
+            →
+          </span>
+        </div>
+
+        <div>
+          <h2><%= label %></h2>
+
+          <p>
+            <%= pluralize(
+                  area_courses.count,
+                  "disciplina cadastrada",
+                  "disciplinas cadastradas"
+                ) %>
+          </p>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</section>
+
+<section class="courses-section">
+  <div class="section-heading">
+    <div>
+      <h2>Todas as disciplinas</h2>
+
+      <p>
+        Cadastre e mantenha o catálogo de disciplinas atualizado.
+      </p>
+    </div>
+
+    <div class="page-actions">
+      <%= link_to "Catálogo de disciplinas",
+                  catalog_courses_path,
+                  class: "button button-primary" %>
+      <%= link_to "Nova disciplina",
+                  new_course_path,
+                  class: "button button-secondary" %>
+    </div>
+  </div>
+
+  <% if @courses.any? %>
+    <div class="discipline-catalog-list">
+      <% @courses.each do |course| %>
+        <article class="discipline-catalog-item">
+          <div>
+            <span class="knowledge-area-tag knowledge-area-<%= course.knowledge_area_color %>">
+              <%= course.knowledge_area_label %>
+            </span>
+
+            <h3><%= course.name %></h3>
+
+            <% if course.description.present? %>
+              <p><%= course.description %></p>
+            <% end %>
+          </div>
+
+          <div class="discipline-catalog-actions">
+            <%= link_to "Editar",
+                        edit_course_path(course),
+                        class: "button button-secondary button-small" %>
+
+            <%= button_to "Excluir",
+                          course_path(course),
+                          method: :delete,
+                          class: "button button-danger button-small",
+                          data: {
+                            turbo_confirm: "Deseja excluir esta disciplina?"
+                          } %>
+          </div>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <strong>Nenhuma disciplina cadastrada.</strong>
+
+      <p>
+        Cadastre disciplinas para vinculá-las aos cursos.
+      </p>
+
+      <%= link_to "Escolher do catálogo",
+                  catalog_courses_path,
+                  class: "button button-primary" %>
+
+      <%= link_to "Cadastrar disciplina",
+                  new_course_path,
+                  class: "button button-secondary" %>
+    </div>
+  <% end %>
+</section>

@@ -1,0 +1,33 @@
+class ProfilesController < ApplicationController
+  before_action :authenticate_professor!
+
+  def show
+    @professor = current_professor
+    @courses = current_professor.courses.order(:name)
+  end
+
+  def edit
+    @professor = current_professor
+  end
+
+  def update
+    @professor = current_professor
+
+    if @professor.update(profile_params)
+      redirect_to profile_path, notice: "Perfil atualizado com sucesso."
+    else
+      render :edit, status: :unprocessable_entity
+    end
+  end
+
+  private
+
+  def profile_params
+    params.require(:professor).permit(
+      :name,
+      :phone,
+      :school_name,
+      :bio
+    )
+  end
+end

@@ -1,0 +1,79 @@
+<% content_for :title, "Escola | Maestro" %>
+
+<div class="profile-page">
+  <div class="profile-header">
+    <div class="profile-photo-area">
+      <% if @school.crest.attached? %>
+        <%= image_tag @school.crest,
+                      class: "school-crest-preview",
+                      alt: "Brasão da escola" %>
+      <% else %>
+        <div class="profile-photo-placeholder">
+          <span>B</span>
+        </div>
+      <% end %>
+      <p class="profile-photo-label">Brasão da escola</p>
+    </div>
+
+    <div class="profile-header-content">
+      <h1>Escola e regional</h1>
+      <p>Esses dados aparecem no Maestro e nos PDFs.</p>
+    </div>
+  </div>
+
+  <% if @school.errors.any? %>
+    <div class="form-errors">
+      <ul>
+        <% @school.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <section class="profile-card">
+    <%= form_with model: @school,
+                  url: school_path,
+                  method: :patch,
+                  multipart: true do |form| %>
+      <div class="profile-form-photo">
+        <%= form.label :crest, "Brasão" %>
+        <%= form.file_field :crest, accept: "image/png,image/jpeg,image/webp" %>
+        <small>Formatos aceitos: JPG, PNG ou WEBP.</small>
+      </div>
+
+      <div class="profile-form-field">
+        <%= form.label :name, "Nome da escola" %>
+        <%= form.text_field :name, required: true %>
+      </div>
+
+      <div class="profile-form-field">
+        <%= form.label :regional, "Regional (GRE)" %>
+        <%= form.select :regional,
+                        School::REGIONALS,
+                        { include_blank: "Selecione a regional" } %>
+      </div>
+
+      <div class="profile-form-field">
+        <%= form.label :regional_other, "Outra regional" %>
+        <%= form.text_field :regional_other,
+                            placeholder: "Preencha se escolheu Outra" %>
+      </div>
+
+      <div class="profile-form-actions">
+        <%= form.submit "Salvar escola", class: "button button-primary" %>
+        <%= link_to "Cancelar", settings_path, class: "button button-secondary" %>
+      </div>
+    <% end %>
+
+    <% if @school.persisted? && @school.crest.attached? %>
+      <div class="profile-remove-photo">
+        <%= button_to "Remover brasão",
+                      remove_crest_school_path,
+                      method: :delete,
+                      class: "button button-danger",
+                      data: { turbo_confirm: "Remover o brasão?" } %>
+      </div>
+    <% end %>
+  </section>
+</div>

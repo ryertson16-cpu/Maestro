@@ -1,0 +1,133 @@
+<div class="profile-page">
+  <div class="profile-header">
+    <div class="profile-photo-area">
+      <% if @professor.profile_photo.attached? %>
+        <%= image_tag @professor.profile_photo,
+                      class: "profile-photo",
+                      alt: "Foto de #{@professor.name}" %>
+      <% else %>
+        <div class="profile-photo-placeholder">
+          <span>
+            <%= @professor.name.presence&.first&.upcase || "P" %>
+          </span>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="profile-header-content">
+      <h1>Editar perfil</h1>
+      <p>Atualize seus dados pessoais e sua foto.</p>
+      <p><%= link_to "Voltar às configurações", settings_path %></p>
+    </div>
+  </div>
+
+  <% if @professor.errors.any? %>
+    <div class="form-errors">
+      <h2>
+        <%= pluralize(@professor.errors.count, "erro") %>
+        impediram o salvamento:
+      </h2>
+
+      <ul>
+        <% @professor.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <section class="profile-card">
+    <%= form_with model: @professor,
+                  url: profile_path,
+                  method: :patch,
+                  multipart: true do |form| %>
+
+      <div class="profile-form-photo">
+        <%= form.label :profile_photo, "Foto do professor" %>
+        <%= form.file_field :profile_photo,
+                            accept: "image/png,image/jpeg,image/webp" %>
+
+        <small>
+          Formatos aceitos: JPG, PNG ou WEBP.
+        </small>
+      </div>
+
+      <div class="profile-form-field">
+        <%= form.label :email, "E-mail de login" %>
+        <%= form.email_field :email, disabled: true %>
+      </div>
+
+      <div class="profile-form-field">
+        <%= form.label :name, "Nome completo" %>
+        <%= form.text_field :name, required: true %>
+      </div>
+
+      <div class="profile-form-field">
+        <%= form.label :preferred_name, "Como gostaria de ser chamado(a)?" %>
+        <%= form.text_field :preferred_name,
+                            maxlength: 80,
+                            placeholder: "Ex.: Ryertson" %>
+        <small>
+          O Maestro usa este nome na saudação depois do login.
+          Se ficar em branco, entra o primeiro nome do cadastro.
+        </small>
+      </div>
+
+      <div class="profile-form-field">
+        <span class="settings-field-label">Sexo</span>
+        <div class="profile-choice-row">
+          <label>
+            <%= form.radio_button :sex, "male" %>
+            Masculino
+          </label>
+          <label>
+            <%= form.radio_button :sex, "female" %>
+            Feminino
+          </label>
+        </div>
+        <small>Define se a saudação usa professor ou professora.</small>
+      </div>
+
+      <div class="profile-form-field">
+        <%= form.label :phone, "Telefone" %>
+        <%= form.telephone_field :phone %>
+      </div>
+
+      <div class="profile-form-field">
+        <%= form.label :whatsapp_number, "WhatsApp do Maestro" %>
+        <%= form.telephone_field :whatsapp_number,
+                                 placeholder: "83999999999" %>
+        <small>
+          Número com DDD. Depois de salvar, o Maestro envia as boas-vindas nesse WhatsApp
+          (se o canal estiver configurado no servidor). Automações também usam este número.
+        </small>
+      </div>
+
+      <div class="profile-form-field">
+        <%= form.label :bio, "Apresentação profissional" %>
+        <%= form.text_area :bio, rows: 5 %>
+      </div>
+
+      <div class="profile-form-actions">
+        <%= form.submit "Salvar perfil",
+                        class: "button button-primary" %>
+
+        <%= link_to "Cancelar",
+                    settings_path,
+                    class: "button button-secondary" %>
+      </div>
+    <% end %>
+
+    <% if @professor.profile_photo.attached? %>
+      <div class="profile-remove-photo">
+        <%= button_to "Remover foto",
+                      remove_photo_profile_path,
+                      method: :delete,
+                      class: "button button-danger",
+                      data: {
+                        turbo_confirm: "Deseja remover sua foto?"
+                      } %>
+      </div>
+    <% end %>
+  </section>
+</div>

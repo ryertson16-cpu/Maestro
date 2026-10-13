@@ -1,0 +1,252 @@
+<% records = local_assigns[:records] || {} %>
+<% prefix = "lessons[#{slot_key}]" %>
+<% field_id = ->(name) { first ? "lesson_#{name}" : "lesson_#{slot_key}_#{name}" } %>
+<% tempo_label = lesson.siage_time_slot.presence || "1º tempo" %>
+<% course_label = lesson.course&.name.presence || "Disciplina" %>
+<% summary = local_assigns[:summary] %>
+
+<section class="data-card diary-tempo-block<%= " timetable-import-card" if show_pdf %>"
+         data-attendance-block
+         <% if show_pdf %>data-timetable-import<% end %>
+         id="tempo-<%= slot_key %>">
+  <div class="lesson-form-header">
+    <div>
+      <span class="section-eyebrow">Tempo</span>
+      <h2><%= tempo_label %><% if lesson.course.present? %> · <%= course_label %><% end %></h2>
+      <p>Chamada deste tempo.</p>
+    </div>
+    <% if lesson.persisted? %>
+      <%= render "lessons/delete_button",
+                 lesson: lesson,
+                 return_to: "diary",
+                 compact: true %>
+    <% end %>
+  </div>
+
+  <%= hidden_field_tag "#{prefix}[id]", lesson.id if lesson.persisted? %>
+  <%= hidden_field_tag "#{prefix}[objective]", lesson.objective, id: field_id.call("objective") %>
+  <%= hidden_field_tag "#{prefix}[content]", lesson.content, id: field_id.call("content") %>
+  <%= hidden_field_tag "#{prefix}[methodology]", lesson.methodology, id: field_id.call("methodology") %>
+  <%= hidden_field_tag "#{prefix}[siage_class_mode]",
+                       lesson.siage_class_mode.presence || "Aula",
+                       id: field_id.call("siage_class_mode") %>
+  <%= hidden_field_tag "#{prefix}[siage_class_type]",
+                       lesson.siage_class_type.presence || "Avulso",
+                       id: field_id.call("siage_class_type") %>
+
+  <div class="form-grid diary-lesson-grid">
+    <div class="form-field">
+      <%= label_tag field_id.call("course_id"), "Disciplina" %>
+      <%= select_tag "#{prefix}[course_id]",
+                     options_from_collection_for_select(
+                       @courses,
+                       :id,
+                       :name,
+                       lesson.course_id
+                     ),
+                     include_blank: "Selecione a disciplina",
+                     id: field_id.call("course_id"),
+                     required: true %>
+    </div>
+
+    <div class="form-field">
+      <%= label_tag field_id.call("lesson_plan_template_id"), "Plano do banco" %>
+      <%= select_tag "#{prefix}[lesson_plan_template_id]",
+                     options_from_collection_for_select(
+                       @plan_templates || [],
+                       :id,
+                       :title,
+                       lesson.lesson_plan_template_id
+                     ),
+                     include_blank: "Nenhum",
+                     id: field_id.call("lesson_plan_template_id") %>
+    </div>
+
+    <div class="form-field">
+      <%= label_tag field_id.call("siage_time_slot"), "Tempo" %>
+      <%= select_tag "#{prefix}[siage_time_slot]",
+                     options_for_select(
+                       Siage::TIME_SLOTS,
+                       lesson.siage_time_slot.presence || "1º tempo"
+                     ),
+                     id: field_id.call("siage_time_slot") %>
+    </div>
+
+    <div class="form-field">
+      <%= label_tag field_id.call("siage_period"), "Período" %>
+      <%= select_tag "#{prefix}[siage_period]",
+                     options_for_select(
+                       Siage::PERIODS,
+                       lesson.siage_period.presence || Siage.period_for_date(@attendance_date)
+                     ),
+                     id: field_id.call("siage_period") %>
+    </div>
+
+    <div class="form-field form-field-wide">
+      <%= label_tag field_id.call("theme"), "Tema (opcional)" %>
+      <%= text_field_tag "#{prefix}[theme]",
+                         lesson.theme,
+                         id: field_id.call("theme"),
+                         placeholder: "Se vazio, usa Aula de + disciplina" %>
+    </div>
+  </div>
+
+  <% if show_pdf %>
+    <div class="timetable-import-actions">
+      <label class="button button-secondary timetable-file-label">
+        Anexar PDF do horário da escola
+        <input
+          type="file"
+          accept="application/pdf,.pdf"
+          data-timetable-file
+          hidden
+        >
+      </label>
+
+      <button
+        type="button"
+        class="button button-secondary"
+        data-timetable-generate
+        data-timetable-url="<%= generate_from_timetable_lessons_path %>"
+      >
+        Gerar aula pelo horário da escola
+      </button>
+    </div>
+    <p class="timetable-file-name" data-timetable-filename>Nenhum arquivo anexado.</p>
+    <p class="timetable-status" data-timetable-status hidden></p>
+  <% end %>
+
+  <% if summary %>
+    <section class="attendance-summary" aria-label="Resumo deste tempo">
+      <article class="summary-card summary-total">
+        <span class="summary-label">Total</span>
+        <strong data-summary-count="total"><%= summary[:total] %></strong>
+      </article>
+      <article class="summary-card summary-present">
+        <span class="summary-label">Presentes</span>
+        <strong data-summary-count="present"><%= summary[:present] %></strong>
+      </article>
+      <article class="summary-card summary-absent">
+        <span class="summary-label">Ausentes</span>
+        <strong data-summary-count="absent"><%= summary[:absent] %></strong>
+      </article>
+      <article class="summary-card summary-justified">
+        <span class="summary-label">Justificados</span>
+        <strong data-summary-count="justified"><%= summary[:justified] %></strong>
+      </article>
+      <article class="summary-card summary-late">
+        <span class="summary-label">Atraso</span>
+        <strong data-summary-count="late"><%= summary[:late] %></strong>
+      </article>
+    </section>
+  <% end %>
+
+  <div class="attendance-list">
+    <div class="attendance-list-header">
+      <p>
+        Todos começam presentes (verde). Desligue para falta (vermelho).
+        Atraso (laranja) vai como presente no SIAGE.
+      </p>
+    </div>
+
+    <% if enrollments.any? %>
+      <div class="attendance-table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Presença</th>
+              <th>Atrasado</th>
+              <th>Falta justificada</th>
+              <th>Observações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% enrollments.each do |enrollment| %>
+              <% attendance_record = records[enrollment.id] %>
+              <% status = attendance_record&.status || "present" %>
+              <tr data-attendance-row>
+                <td>
+                  <strong><%= enrollment.student.name %></strong>
+                </td>
+                <td class="attendance-status-cell status-<%= status %>">
+                  <%= hidden_field_tag(
+                    "attendance[#{slot_key}][#{enrollment.id}][status]",
+                    status,
+                    data: { attendance_status: true }
+                  ) %>
+                  <button
+                    type="button"
+                    class="attendance-switch"
+                    role="switch"
+                    aria-checked="<%= status == "absent" ? "false" : "true" %>"
+                    aria-label="Presença"
+                    data-attendance-switch
+                  >
+                    <span class="attendance-switch-track"></span>
+                    <span class="attendance-switch-knob"></span>
+                  </button>
+                </td>
+                <td>
+                  <label class="attendance-flag" for="attendance_late_<%= slot_key %>_<%= enrollment.id %>">
+                    <input
+                      type="checkbox"
+                      id="attendance_late_<%= slot_key %>_<%= enrollment.id %>"
+                      <%= "checked" if status == "late" %>
+                      data-attendance-late
+                    >
+                    Atrasado
+                  </label>
+                </td>
+                <td>
+                  <label class="attendance-flag" for="attendance_justified_<%= slot_key %>_<%= enrollment.id %>">
+                    <input
+                      type="checkbox"
+                      id="attendance_justified_<%= slot_key %>_<%= enrollment.id %>"
+                      <%= "checked" if status == "justified" %>
+                      data-attendance-justified
+                    >
+                    Falta justificada
+                  </label>
+                </td>
+                <td>
+                  <%= text_field_tag(
+                    "attendance[#{slot_key}][#{enrollment.id}][notes]",
+                    attendance_record&.notes,
+                    placeholder: "Opcional",
+                    class: "attendance-notes-input"
+                  ) %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="attendance-actions">
+        <span class="attendance-help">
+          <%= enrollments.size %> aluno(s) neste tempo
+        </span>
+        <div class="attendance-actions-buttons">
+          <button type="button" class="button button-secondary" data-attendance-mark-all>
+            Marcar todos presentes neste tempo
+          </button>
+          <% if lesson.persisted? %>
+            <%= submit_tag "Salvar e baixar este tempo",
+                           formaction: save_and_export_attendance_records_path,
+                           name: "export_lesson_id",
+                           value: lesson.id,
+                           class: "button button-secondary",
+                           disabled: status_filter.present?,
+                           data: { disable_with: "Salvando…" } %>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <strong>Nenhum aluno neste recorte.</strong>
+        <p>Não há alunos correspondentes ao filtro selecionado.</p>
+      </div>
+    <% end %>
+  </div>
+</section>

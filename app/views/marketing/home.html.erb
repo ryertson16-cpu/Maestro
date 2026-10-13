@@ -1,0 +1,229 @@
+<% content_for :title, "Maestro — caderno digital do professor" %>
+<% trial_days = Billing::Config::TRIAL_DAYS %>
+<% monthly = number_to_currency(Billing::Config::MONTHLY_PRICE, unit: "R$ ", separator: ",", delimiter: ".") %>
+
+<header class="vitrine-top">
+  <%= link_to marketing_home_path, class: "vitrine-brand", aria: { label: "Maestro" } do %>
+    <%= maestro_logo_tag(:header) %>
+  <% end %>
+
+  <nav class="vitrine-nav" aria-label="Vitrine">
+    <a href="#caderno">O caderno</a>
+    <a href="#modulos">O que você faz</a>
+    <a href="#siage">SIAGE</a>
+    <a href="#preco">Preço</a>
+  </nav>
+
+  <div class="vitrine-top-actions">
+    <button
+      type="button"
+      class="auth-theme-chip vitrine-theme"
+      data-theme-toggle
+      role="switch"
+      aria-checked="false"
+      aria-label="Modo noturno"
+    >
+      <%= maestro_icon :moon, size: :sm, html_class: "auth-theme-moon" %>
+      <%= maestro_icon :sun, size: :sm, html_class: "auth-theme-sun" %>
+    </button>
+    <%= link_to "Entrar", new_professor_session_path, class: "vitrine-link-quiet" %>
+    <%= link_to new_professor_registration_path, class: "vitrine-btn-lime" do %>
+      Criar conta
+      <%= maestro_icon :arrow, size: :sm %>
+    <% end %>
+  </div>
+</header>
+
+<section class="vitrine-hero" id="caderno">
+  <nav class="vitrine-rail" aria-label="Atalhos">
+    <a href="#caderno" title="Início"><%= maestro_icon :diary %></a>
+    <a href="#modulos" title="Módulos"><%= maestro_icon :classrooms %></a>
+    <a href="#siage" title="SIAGE"><%= maestro_icon :siage %></a>
+    <a href="#whatsapp" title="WhatsApp"><%= maestro_icon :chat %></a>
+  </nav>
+
+  <div class="vitrine-hero-copy">
+    <p class="vitrine-kicker">Caderno digital do professor</p>
+    <h1>
+      O caderno que
+      <span>libera</span>
+      o seu dia na escola
+    </h1>
+    <p class="vitrine-lead">
+      Chamada, notas, SIAGE e conversa no WhatsApp na mesma conta.
+      Você entra pelo site, fixa no PC e consulta o caderno mesmo com o computador desligado.
+    </p>
+    <%= link_to new_professor_registration_path, class: "vitrine-btn-lime vitrine-btn-lg" do %>
+      Começar os <%= trial_days %> dias
+      <%= maestro_icon :arrow, size: :sm %>
+    <% end %>
+  </div>
+
+  <div class="vitrine-hero-stage" aria-hidden="true">
+    <span class="vitrine-blob"></span>
+    <%= image_tag "maestro-m-neon.png",
+                  class: "vitrine-hero-mark",
+                  alt: "" %>
+  </div>
+</section>
+
+<section class="vitrine-pillars" id="siage">
+  <p class="vitrine-pillars-kicker">Feito para a sala, não para a secretaria</p>
+  <div class="vitrine-pillars-grid">
+    <article>
+      <%= maestro_icon :diary %>
+      <h2>Diário e chamada</h2>
+      <p>Aulas, presença e justificadas no calendário letivo. Atraso não vira falta.</p>
+    </article>
+    <article>
+      <%= maestro_icon :activities %>
+      <h2>Notas na sua mão</h2>
+      <p>Atividades e médias bimestrais. Projeto de turma fica no projeto — não entra na unidade do SIAGE.</p>
+    </article>
+    <article>
+      <%= maestro_icon :siage %>
+      <h2>SIAGE da sua turma</h2>
+      <p>Livro-razão e export das 3 unidades. O Maestro não preenche REC GLOBAL por você.</p>
+    </article>
+    <article>
+      <%= maestro_icon :chat %>
+      <h2>WhatsApp e PC</h2>
+      <p>Mande hoje, turmas ou o nome do aluno. É o mesmo caderno, no celular e no atalho do Windows.</p>
+    </article>
+  </div>
+</section>
+
+<section class="vitrine-picks" id="modulos">
+  <div class="vitrine-picks-head">
+    <h2>O que o professor faz no Maestro</h2>
+    <p>Tudo isso entra no plano mensal. Sem módulo extra.</p>
+  </div>
+
+  <div class="vitrine-picks-grid">
+    <article>
+      <%= image_tag "diary-icon.png", alt: "" %>
+      <h3>Diário de classe</h3>
+      <p>Planeje a aula, registre a chamada e acompanhe o dia letivo.</p>
+      <span>Incluso</span>
+    </article>
+    <article>
+      <%= image_tag "classrooms-icon.png", alt: "" %>
+      <h3>Turmas e alunos</h3>
+      <p>Cadastre turmas, importe a lista e veja cada aluno no mesmo lugar.</p>
+      <span>Incluso</span>
+    </article>
+    <article>
+      <%= image_tag "siage-icon.png", alt: "" %>
+      <h3>SIAGE</h3>
+      <p>Organize o lançamento das unidades e exporte o que a extensão precisa.</p>
+      <span>Incluso</span>
+    </article>
+    <article>
+      <%= image_tag "maestro-assistant.png", alt: "", class: "vitrine-pick-lira" %>
+      <h3>Lira no WhatsApp</h3>
+      <p>Pergunte pelo caderno como no computador. A conta é a mesma.</p>
+      <span>Incluso</span>
+    </article>
+  </div>
+</section>
+
+<section class="vitrine-stats" id="preco">
+  <div>
+    <strong><%= monthly %></strong>
+    <span>por mês, no PIX</span>
+  </div>
+  <div>
+    <strong><%= trial_days %> dias</strong>
+    <span>para testar o caderno pleno</span>
+  </div>
+  <div>
+    <strong>Site + PC</strong>
+    <span>navegador e atalho Windows</span>
+  </div>
+  <div>
+    <strong>WhatsApp</strong>
+    <span>caderno na palma da mão</span>
+  </div>
+</section>
+
+<section class="vitrine-close" id="whatsapp">
+  <div class="vitrine-close-photo">
+    <%= link_to new_professor_session_path,
+                class: "vitrine-laptop",
+                aria: { label: "Abrir a página de login do Maestro" } do %>
+      <span class="vitrine-laptop-lid">
+        <span class="vitrine-laptop-camera"></span>
+        <span class="vitrine-laptop-screen">
+          <span class="vitrine-login-preview">
+            <span class="vitrine-login-mark">
+              <%= maestro_assistant_mark(size: :sm) %>
+            </span>
+            <strong>Bem-vindo de volta</strong>
+            <em>Entre para continuar</em>
+            <span class="vitrine-login-field">E-mail</span>
+            <span class="vitrine-login-field">Senha</span>
+            <span class="vitrine-login-btn">Entrar</span>
+            <span class="vitrine-login-social">
+              <i></i><i></i><i></i>
+            </span>
+          </span>
+        </span>
+      </span>
+      <span class="vitrine-laptop-hinge"></span>
+      <span class="vitrine-laptop-base"></span>
+    <% end %>
+  </div>
+  <blockquote>
+    <p>
+      O Maestro entrega mais do que um caderno digital: entrega o dia do professor
+      organizado — da chamada ao SIAGE, do site ao WhatsApp.
+    </p>
+  </blockquote>
+  <figure class="vitrine-phone" aria-label="Conversa do professor com o Maestro no WhatsApp">
+    <span class="vitrine-phone-notch" aria-hidden="true"></span>
+    <header class="vitrine-phone-bar">
+      <%= image_tag "maestro-m-neon.png", alt: "", class: "vitrine-phone-avatar" %>
+      <span>
+        <strong>Maestro</strong>
+        <em>online</em>
+      </span>
+    </header>
+    <div class="vitrine-phone-thread">
+      <p class="vitrine-bubble is-out">hoje</p>
+      <p class="vitrine-bubble is-in">
+        Tudo bem, professor. Olha o que tem para hoje.
+        <br><br>
+        📚 Hoje · terça-feira (11/10)
+        <br>
+        📚 7h30 · 6º A (⚠️ falta chamada)
+        <br>
+        📚 9h10 · 8º B (✨ chamada ok)
+        <br>
+        ✅ Chamada em aberto: 6º A.
+        <br>
+        📤 SIAGE: 2 pendente(s).
+      </p>
+      <p class="vitrine-bubble is-out">turmas</p>
+      <p class="vitrine-bubble is-in">
+        Tudo bem, professor. Seguem as turmas.
+        <br><br>
+        📋 Turmas:
+        <br>
+        📋 6º A (2026, manhã): 32 aluno(s)
+        <br>
+        📋 8º B (2026, tarde): 28 aluno(s)
+      </p>
+    </div>
+    <div class="vitrine-phone-composer" aria-hidden="true">Mensagem</div>
+  </figure>
+</section>
+
+<p class="vitrine-legal">
+  <%= link_to "Baixar", download_maestro_path %>
+  ·
+  <%= link_to "Já tenho conta", new_professor_session_path %>
+  ·
+  <%= link_to "Privacidade", privacy_policy_path %>
+  ·
+  <%= link_to "Empresa", company_path %>
+</p>

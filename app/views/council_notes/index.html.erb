@@ -1,0 +1,40 @@
+<% content_for :title, "Conselho de classe | Maestro" %>
+
+<div class="page-header page-header-with-action">
+  <div>
+    <h1>Conselho de classe</h1>
+    <p>Parecer descritivo por aluno, gerado com os dados do Maestro. Revise antes de usar.</p>
+  </div>
+</div>
+
+<section class="attendance-filter">
+  <%= form_with url: council_notes_path, method: :get, local: true do %>
+    <%= hidden_field_tag :classroom_id, @classroom.id %>
+    <div>
+      <%= label_tag :bimester, "Bimestre" %>
+      <%= select_tag :bimester, options_for_select((1..4).map { |n| ["#{n}º", n] }, @bimester) %>
+    </div>
+    <%= submit_tag "Abrir", class: "button button-secondary" %>
+  <% end %>
+
+  <%= button_to "Gerar pareceres",
+                generate_council_notes_path,
+                method: :post,
+                params: { classroom_id: @classroom.id, bimester: @bimester },
+                class: "button button-primary" %>
+</section>
+
+<% @students.each do |student| %>
+  <% note = @notes[student.id] %>
+  <section class="data-card">
+    <h2><%= student.name %></h2>
+    <% if note %>
+      <%= form_with url: council_note_path(note), method: :patch, local: true do %>
+        <%= text_area_tag :body, note.body, rows: 5 %>
+        <%= submit_tag "Salvar parecer", class: "button button-primary" %>
+      <% end %>
+    <% else %>
+      <p>Ainda sem parecer. Clique em Gerar pareceres.</p>
+    <% end %>
+  </section>
+<% end %>

@@ -1,0 +1,48 @@
+<div class="page-header page-header-with-action">
+  <div>
+    <h1>Detalhes da matrícula</h1>
+    <p>Informações do vínculo entre aluno e turma.</p>
+  </div>
+
+  <%= link_to "Voltar para matrículas",
+              enrollments_path,
+              class: "button button-secondary" %>
+</div>
+
+<section class="detail-card">
+  <dl class="detail-list">
+    <div>
+      <dt>Aluno</dt>
+      <dd>
+        <%= link_to @enrollment.student.name,
+                    student_path(@enrollment.student) %>
+      </dd>
+    </div>
+
+    <div>
+      <dt>Turma</dt>
+      <dd>
+        <%= link_to @enrollment.classroom.name,
+                    classroom_path(@enrollment.classroom) %>
+      </dd>
+    </div>
+
+    <div>
+      <dt>Data da matrícula</dt>
+      <dd><%= l(@enrollment.enrolled_on, format: :long) %></dd>
+    </div>
+
+    <div>
+      <dt>Status</dt>
+      <dd>
+        <% if @enrollment.status == "active" %>
+          Ativa
+        <% elsif @enrollment.status == "finished" %>
+          Encerrada
+        <% else %>
+          Cancelada
+        <% end %>
+      </dd>
+    </div>
+  </dl>
+</section>

@@ -1,0 +1,93 @@
+<%= form_with model: classroom do |form| %>
+  <% if classroom.errors.any? %>
+    <div class="form-errors">
+      <h2>
+        <%= pluralize(
+              classroom.errors.count,
+              "erro",
+              "erros"
+            ) %>
+        impediram o salvamento:
+      </h2>
+
+      <ul>
+        <% classroom.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="field">
+    <%= form.label :name, "Nome da turma" %>
+
+    <%= form.text_field :name,
+                        required: true,
+                        placeholder: "Ex.: 1ª Administração" %>
+  </div>
+
+  <div class="field">
+    <%= form.label :school_course_id, "Curso" %>
+
+    <%= form.collection_select :school_course_id,
+                               @school_courses,
+                               :id,
+                               :name,
+                               {
+                                 prompt: "Selecione um curso",
+                                 selected: classroom.school_course_id
+                               },
+                               required: true %>
+  </div>
+
+  <div class="field">
+    <%= form.label :grade_level_id, "Nível de ensino" %>
+
+    <%= form.collection_select :grade_level_id,
+                               @grade_levels,
+                               :id,
+                               :name,
+                               {
+                                 prompt: "Selecione um nível de ensino",
+                                 selected: classroom.grade_level_id
+                               },
+                               required: true %>
+  </div>
+
+  <div class="field">
+    <%= form.label :school_year, "Ano letivo" %>
+
+    <%= form.number_field :school_year,
+                          min: 2000,
+                          max: 2100,
+                          required: true %>
+  </div>
+
+  <div class="field">
+    <%= form.label :shift, "Turno" %>
+
+    <%= form.select :shift,
+                    [
+                      ["Manhã", "morning"],
+                      ["Tarde", "afternoon"],
+                      ["Noite", "evening"],
+                      ["Integral", "full_time"]
+                    ],
+                    {
+                      prompt: "Selecione um turno",
+                      selected: classroom.shift
+                    } %>
+  </div>
+
+  <div class="field checkbox-field">
+    <%= form.check_box :active %>
+    <%= form.label :active, "Ativa" %>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit(
+          classroom.persisted? ? "Atualizar turma" : "Criar turma",
+          class: "button button-primary"
+        ) %>
+  </div>
+<% end %>

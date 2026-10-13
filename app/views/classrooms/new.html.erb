@@ -1,0 +1,15 @@
+<div class="page-header">
+  <div class="classrooms-page-title">
+    <%= maestro_icon :classrooms, size: :lg %>
+    <h1>Nova turma</h1>
+    <p>Cadastre uma turma vinculada a um curso e a um nível de ensino.</p>
+  </div>
+</div>
+
+<div class="card form-card">
+  <%= render "form", classroom: @classroom %>
+</div>
+
+<%= link_to "Voltar",
+            classrooms_path,
+            class: "back-link" %>

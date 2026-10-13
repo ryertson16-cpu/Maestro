@@ -1,0 +1,69 @@
+<section class="auth-card">
+  <div class="auth-mark-wrap">
+    <%= maestro_assistant_mark(size: :hero) %>
+  </div>
+
+  <h1>Comece o caderno</h1>
+  <p class="auth-lead"><%= Billing::Config::TRIAL_DAYS %> dias para usar o Maestro em sua forma plena</p>
+
+  <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { class: "auth-form" }) do |f| %>
+    <%= render "devise/shared/error_messages", resource: resource %>
+
+    <div class="auth-field">
+      <%= f.label :name, "Nome", class: "visually-hidden" %>
+      <div class="auth-input">
+        <%= maestro_icon :user, size: :sm, html_class: "auth-input-icon" %>
+        <%= f.text_field :name,
+                         autofocus: true,
+                         autocomplete: "name",
+                         required: true,
+                         placeholder: "Seu nome" %>
+      </div>
+    </div>
+
+    <div class="auth-field">
+      <%= f.label :email, "E-mail", class: "visually-hidden" %>
+      <div class="auth-input">
+        <%= maestro_icon :mail, size: :sm, html_class: "auth-input-icon" %>
+        <%= f.email_field :email,
+                          autocomplete: "email",
+                          required: true,
+                          placeholder: "E-mail" %>
+      </div>
+    </div>
+
+    <div class="auth-field">
+      <%= f.label :password, "Senha", class: "visually-hidden" %>
+      <div class="auth-input">
+        <%= maestro_icon :lock, size: :sm, html_class: "auth-input-icon" %>
+        <%= f.password_field :password,
+                             autocomplete: "new-password",
+                             required: true,
+                             placeholder: "Senha (mínimo 6 caracteres)",
+                             id: "professor_password" %>
+        <button
+          type="button"
+          class="auth-password-toggle"
+          data-password-toggle="professor_password"
+          aria-label="Mostrar senha"
+        >
+          <%= maestro_icon :eye, size: :sm, html_class: "auth-eye" %>
+          <%= maestro_icon :eye_off, size: :sm, html_class: "auth-eye-off" %>
+        </button>
+      </div>
+    </div>
+
+    <%= f.button class: "auth-submit" do %>
+      <span>Criar conta</span>
+      <%= maestro_icon :arrow, size: :sm %>
+    <% end %>
+  <% end %>
+
+  <%= render "devise/shared/oauth" %>
+
+  <p class="auth-signup">
+    Já tem conta?
+    <%= link_to "Entrar", new_professor_session_path %>
+  </p>
+  <p class="auth-tagline">Depois você assina por R$ 49,90 por mês.</p>
+</section>

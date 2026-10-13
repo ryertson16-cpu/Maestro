@@ -1,0 +1,42 @@
+<% case status %>
+<% when "present" %>
+  <svg
+    class="attendance-icon attendance-icon-present"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+  >
+    <path d="M5 12.5l4 4L19 7" />
+  </svg>
+
+<% when "absent" %>
+  <svg
+    class="attendance-icon attendance-icon-absent"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+  >
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+
+<% when "justified" %>
+  <svg
+    class="attendance-icon attendance-icon-justified"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+  >
+    <path d="M7 3h7l4 4v14H7z" />
+    <path d="M14 3v5h4M10 13h5M10 17h5" />
+  </svg>
+
+<% when "late" %>
+  <svg
+    class="attendance-icon attendance-icon-late"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="8" />
+    <path d="M12 7v5l3 2" />
+  </svg>
+
+<% else %>
+  <span class="attendance-empty-icon">+</span>
+<% end %>

@@ -1,0 +1,108 @@
+<% content_for :title, "Projetos | Maestro" %>
+
+<div class="page-header page-header-with-action">
+  <div class="projects-page-title">
+    <%= maestro_icon :projects, size: :lg %>
+    <h1>Projetos</h1>
+    <p>
+      Acompanhe projetos de turma, Professor Nota 10 e Escola Nota 10.
+      Eles não entram no diário, nas notas do bimestre nem no SIAGE.
+    </p>
+  </div>
+  <%= link_to "Novo projeto", new_project_path, class: "button button-primary" %>
+</div>
+
+<% if @overdue_count.to_i.positive? %>
+  <section class="projects-overdue-banner">
+    <%= maestro_icon :target, size: :sm %>
+    <div>
+      <strong><%= pluralize(@overdue_count, "projeto com etapa atrasada", "projetos com etapas atrasadas") %></strong>
+      <p>O atraso da etapa não gera falta e não altera nota.</p>
+    </div>
+  </section>
+<% end %>
+
+<section class="projects-start-grid">
+  <%= link_to new_project_path(kind: "classroom"), class: "projects-start-card" do %>
+    <%= maestro_icon :classrooms, size: :sm %>
+    <strong>Projeto de turma</strong>
+    <span>Uma ou várias turmas, com alunos vinculados.</span>
+  <% end %>
+  <%= link_to new_project_path(kind: "professor_nota_10"), class: "projects-start-card" do %>
+    <%= maestro_icon :target, size: :sm %>
+    <strong>Professor Nota 10</strong>
+    <span>Etapas prontas para o seu percurso formativo.</span>
+  <% end %>
+  <%= link_to new_project_path(kind: "school_nota_10"), class: "projects-start-card" do %>
+    <%= maestro_icon :pin, size: :sm %>
+    <strong>Escola Nota 10</strong>
+    <span>Plano da escola, evidências e relatório para a GRE.</span>
+  <% end %>
+</section>
+
+<div class="projects-filters">
+  <%= link_to "Todos",
+              projects_path,
+              class: ["chip", ("is-active" if @kind_filter.blank? && @status_filter.blank?)].compact.join(" ") %>
+  <% Project::KINDS.each do |value, label| %>
+    <%= link_to label,
+                projects_path(kind: value),
+                class: ["chip", ("is-active" if @kind_filter == value)].compact.join(" ") %>
+  <% end %>
+  <% Project::STATUSES.each do |value, label| %>
+    <%= link_to label,
+                projects_path(status: value, kind: @kind_filter),
+                class: ["chip", ("is-active" if @status_filter == value)].compact.join(" ") %>
+  <% end %>
+</div>
+
+<% if @projects.any? %>
+  <section class="monitoring-classrooms-section">
+    <div class="monitoring-classrooms-grid">
+      <% @projects.each do |project| %>
+        <%= link_to project_path(project),
+                    class: "monitoring-classroom-card project-card" do %>
+          <div class="monitoring-classroom-card-top">
+            <div>
+              <%= maestro_icon :target, size: :sm %>
+              <h3><%= project.title %></h3>
+            </div>
+            <span class="monitoring-classroom-badge<%= " is-ok" if project.status == "completed" %>">
+              <%= project.status_label %>
+            </span>
+          </div>
+
+          <div class="monitoring-classroom-card-info">
+            <span><%= project.kind_label %></span>
+            <span><%= project.audience_label %></span>
+            <% if project.classrooms.any? %>
+              <span><%= project.classrooms.map(&:name).join(", ") %></span>
+            <% end %>
+            <span><%= project.progress %>% concluído</span>
+          </div>
+
+          <% if project.overdue_stages.any? %>
+            <p class="project-card-overdue">
+              Atrasado: <%= project.overdue_stages.map(&:title).to_sentence %>
+            </p>
+          <% elsif project.next_stage.present? %>
+            <p class="project-card-next">
+              Próxima etapa: <%= project.next_stage.title %>
+            </p>
+          <% end %>
+
+          <div class="project-progress" aria-hidden="true">
+            <span style="width: <%= project.progress %>%"></span>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  </section>
+<% else %>
+  <section class="empty-state">
+    <%= maestro_icon :target %>
+    <strong>Nenhum projeto ainda.</strong>
+    <p>Comece por um projeto de turma ou pelo Professor Nota 10.</p>
+    <%= link_to "Novo projeto", new_project_path, class: "button button-primary" %>
+  </section>
+<% end %>

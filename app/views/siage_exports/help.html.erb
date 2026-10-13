@@ -1,0 +1,121 @@
+<% content_for :title, "SIAGE — Maestro" %>
+
+<div class="page-header">
+  <div class="siage-page-title">
+    <%= maestro_icon :siage, size: :lg %>
+    <h1>Vínculo com o SIAGE (SEE-PB)</h1>
+    <p>
+      O Maestro baixa um arquivo <strong>JSON</strong>. A extensão
+      <strong>Maestro → SIAGE 1.7.6</strong> lê esse arquivo e preenche
+      o portal <code>professor.see.pb.gov.br</code>. Ela não conversa
+      sozinha com o caderno: é JSON + clique na tela certa.
+    </p>
+  </div>
+</div>
+
+<section class="data-card siage-help-card">
+  <h2>O que a extensão 1.7.6 faz</h2>
+  <ul class="siage-help-list">
+    <li>
+      Carrega o JSON da aula, da frequência ou das notas.
+    </li>
+    <li>
+      Na tela de <strong>registro de aula</strong>, escolhe mês e dia no
+      calendário, preenche a aula e clica em Registrar e Salvar.
+    </li>
+    <li>
+      Na tela de <strong>frequência</strong>, casa o nome do aluno e liga
+      o interruptor. Presente e atraso ficam no verde
+      (<strong>atraso não é falta</strong>). Falta e justificada são as
+      únicas que mudam a situação.
+    </li>
+    <li>
+      Na tela de <strong>notas</strong>, preenche as unidades e as
+      recuperações. A média do período o SIAGE calcula.
+    </li>
+    <li>
+      Tenta clicar em <strong>Salvar</strong>. Não pede senha. Não grava
+      senha. Só funciona com você já logado no portal.
+    </li>
+  </ul>
+</section>
+
+<section class="data-card siage-help-card">
+  <h2>Como instalar ou atualizar no Chrome</h2>
+  <ol class="siage-help-list">
+    <li>Abra o Chrome e acesse <code>chrome://extensions</code>.</li>
+    <li>Ative <strong>Modo do desenvolvedor</strong>.</li>
+    <li>
+      Clique em <strong>Carregar sem compactação</strong> (ou
+      <strong>Atualizar</strong> se já estiver carregada) e escolha a pasta
+      <code>extensions/siage-chrome</code> do Maestro.
+    </li>
+    <li>
+      Confira se o cartão mostra <strong>Maestro → SIAGE (SEE-PB)</strong>
+      na versão <strong>1.7.6</strong>.
+    </li>
+  </ol>
+</section>
+
+<section class="data-card siage-help-card">
+  <h2>Fluxo no dia a dia</h2>
+  <ol class="siage-help-list">
+    <li>
+      No <strong>Diário de classe</strong>, escolha turma e data. Confira
+      disciplina e tempo. Faça a chamada.
+    </li>
+    <li>
+      Clique em <strong>Salvar e baixar este tempo</strong>. O Maestro
+      baixa o arquivo e deixa a aula na fila do livro-razão.
+    </li>
+    <li>
+      Entre em
+      <%= link_to Siage::ORIGIN, Siage::ORIGIN, target: "_blank", rel: "noopener" %>
+      já logado e abra a tela correspondente: aula, frequência ou notas.
+    </li>
+    <li>
+      Clique no ícone da extensão, escolha o JSON e
+      <strong>Preencher esta página</strong>.
+    </li>
+    <li>
+      A extensão de presença marca Conferido ou Falhou depois de cada
+      aula. No
+      <%= link_to "livro-razão", siage_ledger_path %>
+      os botões continuam disponíveis.
+    </li>
+  </ol>
+  <p>
+    Para várias datas de uma vez, no fim do diário abra
+    <strong>Histórico da turma</strong> e
+    <strong>Exportar todas as aulas (JSON)</strong>.
+    Notas saem de <strong>Exportar 3 unidades para o SIAGE</strong>, na
+    tela de médias.
+  </p>
+  <p>
+    A extensão só atua em <code>professor.see.pb.gov.br</code>.
+    Se o nome no SIAGE não bater com o do caderno, aquele aluno fica de
+    fora e a extensão avisa.
+  </p>
+</section>
+
+<section class="data-card siage-help-card">
+  <h2>Livro-razão</h2>
+  <p>
+    No livro-razão, <strong>Planilha das pendentes</strong> baixa um CSV
+    com todas as turmas. A extensão de presença troca de turma no portal
+    sozinha; não precisa mudar a tela à mão entre uma turma e outra.
+  </p>
+  <p>
+    Baixar JSON ou CSV só coloca a aula <strong>na fila</strong>.
+    <strong>Conferido</strong> é o portal aceitando agora.
+    <strong>Já no SIAGE</strong> é aula que o portal já tinha — não conta
+    como falha. <strong>Falhou</strong> é o erro de verdade no envio.
+  </p>
+  <p>
+    Notas: baixe o JSON em <strong>Exportar 3 unidades para o SIAGE</strong>,
+    abra a tela de notas da turma no portal e anexe o arquivo na extensão.
+    Ela pergunta se é <strong>Salvar parcialmente</strong> (ainda dá para
+    mudar) ou <strong>Lançar notas</strong> (o SIAGE trava). O livro guarda
+    Parcial ou Lançado. REC GLOBAL e média do período o portal calcula.
+  </p>
+</section>

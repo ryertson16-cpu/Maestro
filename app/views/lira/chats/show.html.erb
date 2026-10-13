@@ -1,0 +1,59 @@
+<% content_for :title, "Conversar | Maestro" %>
+
+<div class="page-header">
+  <div class="lira-page-title">
+    <%= maestro_assistant_mark(size: :lg) %>
+    <span class="section-eyebrow">Assistente</span>
+    <h1>Conversar</h1>
+    <p>
+      Conversa completa com o caderno: aulas, chamada, SIAGE e alertas da sua conta.
+      Atraso não é falta. Projetos ficam à parte do SIAGE. Recado rápido fica no Conversar do topo.
+    </p>
+  </div>
+</div>
+
+<section class="lira-shell">
+  <div class="lira-thread" id="lira-thread" data-lira-thread>
+    <% if @messages.none? %>
+      <article class="lira-bubble lira-bubble-assistant">
+        <%= render "lira/chats/assistant_id" %>
+        <%= simple_format(@wake_text) %>
+      </article>
+    <% end %>
+
+    <% @messages.each do |message| %>
+      <%= render "lira/chats/message", message: message %>
+    <% end %>
+  </div>
+
+  <%= form_with url: lira_messages_path,
+                method: :post,
+                class: "lira-composer",
+                data: { turbo: true, lira_composer: true, skip_confirm: true } do |form| %>
+    <div class="lira-chips" role="group" aria-label="Atalhos do Maestro">
+      <button type="button" class="lira-chip" data-lira-prompt="hoje">Hoje</button>
+      <button type="button" class="lira-chip" data-lira-prompt="avisos">Avisos</button>
+      <button type="button" class="lira-chip" data-lira-prompt="monitoramento">Alertas</button>
+      <button type="button" class="lira-chip" data-lira-prompt="ajuda">Ajuda</button>
+    </div>
+
+    <div class="lira-composer-row">
+      <div id="lira-composer-field">
+        <%= form.text_area :body,
+                           required: true,
+                           rows: 2,
+                           placeholder: "Fale com o Maestro. Ex.: frequência da Maria na 7ª A",
+                           id: "lira-body",
+                           data: { lira_input: true } %>
+      </div>
+      <button type="button"
+              class="button button-secondary lira-mic"
+              data-lira-mic
+              aria-label="Falar com o Maestro"
+              title="Falar">
+        Falar
+      </button>
+      <%= form.submit "Enviar", class: "button button-primary" %>
+    </div>
+  <% end %>
+</section>

@@ -1,0 +1,81 @@
+class ClassroomsController < ApplicationController
+  before_action :authenticate_professor!
+  before_action :set_classroom, only: %i[edit update destroy]
+
+  def index
+    @classrooms = current_professor.classrooms
+                                   .includes(:course, :grade_level)
+                                   .order(:school_year, :name)
+  end
+
+  def new
+    @classroom = current_professor.classrooms.new(
+      school_year: Date.current.year,
+      active: true
+    )
+    load_form_options
+  end
+
+  def create
+    @classroom = current_professor.classrooms.new(classroom_params)
+    assign_owned_relations
+
+    if @classroom.save
+      redirect_to classrooms_path, notice: "Turma criada com sucesso."
+    else
+      load_form_options
+      render :new, status: :unprocessable_entity
+    end
+  end
+
+  def edit
+    load_form_options
+  end
+
+  def update
+    @classroom.assign_attributes(classroom_params)
+    assign_owned_relations
+
+    if @classroom.save
+      redirect_to classrooms_path, notice: "Turma atualizada com sucesso."
+    else
+      load_form_options
+      render :edit, status: :unprocessable_entity
+    end
+  end
+
+  def destroy
+    @classroom.destroy
+    redirect_to classrooms_path, notice: "Turma removida com sucesso."
+  end
+
+  private
+
+  def set_classroom
+    @classroom = current_professor.classrooms.find(params[:id])
+  end
+
+  def classroom_params
+    params.require(:classroom).permit(
+      :name,
+      :course_id,
+      :grade_level_id,
+      :school_year,
+      :shift,
+      :active
+    )
+  end
+
+  def assign_owned_relations
+    @classroom.course =
+      current_professor.courses.find_by(id: classroom_params[:course_id])
+
+    @classroom.grade_level =
+      current_professor.grade_levels.find_by(id: classroom_params[:grade_level_id])
+  end
+
+  def load_form_options
+    @courses = current_professor.courses.order(:name)
+    @grade_levels = current_professor.grade_levels.order(:name)
+  end
+end

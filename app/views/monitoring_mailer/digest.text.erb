@@ -1,0 +1,12 @@
+Olá<%= @professor.name.present? ? ", #{@professor.name.split.first}" : "" %>.
+
+Resumo dos alertas da turma <%= @classroom.name %> em <%= @month_label %>.
+
+<%= @alerts.size %> <%= @alerts.size == 1 ? "aluno precisa" : "alunos precisam" %> de acompanhamento.
+
+<% @alerts.each do |alert| %>
+<%= "-" * 40 %>
+<%= alert.recado_text %>
+
+<% end %>
+Acesse o monitoramento no Maestro para ver os detalhes.

@@ -1,0 +1,145 @@
+<div class="page-header page-header-with-action">
+  <div>
+    <h1>Matrículas</h1>
+    <p>Gerencie os alunos vinculados às turmas.</p>
+  </div>
+
+  <%= link_to "Importar alunos",
+              import_enrollments_path,
+              class: "button button-secondary" %>
+
+  <%= link_to "Adicionar matrícula",
+              new_enrollment_path,
+              class: "button button-primary" %>
+</div>
+
+<section class="data-card bulk-enrollment-card">
+  <div class="bulk-enrollment-content">
+    <div>
+      <h2>Matricular vários alunos</h2>
+      <p>
+        Selecione uma turma para adicionar vários alunos de uma vez.
+      </p>
+    </div>
+
+    <%= form_with url: bulk_new_enrollments_path,
+                  method: :get,
+                  local: true,
+                  class: "bulk-enrollment-form" do %>
+
+      <%= select_tag(
+        :classroom_id,
+        options_from_collection_for_select(
+          @classrooms,
+          :id,
+          :name
+        ),
+        include_blank: "Selecione uma turma",
+        required: true
+      ) %>
+
+      <%= submit_tag "Selecionar alunos",
+                     class: "button button-secondary" %>
+    <% end %>
+  </div>
+</section>
+
+<% if @enrollments.any? %>
+  <section class="data-card">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Aluno</th>
+            <th>Turma</th>
+            <th>Data</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <% @enrollments.each do |enrollment| %>
+            <tr>
+              <td>
+                <strong>
+                  <%= enrollment.student.name %>
+                </strong>
+              </td>
+
+              <td>
+                <%= enrollment.classroom.name %>
+              </td>
+
+              <td>
+                <%= enrollment.enrolled_on&.strftime("%d/%m/%Y") || "-" %>
+              </td>
+
+              <td>
+                <% case enrollment.status %>
+                <% when "active" %>
+                  <span class="status-badge status-active">
+                    Ativa
+                  </span>
+                <% when "finished" %>
+                  <span class="status-badge status-inactive">
+                    Encerrada
+                  </span>
+                <% else %>
+                  <span class="status-badge status-inactive">
+                    Cancelada
+                  </span>
+                <% end %>
+              </td>
+
+              <td class="table-actions">
+                <%= link_to enrollment_path(enrollment),
+                            class: "table-action-link action-icon",
+                            title: "Visualizar matrícula",
+                            aria: {
+                              label: "Visualizar matrícula de #{enrollment.student.name}"
+                            } do %>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                <% end %>
+
+                <%= button_to "Remover",
+                              enrollment_path(enrollment),
+                              method: :delete,
+                              data: {
+                                turbo_confirm: "Deseja remover esta matrícula?"
+                              },
+                              class: "button-link-danger" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+<% else %>
+  <section class="empty-state">
+    <strong>Nenhuma matrícula cadastrada.</strong>
+
+    <p>
+      Adicione alunos às suas turmas para começar.
+    </p>
+
+    <%= link_to "Adicionar primeira matrícula",
+                new_enrollment_path,
+                class: "button button-primary" %>
+  </section>
+<% end %>

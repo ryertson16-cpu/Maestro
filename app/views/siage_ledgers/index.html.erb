@@ -1,0 +1,224 @@
+<% content_for :title, "Livro-razão SIAGE | Maestro" %>
+<% waiting_count = @summary[:pending].to_i - @summary[:queued].to_i %>
+
+<div class="page-header page-header-with-action">
+  <div class="siage-page-title">
+    <%= maestro_icon :siage, size: :lg %>
+    <span class="section-eyebrow">SIAGE</span>
+    <h1>Livro-razão SIAGE</h1>
+    <p>Envios de presença e notas. A planilha das pendentes junta as turmas num arquivo; a extensão troca de turma no portal.</p>
+  </div>
+
+  <nav class="diary-header-links" aria-label="Atalhos do livro SIAGE">
+    <%= link_to siage_ledger_export_path({ classroom_id: @classroom&.id }.compact),
+                class: "button button-primary button-small button-with-badge" do %>
+      Planilha das pendentes
+      <% if @summary[:pending].to_i.positive? %>
+        <span class="pending-count-badge" aria-label="<%= pluralize(@summary[:pending], "pendência", "pendências") %>">
+          <%= @summary[:pending] %>
+        </span>
+      <% end %>
+    <% end %>
+    <%= link_to "Diário",
+                @classroom.present? ? attendance_records_path(classroom_id: @classroom.id) : attendance_records_path,
+                class: "button button-ghost button-small" %>
+    <%= link_to "Ajuda SIAGE",
+                siage_help_path,
+                class: "button button-ghost button-small" %>
+  </nav>
+</div>
+
+<% if @classrooms.any? %>
+  <section class="attendance-filter diary-context">
+    <h2>Filtrar envios</h2>
+
+    <%= form_with url: siage_ledger_path, method: :get, local: true do |form| %>
+      <div>
+        <%= form.label :classroom_id, "Turma" %>
+        <%= form.collection_select :classroom_id,
+                                  @classrooms,
+                                  :id,
+                                  :name,
+                                  { selected: @classroom&.id, include_blank: "Todas as turmas" } %>
+      </div>
+
+      <div>
+        <%= form.submit "Abrir" %>
+      </div>
+    <% end %>
+  </section>
+<% end %>
+
+<section class="attendance-summary ledger-summary" aria-label="Resumo dos envios">
+  <article class="summary-card summary-late">
+    <span class="summary-label">Pendentes</span>
+    <strong><%= waiting_count %></strong>
+  </article>
+  <article class="summary-card summary-justified">
+    <span class="summary-label">Na fila</span>
+    <strong><%= @summary[:queued] %></strong>
+  </article>
+  <article class="summary-card summary-present">
+    <span class="summary-label">Conferidos</span>
+    <strong><%= @summary[:verified] %></strong>
+  </article>
+  <article class="summary-card">
+    <span class="summary-label">Já no SIAGE</span>
+    <strong><%= @summary[:already_registered] %></strong>
+  </article>
+  <article class="summary-card summary-absent">
+    <span class="summary-label">Falhas</span>
+    <strong><%= @summary[:failed] %></strong>
+  </article>
+</section>
+
+<section class="data-card">
+  <div class="section-heading">
+    <div>
+      <span class="section-eyebrow">Presença</span>
+      <h2>Aulas dos últimos 120 dias</h2>
+      <p class="classroom-pending-help">
+        Pendente ainda não foi ao SIAGE. Na fila já tem planilha. Conferido o portal aceitou agora.
+        Já no SIAGE o portal já tinha — não é falha.
+      </p>
+    </div>
+    <%= link_to "Planilha das pendentes",
+                siage_ledger_export_path({ classroom_id: @classroom&.id }.compact),
+                class: "button button-secondary" %>
+  </div>
+
+  <ul class="ledger-legend">
+    <li><span class="status-badge status-pending">Pendente</span> sem planilha</li>
+    <li><span class="status-badge status-exported">Na fila</span> planilha baixada</li>
+    <li><span class="status-badge status-verified">Conferido</span> aceito agora</li>
+    <li><span class="status-badge status-already_registered">Já no SIAGE</span> já estava no portal</li>
+    <li><span class="status-badge status-failed">Falhou</span> precisa reenviar</li>
+  </ul>
+
+  <% if @rows.any? %>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Turma</th>
+            <th>Tema</th>
+            <th>Situação</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @rows.each do |row| %>
+            <tr>
+              <td><%= l(row.lesson.lesson_date) %></td>
+              <td><%= row.classroom.name %></td>
+              <td><%= row.lesson.theme %></td>
+              <td>
+                <span class="status-badge status-<%= row.status %>">
+                  <%= row.shipment&.status_label || "Pendente" %>
+                </span>
+              </td>
+              <td>
+                <div class="ledger-row-actions">
+                  <%= link_to "Planilha",
+                              siage_lesson_export_path(row.lesson),
+                              class: "button button-secondary button-small" %>
+                  <%= button_to "Conferir",
+                                verify_siage_ledger_path(row.lesson),
+                                method: :patch,
+                                class: "button button-primary button-small" %>
+                  <%= button_to "Falhou",
+                                fail_siage_ledger_path(row.lesson),
+                                method: :patch,
+                                class: "button button-secondary button-small" %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <section class="empty-state">
+      <strong>Nenhuma aula nos últimos 120 dias.</strong>
+      <p>Gere a aula no diário. Depois ela aparece aqui para ir ao SIAGE.</p>
+      <%= link_to "Abrir diário",
+                  @classroom.present? ? attendance_records_path(classroom_id: @classroom.id) : attendance_records_path,
+                  class: "button button-primary" %>
+    </section>
+  <% end %>
+</section>
+
+<section class="data-card">
+  <div class="section-heading">
+    <div>
+      <span class="section-eyebrow">Notas</span>
+      <h2>Notas no SIAGE</h2>
+      <p class="classroom-pending-help">
+        <strong>Parcial</strong> ainda pode ser alterada no portal.
+        <strong>Lançado</strong> o SIAGE trava. Exporte o JSON em Notas e médias e anexe na extensão.
+      </p>
+    </div>
+  </div>
+
+  <ul class="ledger-legend">
+    <li><span class="status-badge status-partial">Parcial</span> ainda altera no portal</li>
+    <li><span class="status-badge status-launched">Lançado</span> travado no SIAGE</li>
+    <li><span class="status-badge status-failed">Falhou</span> precisa reenviar</li>
+  </ul>
+
+  <% if @grade_rows.any? %>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Turma</th>
+            <th>Bimestre</th>
+            <th>Situação</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @grade_rows.each do |row| %>
+            <tr>
+              <td><%= row.classroom.name %></td>
+              <td><%= row.bimester %>º</td>
+              <td>
+                <span class="status-badge status-<%= row.status %>">
+                  <%= row.shipment&.status_label || "Pendente" %>
+                </span>
+              </td>
+              <td>
+                <div class="ledger-row-actions">
+                  <%= link_to "JSON",
+                              siage_grades_export_path(classroom_id: row.classroom.id, bimester: row.bimester),
+                              class: "button button-secondary button-small" %>
+                  <%= button_to "Parcial",
+                                partial_siage_grade_ledger_path(row.classroom, row.bimester),
+                                method: :patch,
+                                class: "button button-secondary button-small" %>
+                  <%= button_to "Lançado",
+                                launch_siage_grade_ledger_path(row.classroom, row.bimester),
+                                method: :patch,
+                                class: "button button-primary button-small" %>
+                  <%= button_to "Falhou",
+                                fail_siage_grade_ledger_path(row.classroom, row.bimester),
+                                method: :patch,
+                                class: "button button-secondary button-small" %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <section class="empty-state">
+      <strong>Ainda não há envio de notas.</strong>
+      <p>Em Notas e médias, use Exportar 3 unidades para o SIAGE. Isso não mistura com projetos.</p>
+      <%= link_to "Notas e médias",
+                  @classroom.present? ? grades_path(classroom_id: @classroom.id) : grade_levels_path,
+                  class: "button button-primary" %>
+    </section>
+  <% end %>
+</section>

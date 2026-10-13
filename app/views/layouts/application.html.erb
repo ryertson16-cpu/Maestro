@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Maestro" %></title>
+
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Maestro">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= yield :head %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#5b4bdb">
+    <script>
+      (function () {
+        try {
+          if (localStorage.getItem("maestro-theme") === "night") {
+            document.documentElement.setAttribute("data-theme", "night")
+            var meta = document.querySelector('meta[name="theme-color"]')
+            if (meta) meta.content = "#12141c"
+          }
+        } catch (_error) {}
+      })()
+    </script>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="<%= [
+    ("has-app-nav" if professor_signed_in? && controller_path != "marketing"),
+    ("auth-body" if devise_controller? || controller_path == "marketing"),
+    ("vitrine-body" if controller_path == "marketing")
+  ].compact.join(" ") %>">
+    <% if professor_signed_in? %>
+      <header class="app-header">
+        <div class="header-inner">
+          <%= link_to root_path, class: "brand", aria: { label: "Maestro" } do %>
+            <%= maestro_logo_tag(:header) %>
+          <% end %>
+
+          <%= render "application/main_nav" %>
+          <%= render "application/classroom_switch" %>
+
+          <div class="header-user">
+            <button type="button"
+                    class="header-search"
+                    data-command-palette-open
+                    aria-haspopup="dialog"
+                    aria-controls="command-palette"
+                    title="Buscar no Maestro">
+              <%= maestro_icon :search, size: :sm %>
+              <span class="header-search-label">Buscar</span>
+              <kbd data-command-palette-hotkey>Ctrl K</kbd>
+            </button>
+
+            <%= render "application/theme_switch", compact: true %>
+
+            <%= link_to siage_ledger_path,
+                        class: "header-lira header-siage#{' is-active' if controller_name.in?(%w[siage_ledgers siage_exports])}",
+                        title: "Livro-razão do SIAGE" do %>
+              <%= maestro_icon :siage, size: :sm %>
+              <span>SIAGE</span>
+              <% if siage_pending_nav_count.positive? %>
+                <span class="pending-count-badge" aria-label="<%= pluralize(siage_pending_nav_count, "pendência", "pendências") %>">
+                  <%= siage_pending_nav_count %>
+                </span>
+              <% end %>
+            <% end %>
+
+            <button type="button"
+                    class="header-lira<%= ' is-active' if controller_path == 'lira/chats' %>"
+                    data-maestro-quick-open
+                    title="Falar com o Maestro">
+              <%= maestro_assistant_mark(size: :xs) %>
+              <span>Conversar</span>
+            </button>
+
+            <%= render "application/automation_bell" %>
+
+            <%= link_to settings_path,
+                        class: "header-avatar#{' is-active' if controller_name.in?(%w[settings profiles schools])}",
+                        title: "Configurações" do %>
+              <% if current_professor.profile_photo.attached? %>
+                <%= image_tag current_professor.profile_photo,
+                              alt: current_professor.name %>
+              <% else %>
+                <span><%= current_professor.initials %></span>
+              <% end %>
+            <% end %>
+
+            <%= button_to "Sair",
+                          destroy_professor_session_path,
+                          method: :delete,
+                          class: "button button-ghost button-small",
+                          form: { data: { skip_confirm: true } } %>
+          </div>
+        </div>
+      </header>
+    <% end %>
+
+    <main class="app-main<%= " auth-main" if devise_controller? %><%= " vitrine-main" if controller_path == "marketing" %>">
+      <% if devise_controller? || controller_path == "marketing" %>
+        <div class="auth-orbs" aria-hidden="true">
+          <span class="auth-orb auth-orb-tl"></span>
+          <span class="auth-orb auth-orb-tr"></span>
+          <span class="auth-orb auth-orb-bl"></span>
+          <span class="auth-orb auth-orb-br"></span>
+          <span class="auth-orb auth-orb-mid"></span>
+        </div>
+        <% unless controller_path == "marketing" %>
+          <button
+            type="button"
+            class="auth-theme-chip"
+            data-theme-toggle
+            role="switch"
+            aria-checked="false"
+            aria-label="Modo noturno"
+          >
+            <%= maestro_icon :moon, size: :sm, html_class: "auth-theme-moon" %>
+            <%= maestro_icon :sun, size: :sm, html_class: "auth-theme-sun" %>
+          </button>
+        <% end %>
+      <% end %>
+        <div class="<%= if controller_path == "marketing"
+                          "vitrine-shell"
+                        elsif devise_controller?
+                          "auth-shell"
+                        else
+                          "page-shell"
+                        end %>">
+        <%= yield %>
+      </div>
+    </main>
+
+    <footer class="app-footer<%= " is-auth-hidden" if devise_controller? || controller_path == "marketing" %>">
+      <%= link_to root_path, class: "footer-brand", aria: { label: "Maestro" } do %>
+        <%= maestro_logo_tag(:header) %>
+      <% end %>
+      <span>
+        <% if professor_signed_in? %>
+          <%= link_to "Conversar", lira_path, class: "footer-link" %>
+          ·
+          <%= link_to "Configurações", settings_path, class: "footer-link" %>
+          ·
+        <% end %>
+        Gestão escolar simplificada
+      </span>
+    </footer>
+
+    <div id="toast-host" class="toast-host" aria-live="polite"></div>
+    <dialog id="action-confirm" class="calendar-confirm" data-action-confirm>
+      <div class="calendar-confirm-body">
+        <h2>Confirmar ação</h2>
+        <p data-action-confirm-copy>Deseja confirmar esta ação?</p>
+        <div class="calendar-confirm-actions">
+          <button type="button" class="button button-secondary" data-action-confirm-no>Não</button>
+          <button type="button" class="button button-primary" data-action-confirm-yes>Sim</button>
+        </div>
+      </div>
+    </dialog>
+    <script type="application/json" id="toast-flashes"><%= raw json_escape(maestro_toasts.to_json) %></script>
+    <% if professor_signed_in? %>
+      <%= render "application/command_palette" %>
+      <%= render "application/maestro_quick" %>
+      <%= render "application/bottom_nav" %>
+    <% end %>
+  </body>
+</html>

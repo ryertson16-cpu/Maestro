@@ -1,0 +1,226 @@
+<% content_for :title, "#{@project.title} | Projetos | Maestro" %>
+
+<div class="page-header page-header-with-action">
+  <div class="projects-page-title">
+    <%= maestro_icon :projects, size: :lg %>
+    <h1><%= @project.title %></h1>
+    <p>
+      <%= @project.kind_label %>
+      · <%= @project.audience_label %>
+      · <%= @project.status_label %>
+      <% if @project.classrooms.any? %>
+        · <%= @project.classrooms.map(&:name).join(", ") %>
+      <% end %>
+    </p>
+  </div>
+  <div class="page-header-actions">
+    <%= link_to "Portfólio PDF",
+                report_project_path(@project, format: :pdf),
+                class: "button button-secondary" %>
+    <%= link_to "Editar ficha",
+                edit_project_path(@project),
+                class: "button button-secondary" %>
+    <%= button_to "Excluir",
+                  project_path(@project),
+                  method: :delete,
+                  class: "button button-secondary",
+                  data: { turbo_confirm: "Excluir este projeto e as evidências?" } %>
+  </div>
+</div>
+
+<section class="projects-summary-grid">
+  <article class="data-card">
+    <span class="section-eyebrow">Andamento</span>
+    <strong><%= @project.progress %>%</strong>
+    <div class="project-progress">
+      <span style="width: <%= @project.progress %>%"></span>
+    </div>
+    <% if @project.starts_on.present? || @project.ends_on.present? %>
+      <p>
+        Período:
+        <%= [@project.starts_on, @project.ends_on].compact.map { |day| l(day) }.join(" a ") %>
+      </p>
+    <% end %>
+  </article>
+
+  <article class="data-card">
+    <span class="section-eyebrow">Próxima etapa</span>
+    <% if @project.next_stage.present? %>
+      <strong><%= @project.next_stage.title %></strong>
+      <p><%= @project.next_stage.status_label %></p>
+      <% if @project.next_stage.due_on.present? %>
+        <p>Prazo: <%= l(@project.next_stage.due_on) %></p>
+      <% end %>
+    <% else %>
+      <p>Nenhuma etapa cadastrada.</p>
+    <% end %>
+  </article>
+
+  <% if @project.overdue_stages.any? %>
+    <article class="data-card is-warning">
+      <span class="section-eyebrow">Atrasos</span>
+      <strong><%= @project.overdue_stages.size %></strong>
+      <p><%= @project.overdue_stages.map(&:title).to_sentence %></p>
+    </article>
+  <% end %>
+</section>
+
+<section class="projects-ficha">
+  <% if @project.objective.present? %>
+    <div>
+      <h2>Objetivo</h2>
+      <p><%= simple_format(@project.objective) %></p>
+    </div>
+  <% end %>
+  <% if @project.justification.present? %>
+    <div>
+      <h2>Justificativa</h2>
+      <p><%= simple_format(@project.justification) %></p>
+    </div>
+  <% end %>
+  <% if @project.skills.present? %>
+    <div>
+      <h2>Habilidades</h2>
+      <p><%= simple_format(@project.skills) %></p>
+    </div>
+  <% end %>
+  <% if @project.team_notes.present? %>
+    <div>
+      <h2>Equipe e parceiros</h2>
+      <p><%= simple_format(@project.team_notes) %></p>
+    </div>
+  <% end %>
+</section>
+
+<section class="section-heading">
+  <div>
+    <span class="section-eyebrow">Linha do tempo</span>
+    <h2>Etapas e evidências</h2>
+  </div>
+</section>
+
+<div class="project-timeline">
+  <% @project.project_stages.each do |stage| %>
+    <article class="project-stage-card<%= " is-overdue" if stage.overdue? %>">
+      <header>
+        <span class="project-stage-index"><%= stage.position %></span>
+        <div>
+          <h3><%= stage.title %></h3>
+          <p>
+            <%= stage.status_label %>
+            <% if stage.due_on.present? %>
+              · prazo <%= l(stage.due_on) %>
+            <% end %>
+            <% if stage.overdue? %>
+              · atrasada
+            <% end %>
+          </p>
+        </div>
+      </header>
+
+      <% if stage.description.present? %>
+        <p><%= stage.description %></p>
+      <% end %>
+
+      <% if stage.lesson.present? %>
+        <p>
+          Aula vinculada:
+          <%= link_to "#{l(stage.lesson.lesson_date)} · #{stage.lesson.theme}",
+                      lesson_path(stage.lesson) %>
+        </p>
+      <% end %>
+
+      <% if stage.evidences.attached? %>
+        <ul class="project-evidence-list">
+          <% stage.evidences.each do |file| %>
+            <li>
+              <%= link_to file.filename.to_s, rails_blob_path(file, disposition: "attachment") %>
+              <%= button_to "Remover",
+                            remove_evidence_project_project_stage_path(@project, stage, evidence_id: file.id),
+                            method: :delete,
+                            class: "button button-ghost button-small",
+                            data: { turbo_confirm: "Remover esta evidência?" } %>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+
+      <%= form_with model: [@project, stage],
+                    url: project_project_stage_path(@project, stage),
+                    method: :patch,
+                    class: "project-stage-form" do |form| %>
+        <div class="field-grid">
+          <div class="field">
+            <%= form.label :title, "Título" %>
+            <%= form.text_field :title %>
+          </div>
+          <div class="field">
+            <%= form.label :status, "Situação" %>
+            <%= form.select :status, ProjectStage::STATUSES.map { |value, label| [label, value] } %>
+          </div>
+          <div class="field">
+            <%= form.label :due_on, "Prazo" %>
+            <%= form.date_field :due_on %>
+          </div>
+          <div class="field">
+            <%= form.label :lesson_id, "Aula (opcional)" %>
+            <%= form.select :lesson_id,
+                            @lessons.map { |lesson| ["#{l(lesson.lesson_date)} · #{lesson.theme}", lesson.id] },
+                            { include_blank: "Sem vínculo com aula" } %>
+          </div>
+        </div>
+        <div class="field">
+          <%= form.label :description, "Descrição" %>
+          <%= form.text_area :description, rows: 2 %>
+        </div>
+        <div class="field">
+          <%= form.label :evidences, "Anexar evidências" %>
+          <%= form.file_field :evidences, multiple: true %>
+        </div>
+        <div class="form-actions">
+          <%= form.submit "Atualizar etapa", class: "button button-primary button-small" %>
+        </div>
+      <% end %>
+
+      <%= button_to "Remover etapa",
+                    project_project_stage_path(@project, stage),
+                    method: :delete,
+                    class: "button button-secondary button-small",
+                    data: { turbo_confirm: "Remover esta etapa?" } %>
+    </article>
+  <% end %>
+</div>
+
+<section class="data-card">
+  <h2>Nova etapa</h2>
+  <%= form_with model: [@project, ProjectStage.new],
+                url: project_project_stages_path(@project) do |form| %>
+    <div class="field-grid">
+      <div class="field">
+        <%= form.label :title, "Título" %>
+        <%= form.text_field :title, required: true %>
+      </div>
+      <div class="field">
+        <%= form.label :due_on, "Prazo" %>
+        <%= form.date_field :due_on %>
+      </div>
+    </div>
+    <div class="field">
+      <%= form.label :description, "Descrição" %>
+      <%= form.text_area :description, rows: 2 %>
+    </div>
+    <%= form.submit "Adicionar etapa", class: "button button-secondary" %>
+  <% end %>
+</section>
+
+<% if @students.any? %>
+  <section class="data-card">
+    <h2>Alunos das turmas vinculadas</h2>
+    <p>Lista de participação. Não substitui o lançamento de notas no bimestre.</p>
+    <ul class="project-students">
+      <% @students.each do |student| %>
+        <li><%= link_to student.name, student_path(student) %></li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>

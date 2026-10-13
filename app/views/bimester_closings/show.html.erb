@@ -1,0 +1,83 @@
+<% content_for :title, "Fechamento bimestral | Maestro" %>
+
+<div class="page-header page-header-with-action">
+  <div>
+    <h1>Fechamento bimestral</h1>
+    <p>Confira notas, frequência, SIAGE e atividades antes de encerrar o bimestre.</p>
+  </div>
+</div>
+
+<section class="attendance-filter">
+  <%= form_with url: bimester_closing_path, method: :get, local: true do %>
+    <%= hidden_field_tag :classroom_id, @classroom.id %>
+    <div>
+      <%= label_tag :bimester, "Bimestre" %>
+      <%= select_tag :bimester, options_for_select((1..4).map { |n| ["#{n}º", n] }, @bimester) %>
+    </div>
+    <%= submit_tag "Abrir checklist", class: "button button-secondary" %>
+  <% end %>
+</section>
+
+<section class="attendance-summary">
+  <article class="summary-card">
+    <span class="summary-label">Pendências graves</span>
+    <strong><%= @report.summary[:danger] %></strong>
+  </article>
+  <article class="summary-card">
+    <span class="summary-label">Atenções</span>
+    <strong><%= @report.summary[:warning] %></strong>
+  </article>
+  <article class="summary-card">
+    <span class="summary-label">Situação</span>
+    <strong><%= @report.summary[:closed] ? "Fechado" : "Aberto" %></strong>
+  </article>
+</section>
+
+<section class="data-card">
+  <% if @report.items.any? %>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Aluno / item</th>
+            <th>Detalhe</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @report.items.each do |item| %>
+            <tr>
+              <td>
+                <span class="status-badge status-<%= item.severity %>">
+                  <%= item.severity == :danger ? "Grave" : "Atenção" %>
+                </span>
+              </td>
+              <td><%= item.label %></td>
+              <td><%= item.detail %></td>
+              <td><%= link_to "Abrir", item.path, class: "button button-secondary button-small" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p>Nenhuma pendência. Você pode fechar o bimestre.</p>
+  <% end %>
+
+  <% unless @report.summary[:closed] %>
+    <%= form_with url: bimester_closing_path, method: :post, local: true, class: "form-actions" do %>
+      <%= hidden_field_tag :classroom_id, @classroom.id %>
+      <%= hidden_field_tag :bimester, @bimester %>
+      <% if @report.blocking? %>
+        <label class="auth-remember">
+          <%= check_box_tag :force, "1" %>
+          <span>Fechar mesmo com pendências graves</span>
+        </label>
+      <% end %>
+      <%= submit_tag "Fechar bimestre",
+                     class: "button button-danger",
+                     data: { turbo_confirm: "Confirma o fechamento deste bimestre?" } %>
+    <% end %>
+  <% end %>
+</section>

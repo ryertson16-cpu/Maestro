@@ -1,0 +1,51 @@
+<div class="page-header">
+  <div>
+    <%= link_to "← Voltar para áreas",
+                courses_path,
+                class: "back-link" %>
+
+    <h1><%= @course.name %></h1>
+
+    <p>
+      Detalhes da disciplina cadastrada.
+    </p>
+  </div>
+
+  <div class="page-actions">
+    <%= link_to "Editar",
+                edit_course_path(@course),
+                class: "button button-primary" %>
+  </div>
+</div>
+
+<div class="card course-detail-card">
+  <div class="course-detail-area">
+    <span class="knowledge-area-tag knowledge-area-<%= @course.knowledge_area_color %>">
+      <%= @course.knowledge_area_label %>
+    </span>
+  </div>
+
+  <dl class="course-details">
+    <div>
+      <dt>Nome</dt>
+      <dd><%= @course.name %></dd>
+    </div>
+
+    <div>
+      <dt>Área do conhecimento</dt>
+      <dd><%= @course.knowledge_area_label %></dd>
+    </div>
+
+    <div>
+      <dt>Status</dt>
+      <dd><%= @course.active? ? "Ativa" : "Inativa" %></dd>
+    </div>
+
+    <div>
+      <dt>Descrição</dt>
+      <dd>
+        <%= @course.description.presence || "Nenhuma descrição informada." %>
+      </dd>
+    </div>
+  </dl>
+</div>

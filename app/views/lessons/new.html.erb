@@ -1,0 +1,49 @@
+<div class="page-header">
+  <div>
+    <h1>Registrar aula</h1>
+    <p>
+      Use esta página para plano completo e atividade. No dia a dia, aula,
+      chamada e JSON do SIAGE ficam no
+      <%= link_to "Diário de classe", attendance_records_path %>.
+    </p>
+  </div>
+</div>
+
+<section class="data-card lesson-form-card timetable-import-card" data-timetable-import>
+  <div class="lesson-form-header">
+    <div>
+      <h2>Gerar aula pelo horário da escola</h2>
+      <p>
+        Anexe o PDF do horário da escola. O Maestro preenche disciplina, tempo
+        e tema nesta página. Depois revise e salve. No calendário, o mesmo PDF
+        cria a aula no diário.
+      </p>
+    </div>
+  </div>
+
+  <div class="timetable-import-actions">
+    <label class="button button-secondary timetable-file-label">
+      Anexar PDF do horário da escola
+      <input
+        type="file"
+        accept="application/pdf,.pdf"
+        data-timetable-file
+        hidden
+      >
+    </label>
+
+    <button
+      type="button"
+      class="button button-primary"
+      data-timetable-generate
+      data-timetable-url="<%= generate_from_timetable_lessons_path %>"
+    >
+      Gerar aula pelo horário da escola
+    </button>
+  </div>
+
+  <p class="timetable-file-name" data-timetable-filename>Nenhum arquivo anexado.</p>
+  <p class="timetable-status" data-timetable-status hidden></p>
+</section>
+
+<%= render "form", lesson: @lesson %>

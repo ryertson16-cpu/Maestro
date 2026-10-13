@@ -1,0 +1,20 @@
+<% content_for :title, "Baixar o Maestro | Maestro" %>
+
+<section class="marketing-hero">
+  <h1>Maestro no Windows</h1>
+  <p class="marketing-lead">
+    O caderno já abre no navegador, no mesmo endereço da sua conta.
+    O instalador é um atalho: inicia o Chrome no Maestro, como um programa.
+  </p>
+  <div class="marketing-actions">
+    <% if professor_signed_in? %>
+      <%= link_to "Abrir o caderno agora", root_path, class: "button button-primary" %>
+    <% else %>
+      <%= link_to "Criar conta", new_professor_registration_path, class: "button button-primary" %>
+    <% end %>
+  </div>
+  <p class="marketing-price">
+    O arquivo <code>Maestro-Setup.exe</code> entra nesta página quando o atalho Windows estiver pronto.
+    Até lá, no Chrome: menu → <strong>Salvar e compartilhar</strong> → <strong>Criar atalho</strong> → abrir como janela.
+  </p>
+</section>

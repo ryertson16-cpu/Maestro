@@ -1,0 +1,152 @@
+pt-BR:
+  date:
+    formats:
+      default: "%d/%m/%Y"
+      short: "%d/%m/%Y"
+      long: "%d de %B de %Y"
+
+    day_names:
+      - domingo
+      - segunda-feira
+      - terça-feira
+      - quarta-feira
+      - quinta-feira
+      - sexta-feira
+      - sábado
+
+    abbr_day_names:
+      - dom
+      - seg
+      - ter
+      - qua
+      - qui
+      - sex
+      - sáb
+
+    month_names:
+      - null
+      - janeiro
+      - fevereiro
+      - março
+      - abril
+      - maio
+      - junho
+      - julho
+      - agosto
+      - setembro
+      - outubro
+      - novembro
+      - dezembro
+
+    abbr_month_names:
+      - null
+      - jan
+      - fev
+      - mar
+      - abr
+      - mai
+      - jun
+      - jul
+      - ago
+      - set
+      - out
+      - nov
+      - dez
+
+  time:
+    formats:
+      default: "%d/%m/%Y %H:%M"
+      short: "%d/%m/%Y"
+      long: "%d de %B de %Y às %H:%M"
+
+  datetime:
+    distance_in_words:
+      about_x_hours:
+        one: "aproximadamente 1 hora"
+        other: "aproximadamente %{count} horas"
+      x_minutes:
+        one: "1 minuto"
+        other: "%{count} minutos"
+      less_than_x_minutes:
+        one: "menos de 1 minuto"
+        other: "menos de %{count} minutos"
+
+  devise:
+    failure:
+      professor:
+        unauthenticated: "Entre para continuar."
+      unauthenticated: "Entre para continuar."
+      invalid: "E-mail ou senha inválidos."
+      not_found_in_database: "E-mail ou senha inválidos."
+      timeout: "Sua sessão expirou. Faça login novamente."
+      already_authenticated: "Você já está conectado."
+
+    sessions:
+      professor:
+        signed_in: "Login realizado com sucesso."
+        signed_out: "Você saiu da conta."
+        already_signed_out: "Você já havia saído da conta."
+
+    omniauth_callbacks:
+      success: "Entrada com %{kind} realizada."
+      failure: "Não foi possível entrar com %{kind}: %{reason}."
+      linked: "%{kind} vinculado à sua conta."
+      taken: "Esse %{kind} já está ligado a outra conta do Maestro."
+      missing_email: "%{kind} não enviou um e-mail. Entre com Google, Facebook ou e-mail e senha."
+      unconfigured: "O login com %{kind} ainda não está configurado neste Maestro. Falta o ID e o segredo do aplicativo."
+
+    registrations:
+      professor:
+        signed_up: "Cadastro realizado com sucesso."
+
+    passwords:
+      professor:
+        send_instructions: "Você receberá instruções para redefinir sua senha."
+        updated: "Sua senha foi alterada com sucesso."
+
+  helpers:
+    submit:
+      professor:
+        create: "Cadastrar"
+        update: "Atualizar"
+
+  errors:
+    messages:
+      not_saved:
+        one: "Não foi possível salvar %{resource}: 1 erro."
+        other: "Não foi possível salvar %{resource}: %{count} erros."
+
+      restrict_dependent_destroy:
+        has_many: "Não é possível remover este registro porque existem %{record} vinculados a ele."
+        has_one: "Não é possível remover este registro porque existe um %{record} vinculado a ele."
+
+  activerecord:
+    models:
+      professor: Professor
+      project: Projeto
+      project_stage: Etapa do projeto
+    attributes:
+      professor:
+        email: E-mail
+        password: Senha
+        password_confirmation: Confirmação da senha
+        remember_me: Lembrar de mim
+      project:
+        title: Título
+        kind: Tipo
+        kind_other: Outro tipo
+        audience: Alcance
+        status: Situação
+        classrooms: Turmas
+      project_stage:
+        title: Título
+        status: Situação
+        lesson: Aula
+    errors:
+      models:
+        enrollment:
+          attributes:
+            base:
+              restrict_dependent_destroy:
+                has_many: "Não é possível remover esta matrícula porque existem registros vinculados a ela."
+                has_one: "Não é possível remover esta matrícula porque existe um registro vinculado a ela."

@@ -1,0 +1,164 @@
+<div class="page-header page-header-with-action">
+  <div>
+    <h1><%= @lesson.theme %></h1>
+
+    <p>
+      <%= l(@lesson.lesson_date, format: :long) %>
+      —
+      <%= @lesson.classroom.name %>
+    </p>
+  </div>
+
+  <div class="lesson-actions">
+    <%= link_to(
+      "Lançar frequência da turma",
+      attendance_records_path(
+        classroom_id: @lesson.classroom_id,
+        attendance_date: @lesson.lesson_date
+      ),
+      class: "button button-primary"
+    ) %>
+
+    <%= link_to(
+      "Exportar JSON SIAGE",
+      siage_lesson_export_path(@lesson, format: :json),
+      class: "button button-secondary"
+    ) %>
+
+    <%= link_to(
+      "Editar aula",
+      edit_lesson_path(@lesson),
+      class: "button button-secondary"
+    ) %>
+  </div>
+</div>
+
+<section class="lesson-detail-card">
+  <div class="lesson-detail-grid">
+    <div>
+      <span class="detail-label">Turma</span>
+      <strong><%= @lesson.classroom.name %></strong>
+    </div>
+
+    <div>
+      <span class="detail-label">Disciplina</span>
+      <strong>
+        <%= @lesson.course&.name || "Não informada" %>
+      </strong>
+    </div>
+
+    <div>
+      <span class="detail-label">Data</span>
+      <strong>
+        <%= l(@lesson.lesson_date, format: :long) %>
+      </strong>
+    </div>
+
+    <div>
+      <span class="detail-label">Período (SIAGE)</span>
+      <strong><%= @lesson.siage_period.presence || "Não informado" %></strong>
+    </div>
+
+    <div>
+      <span class="detail-label">Modo de aula (SIAGE)</span>
+      <strong><%= @lesson.siage_class_mode.presence || "Não informado" %></strong>
+    </div>
+
+    <div>
+      <span class="detail-label">Tipo de aula (SIAGE)</span>
+      <strong><%= @lesson.siage_class_type.presence || "Não informado" %></strong>
+    </div>
+
+    <div>
+      <span class="detail-label">Tempo (SIAGE)</span>
+      <strong><%= @lesson.siage_time_slot.presence || "Não informado" %></strong>
+    </div>
+  </div>
+</section>
+
+<section class="lesson-detail-card">
+  <h2>Conteúdo da aula</h2>
+
+  <% if @lesson.objective.present? %>
+    <div class="lesson-detail-section">
+      <h3>Objetivo</h3>
+      <p><%= simple_format(@lesson.objective) %></p>
+    </div>
+  <% end %>
+
+  <% if @lesson.content.present? %>
+    <div class="lesson-detail-section">
+      <h3>Conteúdo trabalhado</h3>
+      <p><%= simple_format(@lesson.content) %></p>
+    </div>
+  <% end %>
+
+  <% if @lesson.methodology.present? %>
+    <div class="lesson-detail-section">
+      <h3>Metodologia</h3>
+      <p><%= simple_format(@lesson.methodology) %></p>
+    </div>
+  <% end %>
+</section>
+
+<% if @lesson.has_activity? && @lesson.activity.present? %>
+  <section class="lesson-detail-card lesson-activity-card">
+    <div class="lesson-detail-section-header">
+      <div>
+        <h2>Atividade vinculada</h2>
+        <p><%= @lesson.activity.title %></p>
+      </div>
+
+      <%= render "activities/sheet_button", activity: @lesson.activity %>
+    </div>
+
+    <div class="lesson-detail-grid">
+      <div>
+        <span class="detail-label">Tipo</span>
+        <strong><%= @lesson.activity.activity_type %></strong>
+      </div>
+
+      <div>
+        <span class="detail-label">Pontuação máxima</span>
+        <strong>
+          <%= @lesson.activity.maximum_score || "Não informada" %>
+        </strong>
+      </div>
+
+      <div>
+        <span class="detail-label">Data de entrega</span>
+        <strong>
+          <% if @lesson.activity.due_date.present? %>
+            <%= l(@lesson.activity.due_date, format: :long) %>
+          <% else %>
+            Não informada
+          <% end %>
+        </strong>
+      </div>
+    </div>
+
+    <% if @lesson.activity.description.present? %>
+      <div class="lesson-detail-section">
+        <h3>Descrição</h3>
+        <p><%= simple_format(@lesson.activity.description) %></p>
+      </div>
+    <% end %>
+
+    <% if @lesson.activity.instructions.present? %>
+      <div class="lesson-detail-section">
+        <h3>Instruções</h3>
+        <p><%= simple_format(@lesson.activity.instructions) %></p>
+      </div>
+    <% end %>
+  </section>
+<% end %>
+
+<div class="lesson-actions">
+  <%= link_to(
+    "Voltar para as aulas",
+    lessons_path(classroom_id: @lesson.classroom_id),
+    class: "button button-secondary"
+  ) %>
+
+  <%= render "lessons/delete_button", lesson: @lesson %>
+</div>

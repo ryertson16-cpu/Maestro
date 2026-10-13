@@ -1,0 +1,43 @@
+<nav class="main-nav" aria-label="Navegação principal" data-main-nav>
+  <% maestro_nav_groups.each do |group| %>
+    <% active = maestro_nav_section == group[:key] %>
+    <div class="nav-item<%= " is-active" if active %>" data-nav-item>
+      <%= link_to group[:href],
+                  class: ["nav-link", ("is-active" if active)].compact.join(" ") do %>
+        <%= group[:label] %>
+        <% if group[:badge].to_i.positive? %>
+          <span class="pending-count-badge"><%= group[:badge] %></span>
+        <% end %>
+      <% end %>
+
+      <button type="button"
+              class="nav-caret"
+              data-nav-caret
+              data-skip-confirm
+              aria-expanded="false"
+              aria-haspopup="true"
+              aria-label="Abrir menu <%= group[:label] %>">
+        <span aria-hidden="true">▾</span>
+      </button>
+
+      <div class="nav-panel" hidden data-nav-panel>
+        <% group[:items].each do |item| %>
+          <%= link_to item[:href],
+                      class: ["nav-panel-link", ("is-emphasis" if item[:emphasis])].compact.join(" ") do %>
+            <span>
+              <strong>
+                <%= item[:label] %>
+                <% if item[:badge].to_i.positive? %>
+                  <span class="pending-count-badge"><%= item[:badge] %></span>
+                <% end %>
+              </strong>
+              <% if item[:hint].present? %>
+                <small><%= item[:hint] %></small>
+              <% end %>
+            </span>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</nav>

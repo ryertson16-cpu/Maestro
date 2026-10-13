@@ -1,0 +1,94 @@
+<div class="page-header page-header-with-action">
+  <div class="classrooms-page-title">
+    <%= maestro_icon :classrooms, size: :lg %>
+    <h1>Turmas</h1>
+    <p>Abra uma turma para o diário, as matrículas e o acompanhamento.</p>
+  </div>
+
+  <div class="page-header-actions">
+    <% if remembered_classroom.present? %>
+      <%= link_to "Continuar em #{remembered_classroom.name}",
+                  classroom_path(remembered_classroom),
+                  class: "button button-secondary" %>
+    <% end %>
+    <%= link_to "Nova turma",
+                new_classroom_path,
+                class: "button button-primary" %>
+  </div>
+</div>
+
+<% if @classrooms.any? %>
+  <section class="monitoring-classrooms-section">
+    <div class="monitoring-classrooms-grid">
+      <% @classrooms.each do |classroom| %>
+        <% student_count = @classroom_student_counts[classroom.id] || 0 %>
+        <% course_name = classroom.school_course&.name.presence || "Curso não informado" %>
+
+        <article class="monitoring-classroom-card classroom-hub-card <%= "is-inactive" unless classroom.active? %> <%= "is-recent" if remembered_classroom&.id == classroom.id %>">
+          <%= link_to classroom_path(classroom),
+                      class: "classroom-hub-main" do %>
+            <div class="monitoring-classroom-card-top">
+              <div>
+                <%= maestro_icon :classrooms, size: :sm %>
+                <h3><%= classroom.name %></h3>
+              </div>
+
+              <% if remembered_classroom&.id == classroom.id %>
+                <span class="monitoring-classroom-badge is-ok">Última turma</span>
+              <% elsif classroom.active? %>
+                <span class="monitoring-classroom-badge is-ok">Ativa</span>
+              <% else %>
+                <span class="monitoring-classroom-badge">Inativa</span>
+              <% end %>
+            </div>
+
+            <div class="monitoring-classroom-card-info">
+              <span><%= course_name %></span>
+              <% if classroom.grade_level.present? %>
+                <span><%= classroom.grade_level.name %></span>
+              <% end %>
+              <% if classroom.school_year.present? %>
+                <span><%= classroom.school_year %></span>
+              <% end %>
+              <% if classroom.shift.present? %>
+                <span><%= classroom.shift_label %></span>
+              <% end %>
+              <span><%= pluralize(student_count, "aluno", "alunos") %></span>
+            </div>
+          <% end %>
+
+          <div class="classroom-hub-actions">
+            <%= link_to "Diário",
+                        attendance_records_path(classroom_id: classroom.id),
+                        class: "button button-secondary button-small" %>
+
+            <%= link_to "Atividades",
+                        grade_levels_path(classroom_id: classroom.id),
+                        class: "button button-secondary button-small" %>
+
+            <%= link_to "SIAGE",
+                        siage_ledger_path(classroom_id: classroom.id),
+                        class: "button button-secondary button-small" %>
+
+            <%= link_to "Matricular",
+                        bulk_new_enrollments_path(classroom_id: classroom.id),
+                        class: "button button-secondary button-small" %>
+
+            <%= link_to "Editar",
+                        edit_classroom_path(classroom),
+                        class: "button button-secondary button-small" %>
+          </div>
+        </article>
+      <% end %>
+    </div>
+  </section>
+<% else %>
+  <section class="empty-state">
+    <%= maestro_icon :classrooms %>
+    <strong>Nenhuma turma cadastrada.</strong>
+    <p>Comece criando a primeira turma.</p>
+    <%= link_to "Nova turma",
+                new_classroom_path,
+                class: "button button-primary" %>
+  </section>
+<% end %>

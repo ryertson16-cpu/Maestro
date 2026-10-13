@@ -1,0 +1,33 @@
+<section class="auth-card">
+  <div class="auth-mark-wrap">
+    <%= maestro_assistant_mark(size: :hero) %>
+  </div>
+
+  <h1>Esqueci a senha</h1>
+  <p class="auth-lead">Informe o e-mail da conta</p>
+
+  <%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :post, class: "auth-form" }) do |f| %>
+    <%= render "devise/shared/error_messages", resource: resource %>
+
+    <div class="auth-field">
+      <%= f.label :email, "E-mail", class: "visually-hidden" %>
+      <div class="auth-input">
+        <%= maestro_icon :user, size: :sm, html_class: "auth-input-icon" %>
+        <%= f.email_field :email,
+                          autofocus: true,
+                          autocomplete: "email",
+                          required: true,
+                          placeholder: "E-mail" %>
+      </div>
+    </div>
+
+    <%= f.button class: "auth-submit" do %>
+      <span>Enviar instruções</span>
+      <%= maestro_icon :arrow, size: :sm %>
+    <% end %>
+  <% end %>
+
+  <nav class="auth-links">
+    <%= link_to "Voltar ao login", new_session_path(resource_name) %>
+  </nav>
+</section>

@@ -1,0 +1,454 @@
+<% stats = @attendance_stats.values %>
+
+<% regular_count = stats.count { |item| item[:situation] == "regular" } %>
+<% attention_count = stats.count { |item| item[:situation] == "attention" } %>
+<% low_count = stats.count { |item| item[:situation] == "low" } %>
+<% without_records_count = stats.count do |item|
+     item[:situation] == "without_records"
+   end
+%>
+
+<%
+  course_name = @classroom.school_course&.name.presence || "Curso não informado"
+  classroom_query = ->(overrides = {}) {
+    {
+      search: @search.presence,
+      frequency: @frequency_filter.presence
+    }.merge(overrides).compact
+  }
+%>
+
+<div class="page-header classroom-show-header">
+  <div class="classrooms-page-title">
+    <%= maestro_icon :classrooms, size: :lg %>
+    <span class="section-eyebrow">Turma</span>
+    <h1><%= @classroom.name %></h1>
+    <p>
+      <%= course_name %>
+      <span class="hero-separator">•</span>
+      <%= @classroom.grade_level&.name || "Nível não informado" %>
+      <% if @classroom.school_year.present? %>
+        <span class="hero-separator">•</span>
+        <%= @classroom.school_year %>
+      <% end %>
+      <% if @classroom.shift.present? %>
+        <span class="hero-separator">•</span>
+        <%= @classroom.shift_label %>
+      <% end %>
+    </p>
+  </div>
+
+  <div class="classroom-show-status">
+    <% if @classroom.active? %>
+      <span class="status-badge status-active">Ativa</span>
+    <% else %>
+      <span class="status-badge status-inactive">Inativa</span>
+    <% end %>
+  </div>
+</div>
+
+<section class="classroom-hub-grid" aria-label="Ações da turma">
+  <article class="data-card classroom-hub-panel">
+    <span class="section-eyebrow">Diário</span>
+    <h2 class="classroom-hub-title-with-icon">
+      <%= maestro_icon :diary, size: :sm %>
+      Chamada e SIAGE
+    </h2>
+    <p>Registre a aula, faça a chamada e baixe o JSON desta turma. O livro-razão geral continua no atalho SIAGE do cabeçalho.</p>
+    <div class="classroom-show-actions">
+      <%= link_to "Diário",
+                  attendance_records_path(classroom_id: @classroom.id),
+                  class: "button button-primary" %>
+      <%= link_to "Calendário",
+                  school_calendar_path(classroom_id: @classroom.id),
+                  class: "button button-secondary" %>
+      <%= link_to siage_ledger_path(classroom_id: @classroom.id),
+                  class: "button button-secondary" do %>
+        Livro SIAGE
+      <% end %>
+      <%= link_to "Ajuda SIAGE",
+                  siage_help_path,
+                  class: "button button-secondary" %>
+    </div>
+  </article>
+
+  <article class="data-card classroom-hub-panel">
+    <span class="section-eyebrow">Atividades</span>
+    <h2 class="classroom-hub-title-with-icon">
+      <%= maestro_icon :activities, size: :sm %>
+      Notas e fechamento
+    </h2>
+    <p>Entregas, médias, atividades adaptadas e fechamento do bimestre.</p>
+    <div class="classroom-show-actions">
+      <%= link_to "Entregas e notas",
+                  grade_levels_path(classroom_id: @classroom.id),
+                  class: "button button-secondary" %>
+      <%= link_to "Médias",
+                  grades_path(classroom_id: @classroom.id),
+                  class: "button button-secondary" %>
+      <%= link_to "Fechamento",
+                  bimester_closing_path(classroom_id: @classroom.id),
+                  class: "button button-secondary" %>
+    </div>
+  </article>
+
+  <article class="data-card classroom-hub-panel">
+    <span class="section-eyebrow">Alunos</span>
+    <h2 class="classroom-hub-title-with-icon">
+      <%= maestro_icon :students, size: :sm %>
+      Matrículas
+    </h2>
+    <p>Inclua alunos nesta turma. O histórico permanece se alguém for removido.</p>
+    <div class="classroom-show-actions">
+      <%= link_to "Matricular alunos",
+                  bulk_new_enrollments_path(classroom_id: @classroom.id),
+                  class: "button button-secondary" %>
+    </div>
+  </article>
+
+  <article class="data-card classroom-hub-panel">
+    <span class="section-eyebrow">Acompanhamento</span>
+    <h2 class="classroom-hub-title-with-icon">
+      <%= maestro_icon :monitoring, size: :sm %>
+      Alertas e conselho
+    </h2>
+    <p>Pendências, frequência e pareceres do bimestre.</p>
+    <div class="classroom-show-actions">
+      <%= link_to "Monitoramento",
+                  monitoring_path(classroom_id: @classroom.id),
+                  class: "button button-secondary" %>
+      <%= link_to "Conselho",
+                  council_notes_path(classroom_id: @classroom.id),
+                  class: "button button-secondary" %>
+    </div>
+  </article>
+
+  <article class="data-card classroom-hub-panel">
+    <span class="section-eyebrow">Projetos</span>
+    <h2 class="classroom-hub-title-with-icon">
+      <%= maestro_icon :projects, size: :sm %>
+      Professor e Escola Nota 10
+    </h2>
+    <p>Projetos desta turma. Não entram no diário nem no SIAGE.</p>
+    <div class="classroom-show-actions">
+      <%= link_to "Projetos",
+                  projects_path(classroom_id: @classroom.id),
+                  class: "button button-secondary" %>
+    </div>
+  </article>
+
+  <article class="data-card classroom-hub-panel">
+    <span class="section-eyebrow">Cadastro</span>
+    <h2>Dados da turma</h2>
+    <p>Nome, turno, curso e situação.</p>
+    <div class="classroom-show-actions">
+      <%= link_to "Editar",
+                  edit_classroom_path(@classroom),
+                  class: "button button-secondary" %>
+      <%= button_to "Excluir turma",
+                    classroom_path(@classroom),
+                    method: :delete,
+                    data: { turbo_confirm: "Deseja excluir esta turma?" },
+                    class: "button-link-danger classroom-delete-button" %>
+    </div>
+  </article>
+</section>
+
+<section class="attendance-summary classroom-show-summary" aria-label="Resumo da turma">
+  <article class="summary-card">
+    <span class="summary-label">Alunos ativos</span>
+    <strong><%= @students_count %></strong>
+  </article>
+  <article class="summary-card">
+    <span class="summary-label">Frequência média</span>
+    <strong>
+      <%= @average_frequency.present? ? "#{@average_frequency}%" : "—" %>
+    </strong>
+  </article>
+  <article class="summary-card summary-late">
+    <span class="summary-label">Abaixo de 75%</span>
+    <strong><%= @students_low_frequency %></strong>
+  </article>
+  <article class="summary-card">
+    <span class="summary-label">Aulas com chamada</span>
+    <strong><%= @total_lessons %></strong>
+  </article>
+  <article class="summary-card">
+    <span class="summary-label">Pendências</span>
+    <strong><%= @pending_activity_rows.size %></strong>
+  </article>
+</section>
+
+<section class="data-card classroom-students-card">
+  <div class="section-header">
+    <div>
+      <span class="section-eyebrow">Alunos</span>
+      <h2>Matriculados nesta turma</h2>
+      <p>
+        Exibindo
+        <%= pluralize(@enrollments.size, "aluno", "alunos") %>.
+      </p>
+    </div>
+  </div>
+
+  <%= form_with url: classroom_path(@classroom),
+                method: :get,
+                local: true,
+                class: "classroom-filter-form" do %>
+    <%= hidden_field_tag :frequency, @frequency_filter %>
+
+    <div class="filter-search-field">
+      <%= label_tag :search, "Buscar aluno" %>
+      <%= text_field_tag :search,
+                         @search,
+                         placeholder: "Nome ou matrícula" %>
+    </div>
+
+    <div class="classroom-filter-actions">
+      <%= submit_tag "Buscar", class: "button button-primary" %>
+      <%= link_to "Limpar",
+                  classroom_path(@classroom),
+                  class: "button button-secondary" %>
+    </div>
+  <% end %>
+
+  <div class="monitoring-chip-row" role="navigation" aria-label="Filtrar frequência">
+    <%
+      frequency_chips = [
+        ["", "Todos", @students_count],
+        ["regular", "Regular", regular_count],
+        ["attention", "Atenção", attention_count],
+        ["low", "Baixa frequência", low_count],
+        ["without_records", "Sem registros", without_records_count]
+      ]
+    %>
+    <% frequency_chips.each do |value, label, count| %>
+      <%= link_to classroom_path(@classroom, classroom_query.call(frequency: value)),
+                  class: [
+                    "monitoring-filter-chip",
+                    ("is-active" if @frequency_filter.to_s == value.to_s)
+                  ].compact.join(" ") do %>
+        <%= label %>
+        <span><%= count %></span>
+      <% end %>
+    <% end %>
+  </div>
+
+  <% if @enrollments.any? %>
+    <div class="table-wrapper">
+      <table class="classroom-students-table">
+        <thead>
+          <tr>
+            <th>Aluno</th>
+            <th>Matrícula</th>
+            <th>Frequência</th>
+            <th>Situação</th>
+            <th class="actions-column">Ações</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <% @enrollments.each do |enrollment| %>
+            <% student = enrollment.student %>
+            <% stats = @attendance_stats[enrollment.id] %>
+
+            <tr>
+              <td>
+                <strong><%= student.name %></strong>
+                <% if student.series.present? %>
+                  <small class="table-secondary-text"><%= student.series %></small>
+                <% end %>
+              </td>
+
+              <td>
+                <%= student.registration_number.presence || "Não informado" %>
+              </td>
+
+              <td>
+                <% if stats[:percentage].present? %>
+                  <strong class="frequency-value"><%= stats[:percentage] %>%</strong>
+                  <small class="table-secondary-text">
+                    <%= pluralize(stats[:total], "registro", "registros") %>
+                  </small>
+                <% else %>
+                  <span class="muted-text">Sem registros</span>
+                <% end %>
+              </td>
+
+              <td>
+                <% case stats[:situation] %>
+                <% when "regular" %>
+                  <span class="frequency-badge frequency-regular">Regular</span>
+                <% when "attention" %>
+                  <span class="frequency-badge frequency-attention">Atenção</span>
+                <% when "low" %>
+                  <span class="frequency-badge frequency-low">Baixa frequência</span>
+                <% else %>
+                  <span class="frequency-badge frequency-without-records">Sem registros</span>
+                <% end %>
+              </td>
+
+              <td class="table-actions student-row-actions">
+                <%= link_to student_path(student),
+                            class: "button button-secondary button-small",
+                            aria: { label: "Ver #{student.name}" } do %>
+                  Ver aluno
+                <% end %>
+
+                <details class="move-student-menu">
+                  <summary class="button button-secondary button-small">
+                    Mudar turma
+                  </summary>
+
+                  <div class="move-student-popover">
+                    <strong>Mudar de turma</strong>
+
+                    <% if @available_classrooms.any? %>
+                      <%= form_with url: move_enrollment_path(enrollment),
+                                    method: :patch,
+                                    local: true do %>
+                        <%= select_tag :classroom_id,
+                                       options_from_collection_for_select(
+                                         @available_classrooms,
+                                         :id,
+                                         :name
+                                       ),
+                                       include_blank: "Selecione a turma" %>
+
+                        <%= submit_tag "Confirmar",
+                                       class: "button button-primary button-small",
+                                       data: {
+                                         turbo_confirm: "Deseja mudar #{student.name} de turma?"
+                                       } %>
+                      <% end %>
+                    <% else %>
+                      <p class="popover-empty-message">
+                        Não há outra turma disponível.
+                      </p>
+                    <% end %>
+                  </div>
+                </details>
+
+                <%= button_to "Remover",
+                              remove_from_classroom_enrollment_path(enrollment),
+                              method: :patch,
+                              class: "button-link-danger button-small",
+                              aria: { label: "Remover #{student.name} da turma" },
+                              data: {
+                                turbo_confirm:
+                                  "Deseja remover #{student.name} desta turma? " \
+                                  "O histórico será preservado."
+                              } %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <% if @search.present? || @frequency_filter.present? %>
+        <%= maestro_icon :students %>
+        <strong>Nenhum aluno encontrado.</strong>
+        <p>Tente alterar a busca ou os filtros.</p>
+        <%= link_to "Limpar filtros",
+                    classroom_path(@classroom),
+                    class: "button button-secondary" %>
+      <% else %>
+        <%= maestro_icon :students %>
+        <strong>Nenhum aluno matriculado nesta turma.</strong>
+        <p>Matricule vários alunos de uma vez.</p>
+        <%= link_to "Matricular alunos",
+                    bulk_new_enrollments_path(classroom_id: @classroom.id),
+                    class: "button button-primary" %>
+      <% end %>
+    </div>
+  <% end %>
+</section>
+
+<details class="data-card classroom-pending-tools">
+  <summary>
+    Atividades pendentes
+    <span><%= @pending_activity_rows.size %></span>
+  </summary>
+
+  <p class="classroom-pending-help">
+    Entregas em aberto nesta turma. O acompanhamento por gravidade continua no
+    <%= link_to "Monitoramento", monitoring_path(classroom_id: @classroom.id) %>.
+  </p>
+
+  <% if @pending_activity_rows.any? %>
+    <div class="table-wrapper">
+      <table class="classroom-activities-table">
+        <thead>
+          <tr>
+            <th>Aluno</th>
+            <th>Atividade</th>
+            <th>Disciplina</th>
+            <th>Data limite</th>
+            <th>Atraso</th>
+            <th></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <% @pending_activity_rows.each do |row| %>
+            <% student = row[:student] %>
+            <% activity = row[:activity] %>
+            <% days_late = row[:days_late] %>
+
+            <tr>
+              <td>
+                <strong><%= student.name %></strong>
+              </td>
+              <td>
+                <strong><%= activity.title %></strong>
+              </td>
+              <td>
+                <%= activity.lesson.course&.name || "Não informada" %>
+              </td>
+              <td>
+                <% if activity.due_date.present? %>
+                  <%= l(activity.due_date, format: :short) %>
+                <% else %>
+                  <span class="muted-text">Não informada</span>
+                <% end %>
+              </td>
+              <td>
+                <% if days_late.positive? %>
+                  <strong class="activity-days-late">
+                    <%= days_late %>
+                    <%= days_late == 1 ? "dia" : "dias" %>
+                  </strong>
+                <% else %>
+                  <span class="activity-on-time">No prazo</span>
+                <% end %>
+              </td>
+              <td class="table-actions">
+                <%= link_to "Ver aluno",
+                            student_path(student),
+                            class: "button button-secondary button-small" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% elsif @activities_count.zero? %>
+    <div class="empty-state">
+      <%= maestro_icon :clipboard %>
+      <strong>Nenhuma atividade criada.</strong>
+      <p>Registre uma aula com atividade para acompanhar as entregas.</p>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <%= maestro_icon :check, html_class: "maestro-icon-success" %>
+      <strong>Nenhuma atividade pendente.</strong>
+      <p>Todos os alunos entregaram as atividades desta turma.</p>
+    </div>
+  <% end %>
+</details>
+
+<p class="classroom-back">
+  <%= link_to "Voltar para turmas", classrooms_path, class: "back-link" %>
+</p>

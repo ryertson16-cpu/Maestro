@@ -1,0 +1,14 @@
+<%= turbo_stream.update "lira-thread" do %>
+  <% @messages.each do |message| %>
+    <%= render "lira/chats/message", message: message %>
+  <% end %>
+<% end %>
+
+<%= turbo_stream.update "lira-composer-field" do %>
+  <textarea name="body"
+            id="lira-body"
+            required="required"
+            rows="2"
+            placeholder="Fale com o Maestro. Ex.: frequência da Maria na 7ª A"
+            data-lira-input="true"></textarea>
+<% end %>

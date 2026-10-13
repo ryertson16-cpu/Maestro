@@ -1,0 +1,94 @@
+<% content_for :title, "Conferir notas | Maestro" %>
+
+<div class="page-header">
+  <div>
+    <h1>Conferir resultados do PDF</h1>
+
+    <% if @import_classroom.present? && @import_activity.present? %>
+      <p>
+        Turma: <strong><%= @import_classroom.name %></strong> —
+        Atividade: <strong><%= @import_activity.title %></strong>
+      </p>
+    <% end %>
+  </div>
+
+  <div class="page-actions">
+    <%= link_to "Voltar ao monitoramento",
+                monitoring_path(
+                  classroom_id: @import_classroom&.id,
+                  activity_id: @import_activity&.id
+                ),
+                class: "button button-secondary" %>
+  </div>
+</div>
+
+<% if @import_rows.present? %>
+  <section class="monitoring-results-card">
+    <p>
+      Confira cada aluno e cada nota antes de confirmar.
+      Se já houver uma nota salva para a atividade, a nota numérica importada
+      irá substituí-la.
+    </p>
+
+    <p>
+      As linhas marcadas como “Sem nota” não serão importadas e não apagarão
+      notas já registradas.
+    </p>
+
+    <%= form_with url: confirm_monitoring_results_path,
+                  method: :post,
+                  local: true do %>
+      <%= hidden_field_tag :classroom_id, @import_classroom.id %>
+      <%= hidden_field_tag :activity_id, @import_activity.id %>
+
+      <div class="monitoring-students-list">
+        <% @import_rows.each_with_index do |row, index| %>
+          <article class="monitoring-student-card">
+            <h3><%= row[:name] %></h3>
+
+            <% if row[:score].blank? %>
+              <p><strong>Sem nota:</strong> nenhuma nota será alterada para esta linha.</p>
+            <% else %>
+              <p><%= row[:match_label] %></p>
+
+              <div>
+                <%= label_tag "results_#{index}_student_id", "Aluno da turma" %>
+
+                <%= select_tag "results[#{index}][student_id]",
+                               options_for_select(
+                                 [["Selecione o aluno", ""]] +
+                                   @import_students.map { |student| [student.name, student.id] },
+                                 row[:student_id]
+                               ),
+                               id: "results_#{index}_student_id",
+                               required: true %>
+              </div>
+
+              <div>
+                <%= label_tag "results_#{index}_score", "Nota" %>
+
+                <%= number_field_tag "results[#{index}][score]",
+                                     row[:score],
+                                     id: "results_#{index}_score",
+                                     min: 0,
+                                     max: 10,
+                                     step: 0.01,
+                                     required: true %>
+              </div>
+
+              <% if row[:existing_score].present? %>
+                <p>
+                  Nota atualmente salva:
+                  <strong><%= number_with_precision(row[:existing_score], precision: 2) %></strong>
+                </p>
+              <% end %>
+            <% end %>
+          </article>
+        <% end %>
+      </div>
+
+      <%= submit_tag "Confirmar e salvar notas",
+                     class: "button button-primary" %>
+    <% end %>
+  </section>
+<% end %>

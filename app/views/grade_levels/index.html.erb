@@ -1,0 +1,437 @@
+<% content_for :title, "Atividades | Maestro" %>
+
+<%
+  center_query = ->(overrides = {}) {
+    {
+      classroom_id: @classroom&.id,
+      activity_id: @activity&.id,
+      bimester: @bimester_filter,
+      kind: @activity_kind
+    }.merge(overrides).compact
+  }
+%>
+
+<div class="page-header page-header-with-action">
+  <div class="activities-page-title">
+    <%= maestro_icon :activities, size: :lg %>
+    <span class="section-eyebrow">Atividades</span>
+    <h1>Atividades</h1>
+    <p>Escolha a turma e a atividade para lançar entregas e notas. Projetos ficam em Turmas. REC só nesta tela, por atividade.</p>
+  </div>
+
+  <% if @classroom.present? %>
+    <nav class="diary-header-links" aria-label="Atalhos de atividades">
+      <%= link_to "Notas e médias",
+                  grades_path(classroom_id: @classroom.id),
+                  class: "button button-ghost button-small" %>
+      <% if @exam_activity.present? %>
+        <%= link_to "Resultado da prova",
+                    exam_result_grade_levels_path(classroom_id: @classroom.id),
+                    class: "button button-ghost button-small",
+                    target: "_blank",
+                    rel: "noopener" %>
+      <% end %>
+      <%= link_to "Registrar aula",
+                  new_lesson_path(classroom_id: @classroom.id),
+                  class: "button button-ghost button-small" %>
+    </nav>
+  <% end %>
+</div>
+
+<% if @classrooms.blank? %>
+  <section class="empty-state">
+    <%= maestro_icon :classrooms %>
+    <strong>Nenhuma turma cadastrada.</strong>
+    <p>Cadastre uma turma para acompanhar as atividades.</p>
+    <%= link_to "Cadastrar turma", new_classroom_path, class: "button button-primary" %>
+  </section>
+<% else %>
+  <section class="attendance-filter diary-context">
+    <h2>Filtrar turma</h2>
+
+    <%= form_with url: grade_levels_path, method: :get, local: true do |form| %>
+      <% if @bimester_filter.present? %>
+        <%= hidden_field_tag :bimester, @bimester_filter %>
+      <% end %>
+      <% if @activity_kind == "adapted" %>
+        <%= hidden_field_tag :kind, @activity_kind %>
+      <% end %>
+
+      <div>
+        <%= form.label :classroom_id, "Turma" %>
+        <%= form.collection_select :classroom_id,
+                                  @classrooms,
+                                  :id,
+                                  :name,
+                                  { selected: @classroom&.id },
+                                  { required: true } %>
+      </div>
+
+      <div>
+        <%= form.submit "Abrir" %>
+      </div>
+    <% end %>
+  </section>
+
+  <section class="monitoring-classrooms-section">
+    <details class="classroom-picker-details" <%= "open" if @classroom.blank? %>>
+      <summary>Pendências por turma</summary>
+
+      <div class="monitoring-classrooms-grid">
+        <% @classrooms.each do |classroom| %>
+          <% student_count = @classroom_student_counts[classroom.id] || 0 %>
+          <% pending_count = @classroom_pending_counts[classroom.id] || 0 %>
+
+          <%= link_to grade_levels_path(classroom_id: classroom.id),
+                      class: [
+                        "monitoring-classroom-card",
+                        ("selected" if @classroom&.id == classroom.id)
+                      ].compact.join(" ") do %>
+            <div class="monitoring-classroom-card-top">
+              <div>
+                <%= maestro_icon :clipboard, size: :sm %>
+                <h3><%= classroom.name %></h3>
+              </div>
+              <% if pending_count.positive? %>
+                <span class="monitoring-classroom-badge">
+                  <%= pending_count %> em aberto
+                </span>
+              <% else %>
+                <span class="monitoring-classroom-badge is-ok">Em dia</span>
+              <% end %>
+            </div>
+
+            <div class="monitoring-classroom-card-info">
+              <% if classroom.grade_level.present? %>
+                <span><%= classroom.grade_level.name %></span>
+              <% end %>
+              <% if classroom.school_year.present? %>
+                <span><%= classroom.school_year %></span>
+              <% end %>
+              <% if classroom.shift.present? %>
+                <span><%= classroom.shift_label %></span>
+              <% end %>
+              <span><%= pluralize(student_count, "aluno", "alunos") %></span>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    </details>
+  </section>
+<% end %>
+
+<% if @classroom.present? %>
+  <section class="data-card activity-board">
+    <div class="section-heading">
+      <div>
+        <span class="section-eyebrow"><%= @classroom.name %></span>
+        <h2><%= @activity_kind == "adapted" ? "Atividades adaptadas" : "Atividades da turma" %></h2>
+        <p class="classroom-pending-help">
+          <% if @activity_kind == "adapted" %>
+            Versões para alunos específicos. A média só muda se a adaptação substituir a atividade da turma.
+          <% else %>
+            Clique na atividade para lançar entregas e notas abaixo.
+          <% end %>
+        </p>
+      </div>
+    </div>
+
+    <div class="diary-workbar activity-filter-bar">
+      <div class="monitoring-chip-row" role="navigation" aria-label="Tipo de atividade">
+        <%= link_to grade_levels_path(center_query.call(kind: "regular", activity_id: nil)),
+                    class: ["monitoring-filter-chip", ("is-active" if @activity_kind != "adapted")].compact.join(" ") do %>
+          Da turma
+          <span><%= @all_classroom_activities.count { |activity| !activity.adapted? } %></span>
+        <% end %>
+
+        <%= link_to grade_levels_path(center_query.call(kind: "adapted", activity_id: nil)),
+                    class: ["monitoring-filter-chip", ("is-active" if @activity_kind == "adapted")].compact.join(" ") do %>
+          Adaptadas
+          <span><%= @all_classroom_activities.count(&:adapted?) %></span>
+        <% end %>
+      </div>
+
+      <div class="monitoring-chip-row" role="navigation" aria-label="Filtrar por bimestre">
+        <%= link_to grade_levels_path(center_query.call(bimester: nil, activity_id: nil)),
+                    class: ["monitoring-filter-chip", ("is-active" if @bimester_filter.blank?)].compact.join(" ") do %>
+          Todos
+          <span><%= @all_classroom_activities.size %></span>
+        <% end %>
+
+        <% (1..4).each do |number| %>
+          <% count = @all_classroom_activities.count { |activity| activity.bimester == number } %>
+          <%= link_to grade_levels_path(center_query.call(bimester: number, activity_id: nil)),
+                      class: ["monitoring-filter-chip", ("is-active" if @bimester_filter == number)].compact.join(" ") do %>
+            <%= number %>º bimestre
+            <span><%= count %></span>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+
+    <% if @activities.any? %>
+      <div class="activity-compact-list">
+        <% @activities.each do |activity| %>
+          <% pending_count = @activity_pending_counts[activity.id] || 0 %>
+          <% selected = @activity&.id == activity.id %>
+
+          <article class="activity-compact-card <%= "selected" if selected %>">
+            <%= link_to grade_levels_path(center_query.call(activity_id: activity.id)),
+                        class: "activity-compact-main" do %>
+              <div>
+                <span class="activity-type-label"><%= activity.activity_type %></span>
+                <% if activity.adapted? %>
+                  <span class="activity-adapted-badge">Adaptada</span>
+                <% end %>
+                <h3><%= activity.title %></h3>
+                <p>
+                  Limite <%= l(activity.due_date, format: :short) %>
+                  <span class="hero-separator">•</span>
+                  <%= activity.bimester_label %>
+                  <span class="hero-separator">•</span>
+                  Peso <%= activity.weight %>
+                  <% if activity.adapted? && activity.adaptation_kind_label.present? %>
+                    <span class="hero-separator">•</span>
+                    <%= activity.adaptation_kind_label %>
+                  <% end %>
+                </p>
+                <% if activity.adapted? && activity.parent_activity.present? %>
+                  <p>A partir de <%= activity.parent_activity.title %></p>
+                <% end %>
+              </div>
+
+              <% if pending_count.positive? %>
+                <span class="monitoring-classroom-badge">
+                  <%= pending_count %> sem entrega
+                </span>
+              <% else %>
+                <span class="monitoring-classroom-badge is-ok">Completa</span>
+              <% end %>
+            <% end %>
+
+            <% if selected %>
+              <%= form_with model: activity,
+                            url: activity_path(activity),
+                            method: :patch,
+                            local: true,
+                            class: "activity-classification-form" do |form| %>
+                <%= hidden_field_tag :classroom_id, @classroom.id %>
+                <%= hidden_field_tag :bimester_filter, @bimester_filter %>
+                <%= hidden_field_tag :kind, @activity_kind %>
+
+                <div>
+                  <%= form.label :bimester, "Bimestre" %>
+                  <%= form.select(
+                        :bimester,
+                        Activity::BIMESTERS.map { |number, label| [label, number] },
+                        {},
+                        class: "activity-bimester-select"
+                      ) %>
+                </div>
+
+                <div>
+                  <%= form.label :weight, "Peso" %>
+                  <%= form.number_field :weight,
+                                        min: 0.1,
+                                        max: 100,
+                                        step: 0.1,
+                                        class: "activity-weight-input" %>
+                </div>
+
+                <%= form.submit "Salvar bimestre e peso",
+                                class: "button button-secondary button-small" %>
+
+                <% if activity.adapted? %>
+                  <%= link_to "Editar adaptação",
+                              adapt_activity_path(activity),
+                              class: "button button-secondary button-small" %>
+                <% else %>
+                  <%= link_to "Criar versão adaptada",
+                              adapt_activity_path(activity),
+                              class: "button button-secondary button-small" %>
+                <% end %>
+
+                <%= render "activities/sheet_button",
+                           activity: activity,
+                           css_class: "button button-secondary button-small" %>
+              <% end %>
+            <% end %>
+          </article>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <%= maestro_icon :clipboard %>
+        <strong>Nenhuma atividade neste recorte.</strong>
+        <p>
+          <% if @activity_kind == "adapted" %>
+            Abra uma atividade da turma e escolha criar versão adaptada.
+          <% else %>
+            Registre uma aula; a atividade fica no formulário da aula, ou escolha outro bimestre.
+          <% end %>
+        </p>
+        <% if @activity_kind == "adapted" %>
+          <%= link_to "Ver atividades da turma",
+                      grade_levels_path(center_query.call(kind: "regular", activity_id: nil)),
+                      class: "button button-primary" %>
+        <% else %>
+          <%= link_to "Registrar aula",
+                      new_lesson_path(classroom_id: @classroom.id),
+                      class: "button button-primary" %>
+        <% end %>
+      </div>
+    <% end %>
+  </section>
+<% end %>
+
+<% if @classroom.present? && @activity.present? %>
+  <section class="data-card activity-tracking-section">
+    <div class="section-heading">
+      <div>
+        <span class="section-eyebrow">Lançamento</span>
+        <h2><%= @activity.title %></h2>
+        <p class="classroom-pending-help">
+          Limite:
+          <%= l(@activity.due_date, format: :long) %>
+          —
+          <%= @activity.bimester_label %>
+          <% if @activity.adapted? %>
+            —
+            Adaptada<% if @activity.adaptation_kind_label.present? %>, <%= @activity.adaptation_kind_label.downcase %><% end %>
+            <% if @activity.complements? %>
+              — não entra na média
+            <% else %>
+              — substitui a atividade da turma
+            <% end %>
+          <% end %>
+        </p>
+        <% if @replaced_students.present? %>
+          <p class="classroom-pending-help">
+            <%= pluralize(@replaced_students.size, "aluno usa", "alunos usam") %>
+            versão adaptada e não entra neste lançamento.
+          </p>
+        <% end %>
+      </div>
+
+      <%= render "activities/sheet_button", activity: @activity %>
+    </div>
+
+    <section class="attendance-summary activity-tracking-summary" aria-label="Resumo das entregas">
+      <article class="summary-card summary-late">
+        <span class="summary-label">Em andamento</span>
+        <strong><%= @tracking_summary[:in_progress] %></strong>
+      </article>
+      <article class="summary-card summary-present">
+        <span class="summary-label">Entregues</span>
+        <strong><%= @tracking_summary[:delivered] %></strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Com atraso</span>
+        <strong><%= @tracking_summary[:delivered_late] %></strong>
+      </article>
+      <article class="summary-card summary-absent">
+        <span class="summary-label">Não entregou</span>
+        <strong><%= @tracking_summary[:not_delivered] %></strong>
+      </article>
+    </section>
+
+    <%= form_with(
+          url: save_submissions_grade_levels_path,
+          method: :post,
+          local: true
+        ) do %>
+      <%= hidden_field_tag :classroom_id, @classroom.id %>
+      <%= hidden_field_tag :activity_id, @activity.id %>
+      <%= hidden_field_tag :bimester, @bimester_filter %>
+      <%= hidden_field_tag :kind, @activity_kind %>
+
+      <div class="activity-table-wrapper">
+        <table class="activity-tracking-table">
+          <thead>
+            <tr>
+              <th>Aluno</th>
+              <th>Situação</th>
+              <th>Nota</th>
+              <% if @activity.recovery_eligible? %>
+                <th>REC</th>
+              <% end %>
+              <th>Recebimento</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @tracking_rows.each do |row| %>
+              <% student = row[:student] %>
+              <% submission = row[:submission] %>
+              <% date_id = "submission-date-#{student.id}" %>
+
+              <tr>
+                <td>
+                  <%= link_to student.name, student_path(student) %>
+                </td>
+                <td>
+                  <span class="activity-status-tag status-<%= row[:status] %>">
+                    <%= activity_status_label(row[:status]) %>
+                  </span>
+                </td>
+                <td>
+                  <%= number_field_tag(
+                        "submissions[#{student.id}][score]",
+                        submission&.score,
+                        min: 0,
+                        max: 10,
+                        step: 0.1,
+                        placeholder: "—",
+                        class: "activity-submission-score"
+                      ) %>
+                </td>
+                <% if @activity.recovery_eligible? %>
+                  <td>
+                    <%= number_field_tag(
+                          "submissions[#{student.id}][recovery_score]",
+                          row[:recovery_grade]&.score,
+                          min: 0,
+                          max: 10,
+                          step: 0.1,
+                          placeholder: "—",
+                          class: "activity-submission-score"
+                        ) %>
+                  </td>
+                <% end %>
+                <td>
+                  <div class="activity-date-field">
+                    <%= date_field_tag(
+                          "submissions[#{student.id}][submitted_on]",
+                          submission&.submitted_on,
+                          id: date_id,
+                          class: "activity-submission-date"
+                        ) %>
+                    <button type="button"
+                            class="button button-secondary button-small"
+                            data-fill-today
+                            data-target="<%= date_id %>"
+                            data-today="<%= Time.zone.today.iso8601 %>">
+                      Hoje
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="activity-tracking-actions">
+        <span>
+          <%= pluralize(@tracking_rows.size, "aluno acompanhado", "alunos acompanhados") %>
+        </span>
+        <%= submit_tag "Salvar entregas e notas", class: "button button-primary" %>
+      </div>
+    <% end %>
+  </section>
+<% elsif @classroom.present? && @activities.any? %>
+  <div class="empty-state activity-selection-message">
+    <%= maestro_icon :clipboard %>
+    <strong>Selecione uma atividade.</strong>
+    <p>Escolha uma atividade acima para lançar as entregas e as notas.</p>
+  </div>
+<% end %>

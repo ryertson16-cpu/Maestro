@@ -1,0 +1,281 @@
+<% content_for :title, "Configurações | Maestro" %>
+
+<div class="page-header">
+  <div>
+    <h1>Configurações</h1>
+    <p>Seus dados e os da escola em que você trabalha.</p>
+  </div>
+</div>
+
+<section class="settings-identity">
+  <div class="settings-crest">
+    <% if @school&.crest&.attached? %>
+      <%= image_tag @school.crest, alt: "Brasão de #{@school.name}" %>
+    <% else %>
+      <span class="brand-mark">M</span>
+    <% end %>
+  </div>
+
+  <div class="settings-identity-copy">
+    <span class="section-eyebrow">Professor</span>
+    <h2><%= @professor.name %></h2>
+    <p>
+      <% if @school.present? %>
+        <%= @school.name %>
+        <% if @school.regional_label.present? %>
+          <span class="hero-separator">•</span>
+          <%= @school.regional_label %>
+        <% end %>
+      <% else %>
+        Cadastre a escola para o brasão aparecer no Maestro e nos PDFs.
+      <% end %>
+    </p>
+  </div>
+
+  <div class="settings-avatar">
+    <% if @professor.profile_photo.attached? %>
+      <%= image_tag @professor.profile_photo,
+                    alt: "Foto de #{@professor.name}" %>
+    <% else %>
+      <span><%= @professor.initials %></span>
+    <% end %>
+  </div>
+</section>
+
+<section class="settings-grid">
+  <article class="data-card" id="assinatura">
+    <div class="profile-section-header">
+      <div>
+        <span class="section-eyebrow">Plano</span>
+        <h2>Assinatura</h2>
+        <p>
+          <% if current_professor.subscription %>
+            <%= current_professor.subscription.label %>
+            <% if current_professor.maestro_full_access? %>
+              — caderno pleno liberado.
+            <% else %>
+              — renovar para voltar a usar o caderno e o WhatsApp.
+            <% end %>
+          <% else %>
+            Nenhuma assinatura nesta conta.
+          <% end %>
+        </p>
+      </div>
+      <%= link_to "Gerenciar",
+                  assinatura_path,
+                  class: "button button-primary" %>
+    </div>
+  </article>
+
+  <article class="data-card">
+    <div class="profile-section-header">
+      <div>
+        <span class="section-eyebrow">Você</span>
+        <h2>Meu perfil</h2>
+        <p>Nome, foto, como quer ser chamado, telefone e WhatsApp.</p>
+      </div>
+      <%= link_to "Editar perfil",
+                  edit_profile_path,
+                  class: "button button-primary" %>
+    </div>
+
+    <dl class="profile-details">
+      <div>
+        <dt>E-mail</dt>
+        <dd><%= @professor.email %></dd>
+      </div>
+      <div>
+        <dt>Telefone</dt>
+        <dd><%= @professor.phone.presence || "Não informado" %></dd>
+      </div>
+      <div>
+        <dt>WhatsApp do Maestro</dt>
+        <dd><%= @professor.whatsapp_number.presence || "Não vinculado" %></dd>
+      </div>
+      <div>
+        <dt>Como o Maestro te chama</dt>
+        <dd>
+          <%= @professor.greeting_name.presence || "Não informado" %>
+          <span class="hero-separator">•</span>
+          <%= @professor.feminine? ? "Professora" : "Professor" %>
+        </dd>
+      </div>
+      <div>
+        <dt>Apresentação</dt>
+        <dd>
+          <%= simple_format(@professor.bio.presence || "Nenhuma apresentação cadastrada.") %>
+        </dd>
+      </div>
+    </dl>
+  </article>
+
+  <article class="data-card" id="contas-sociais">
+    <div class="profile-section-header">
+      <div>
+        <span class="section-eyebrow">Acesso</span>
+        <h2>Contas sociais</h2>
+        <p>Entre depois com Google, Facebook ou Instagram, sem alterar a senha atual.</p>
+      </div>
+    </div>
+
+    <ul class="oauth-link-list">
+      <% OauthHelper::OAUTH_BUTTONS.each do |button| %>
+        <% identity = @professor.identities.find { |row| row.provider == button[:provider].to_s } %>
+        <li class="oauth-link-row">
+          <span class="oauth-link-brand">
+            <%= oauth_brand_icon(button[:brand]) %>
+            <%= Oauth::Settings.label_for(button[:provider]) %>
+          </span>
+          <% if identity %>
+            <span class="oauth-link-status">Vinculado</span>
+          <% else %>
+            <%= button_to "Vincular",
+                          oauth_authorize_path_for(button[:provider]),
+                          method: :post,
+                          class: "button button-secondary button-small",
+                          data: { turbo: false, skip_confirm: true } %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </article>
+
+  <article class="data-card" id="saudacao">
+    <div class="profile-section-header">
+      <div>
+        <span class="section-eyebrow">Maestro</span>
+        <h2>Saudação</h2>
+        <p>Como o Maestro deve te chamar depois do login.</p>
+      </div>
+    </div>
+
+    <%= form_with model: @professor,
+                  url: profile_path,
+                  method: :patch,
+                  class: "settings-greeting-form" do |form| %>
+      <div class="profile-form-field">
+        <%= form.label :preferred_name, "Como gostaria de ser chamado(a)?" %>
+        <%= form.text_field :preferred_name,
+                            maxlength: 80,
+                            placeholder: "Ex.: Ryertson" %>
+        <small>Esse nome entra na saudação, ao lado de professor ou professora.</small>
+      </div>
+
+      <div class="profile-form-field">
+        <span class="settings-field-label">Sexo</span>
+        <div class="profile-choice-row">
+          <label>
+            <%= form.radio_button :sex, "male" %>
+            Masculino
+          </label>
+          <label>
+            <%= form.radio_button :sex, "female" %>
+            Feminino
+          </label>
+        </div>
+      </div>
+
+      <div class="page-actions">
+        <%= form.submit "Salvar saudação", class: "button button-primary" %>
+      </div>
+    <% end %>
+  </article>
+
+  <article class="data-card">
+    <div class="profile-section-header">
+      <div>
+        <span class="section-eyebrow">Instituição</span>
+        <h2>Escola e regional</h2>
+        <p>Nome, GRE e brasão usados no cabeçalho e nos documentos.</p>
+      </div>
+      <%= link_to @school.present? ? "Editar escola" : "Cadastrar escola",
+                  edit_school_path,
+                  class: "button button-primary" %>
+    </div>
+
+    <% if @school.present? %>
+      <dl class="profile-details">
+        <div>
+          <dt>Escola</dt>
+          <dd><%= @school.name %></dd>
+        </div>
+        <div>
+          <dt>Regional</dt>
+          <dd><%= @school.regional_label.presence || "Não informada" %></dd>
+        </div>
+        <div>
+          <dt>Brasão</dt>
+          <dd><%= @school.crest.attached? ? "Enviado" : "Não enviado" %></dd>
+        </div>
+      </dl>
+    <% else %>
+      <p>Nenhuma escola cadastrada ainda.</p>
+    <% end %>
+  </article>
+
+  <article class="data-card">
+    <div class="profile-section-header">
+      <div>
+        <span class="section-eyebrow">Cadastro</span>
+        <h2>Cursos e níveis</h2>
+        <p>Disciplinas, cursos da escola e níveis de ensino.</p>
+      </div>
+      <%= link_to "Abrir cursos",
+                  courses_path,
+                  class: "button button-primary" %>
+    </div>
+  </article>
+
+  <article class="data-card" id="automacoes">
+    <div class="profile-section-header">
+      <div>
+        <span class="section-eyebrow">Agente</span>
+        <h2>Automações neste PC</h2>
+        <p>
+          O Maestro avisa no sino e, se o WhatsApp da Meta estiver configurado,
+          também no celular. Só funciona com o aplicativo aberto.
+          Não lança nota, falta nem SIAGE. Comandos: hoje, status, avisos, ajuda.
+        </p>
+      </div>
+    </div>
+
+    <%= form_with url: update_automation_settings_path, method: :patch, class: "automation-rules-form" do %>
+      <% @automation_rules.each do |rule| %>
+        <div class="automation-rule-row">
+          <label class="automation-rule-toggle">
+            <%= hidden_field_tag "rules[#{rule.kind}][enabled]", "0", id: nil %>
+            <%= check_box_tag "rules[#{rule.kind}][enabled]",
+                              "1",
+                              rule.enabled?,
+                              id: "rule_#{rule.kind}_enabled" %>
+            <span>
+              <strong><%= rule.catalog[:title] %></strong>
+              <em><%= rule.catalog[:hint] %></em>
+            </span>
+          </label>
+
+          <div class="automation-rule-time">
+            <%= select_tag "rules[#{rule.kind}][hour]",
+                           options_for_select((6..20).map { |h| [format("%02d", h), h] }, rule.hour) %>
+            <span>:</span>
+            <%= select_tag "rules[#{rule.kind}][minute]",
+                           options_for_select([["00", 0], ["30", 30]], rule.minute) %>
+            <label class="automation-rule-whatsapp">
+              <%= hidden_field_tag "rules[#{rule.kind}][whatsapp]", "0", id: nil %>
+              <%= check_box_tag "rules[#{rule.kind}][whatsapp]",
+                                "1",
+                                rule.whatsapp?,
+                                id: "rule_#{rule.kind}_whatsapp" %>
+              WhatsApp
+            </label>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="page-actions">
+        <%= submit_tag "Salvar automações", class: "button button-primary" %>
+        <%= link_to "Ver avisos", automation_notices_path, class: "button button-secondary" %>
+      </div>
+    <% end %>
+  </article>
+</section>

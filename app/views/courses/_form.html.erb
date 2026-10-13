@@ -1,0 +1,49 @@
+<%= form_with model: course do |form| %>
+  <% if course.errors.any? %>
+    <div class="form-errors">
+      <h2>
+        <%= pluralize(course.errors.count, "erro") %>
+        impediram o salvamento:
+      </h2>
+
+      <ul>
+        <% course.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="field">
+    <%= form.label :name, "Nome da disciplina" %>
+    <%= form.text_field :name, required: true %>
+  </div>
+
+  <div class="field">
+    <%= form.label :knowledge_area, "Área do conhecimento" %>
+
+    <%= form.select :knowledge_area,
+                    options_for_select(
+                      (@available_knowledge_areas || Course.knowledge_area_names).map do |key, label|
+                        [label, key]
+                      end,
+                      course.knowledge_area
+                    ),
+                    { prompt: "Selecione uma área" },
+                    required: true %>
+  </div>
+
+  <div class="field">
+    <%= form.label :description, "Descrição" %>
+    <%= form.text_area :description %>
+  </div>
+
+  <div class="field checkbox-field">
+    <%= form.check_box :active %>
+    <%= form.label :active, "Disciplina ativa" %>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit "Salvar disciplina", class: "button button-primary" %>
+  </div>
+<% end %>

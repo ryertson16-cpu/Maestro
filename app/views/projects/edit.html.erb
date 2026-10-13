@@ -1,0 +1,15 @@
+<% content_for :title, "Editar projeto | Maestro" %>
+
+<div class="page-header">
+  <div class="projects-page-title">
+    <%= maestro_icon :projects, size: :lg %>
+    <h1>Editar projeto</h1>
+    <p>Atualize a ficha. As evidências continuam nas etapas.</p>
+  </div>
+</div>
+
+<div class="card form-card">
+  <%= render "form", project: @project %>
+</div>
+
+<%= link_to "Voltar para o projeto", project_path(@project), class: "back-link" %>

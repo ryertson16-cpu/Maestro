@@ -1,0 +1,80 @@
+<div class="page-header page-header-with-action">
+  <div class="students-page-title">
+    <%= maestro_icon :students, size: :lg %>
+    <h1>Matricular alunos</h1>
+    <p>
+      Selecione os alunos que serão adicionados à turma
+      <strong><%= @classroom.name %></strong>.
+    </p>
+  </div>
+
+  <%= link_to "Voltar para a turma",
+              classroom_path(@classroom),
+              class: "button button-secondary" %>
+</div>
+
+<section class="form-card">
+  <% if @students.any? %>
+    <%= form_with url: bulk_create_enrollments_path,
+              method: :post,
+              local: true do |form| %>
+  <%= hidden_field_tag :classroom_id, @classroom.id %>
+
+      <div class="bulk-selection-header">
+        <strong>Alunos ativos</strong>
+
+        <button type="button"
+                class="button button-secondary"
+                onclick="document.querySelectorAll('.student-checkbox').forEach((checkbox) => checkbox.checked = true)">
+          Selecionar todos
+        </button>
+      </div>
+
+      <div class="student-selection-list">
+        <% @students.each do |student| %>
+          <% already_enrolled = @enrolled_student_ids.include?(student.id) %>
+
+          <label class="student-selection-item <%= 'already-enrolled' if already_enrolled %>">
+            <%= check_box_tag "student_ids[]",
+                              student.id,
+                              already_enrolled,
+                              class: "student-checkbox",
+                              disabled: already_enrolled %>
+
+            <span>
+              <strong><%= student.name %></strong>
+
+              <% if student.registration_number.present? %>
+                <small>
+                  Matrícula: <%= student.registration_number %>
+                </small>
+              <% end %>
+
+              <% if already_enrolled %>
+                <small>Já matriculado nesta turma</small>
+              <% end %>
+            </span>
+          </label>
+        <% end %>
+      </div>
+
+      <div class="form-actions">
+        <%= form.submit "Matricular selecionados",
+                        class: "button button-primary" %>
+
+        <%= link_to "Cancelar",
+                    classroom_path(@classroom),
+                    class: "button button-secondary" %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="empty-state">
+      <strong>Nenhum aluno disponível.</strong>
+      <p>Cadastre pelo menos um aluno ativo antes de fazer a matrícula.</p>
+
+      <%= link_to "Cadastrar aluno",
+                  new_student_path,
+                  class: "button button-primary" %>
+    </div>
+  <% end %>
+</section>

@@ -1,0 +1,64 @@
+<%= form_with model: enrollment, local: true do |form| %>
+  <% if enrollment.errors.any? %>
+    <div class="form-errors">
+      <h2>
+        <%= pluralize(enrollment.errors.count, "erro") %>
+        impediram o salvamento:
+      </h2>
+
+      <ul>
+        <% enrollment.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-grid">
+    <div class="form-field form-field-wide">
+      <%= form.label :student_id, "Aluno" %>
+      <%= form.collection_select :student_id,
+                                 students,
+                                 :id,
+                                 :name,
+                                 { prompt: "Selecione um aluno" },
+                                 { required: true } %>
+    </div>
+
+    <div class="form-field form-field-wide">
+      <%= form.label :classroom_id, "Turma" %>
+      <%= form.collection_select :classroom_id,
+                                 classrooms,
+                                 :id,
+                                 :name,
+                                 { prompt: "Selecione uma turma" },
+                                 { required: true } %>
+    </div>
+
+    <div class="form-field">
+      <%= form.label :enrolled_on, "Data da matrícula" %>
+      <%= form.date_field :enrolled_on, required: true %>
+    </div>
+
+    <div class="form-field">
+      <%= form.label :status, "Status" %>
+      <%= form.select :status,
+                      [
+                        ["Ativa", "active"],
+                        ["Encerrada", "finished"],
+                        ["Cancelada", "cancelled"]
+                      ],
+                      {},
+                      required: true %>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit "Salvar matrícula",
+                    class: "button button-primary" %>
+
+    <%= link_to "Cancelar",
+                students_path,
+                class: "button button-secondary" %>
+  </div>
+<% end %>

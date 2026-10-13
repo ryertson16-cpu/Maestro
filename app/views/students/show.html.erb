@@ -1,0 +1,420 @@
+<% content_for :title, "#{@student.name} | Maestro" %>
+
+<%
+  course_name = @current_enrollments.filter_map { |enrollment|
+    enrollment.classroom.school_course&.name
+  }.uniq
+  grade_history = @grade_history || { activities: [], bimesters: [] }
+  grade_activities = grade_history[:activities] || []
+  grade_bimesters = grade_history[:bimesters] || []
+  has_grade_history = grade_activities.any? || grade_bimesters.any?
+%>
+
+<div class="student-show-hero">
+  <div class="student-show-identity">
+    <div class="student-profile-photo-column">
+      <% if @student.photo.attached? %>
+        <%= image_tag @student.photo,
+                      class: "student-profile-photo",
+                      alt: "Foto de #{@student.name}" %>
+      <% else %>
+        <div class="student-profile-photo-placeholder" aria-label="Aluno sem foto">
+          <%= @student.name.to_s.split.first(2).map { |name| name[0] }.join.upcase %>
+        </div>
+      <% end %>
+
+      <%= form_with model: @student,
+                    url: student_path(@student),
+                    method: :patch,
+                    local: true,
+                    html: {
+                      multipart: true,
+                      class: "student-photo-form",
+                      data: { student_photo_form: true }
+                    } do |form| %>
+        <%= form.file_field :photo,
+                            accept: "image/png,image/jpeg,image/webp",
+                            id: "student-photo-upload",
+                            class: "student-photo-input" %>
+
+        <%= label_tag "student-photo-upload",
+                      @student.photo.attached? ? "Alterar foto" : "Adicionar foto",
+                      class: "button button-secondary student-photo-button" %>
+
+        <%= form.submit "Salvar foto",
+                        class: "button button-primary button-small visually-hidden" %>
+      <% end %>
+    </div>
+
+    <div class="student-show-heading">
+      <span class="section-eyebrow">Aluno</span>
+      <h1><%= @student.name %></h1>
+
+      <p>
+        <% if @current_classroom.present? %>
+          <%= link_to @current_classroom.name, classroom_path(@current_classroom) %>
+        <% elsif @current_enrollments.any? %>
+          <%= @current_enrollments.map { |enrollment| enrollment.classroom.name }.join(", ") %>
+        <% else %>
+          Sem turma ativa
+        <% end %>
+
+        <% if course_name.any? %>
+          <span class="hero-separator">•</span>
+          <%= course_name.join(", ") %>
+        <% end %>
+
+        <% if @student.registration_number.present? %>
+          <span class="hero-separator">•</span>
+          Matrícula <%= @student.registration_number %>
+        <% end %>
+      </p>
+
+      <% if @student.active? %>
+        <span class="status-badge status-active">Ativo</span>
+      <% else %>
+        <span class="status-badge status-inactive">Inativo</span>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<div class="classroom-show-actions">
+  <% if @current_classroom.present? %>
+    <%= link_to "Diário",
+                attendance_records_path(classroom_id: @current_classroom.id),
+                class: "button button-primary" %>
+
+    <%= link_to "Turma",
+                classroom_path(@current_classroom),
+                class: "button button-secondary" %>
+
+    <%= link_to "Monitoramento",
+                monitoring_path(classroom_id: @current_classroom.id),
+                class: "button button-secondary" %>
+  <% end %>
+
+  <%= link_to "Gerar relatório PDF",
+              report_student_path(@student, format: :pdf),
+              class: "button button-secondary",
+              target: "_blank",
+              rel: "noopener" %>
+
+  <%= link_to "Editar",
+              edit_student_path(@student),
+              class: "button button-secondary" %>
+</div>
+
+<section class="attendance-summary classroom-show-summary" aria-label="Resumo de frequência">
+  <article class="summary-card">
+    <div class="summary-card-top">
+      <span class="summary-label">Frequência geral</span>
+      <%= maestro_icon :chart, size: :sm %>
+    </div>
+    <strong>
+      <%= @attendance_percentage.present? ? "#{@attendance_percentage}%" : "—" %>
+    </strong>
+  </article>
+
+  <article class="summary-card summary-present">
+    <div class="summary-card-top">
+      <span class="summary-label">Presenças</span>
+      <%= maestro_icon :check, size: :sm, html_class: "maestro-icon-success" %>
+    </div>
+    <strong><%= @attendance_present %></strong>
+  </article>
+
+  <article class="summary-card summary-absent">
+    <div class="summary-card-top">
+      <span class="summary-label">Faltas</span>
+      <%= maestro_icon :warning, size: :sm, html_class: "maestro-icon-danger" %>
+    </div>
+    <strong><%= @attendance_absent %></strong>
+  </article>
+
+  <article class="summary-card summary-justified">
+    <div class="summary-card-top">
+      <span class="summary-label">Justificadas</span>
+      <%= maestro_icon :calendar, size: :sm %>
+    </div>
+    <strong><%= @attendance_justified %></strong>
+  </article>
+
+  <article class="summary-card summary-late">
+    <div class="summary-card-top">
+      <span class="summary-label">Atrasos</span>
+      <%= maestro_icon :warning, size: :sm, html_class: "maestro-icon-warning" %>
+    </div>
+    <strong><%= @attendance_late %></strong>
+  </article>
+</section>
+
+<section class="data-card student-grade-history-card"
+         id="student-grade-history"
+         data-grade-history="<%= json_escape(grade_history.to_json) %>">
+  <div class="section-header">
+    <div>
+      <span class="section-eyebrow">Desempenho</span>
+      <h2>Evolução das notas</h2>
+      <p>Comparação do aluno com a média da turma ao longo do tempo.</p>
+    </div>
+  </div>
+
+  <% if has_grade_history %>
+    <div class="monitoring-chip-row student-chart-modes" role="tablist" aria-label="Recorte do gráfico">
+      <button type="button"
+              class="monitoring-filter-chip is-active"
+              data-grade-mode="bimester">
+        Bimestres
+      </button>
+      <% if grade_activities.any? %>
+        <button type="button"
+                class="monitoring-filter-chip"
+                data-grade-mode="activity">
+          Atividades
+        </button>
+      <% end %>
+    </div>
+
+    <div class="grade-history-legend student-chart-legend">
+      <span>
+        <i class="grade-history-legend-student"></i>
+        Nota do aluno
+      </span>
+      <span>
+        <i class="grade-history-legend-class"></i>
+        Média da turma
+      </span>
+    </div>
+
+    <div class="grade-history-chart-card student-chart-panel">
+      <div id="grade-history-summary" class="grade-history-summary"></div>
+
+      <div class="grade-history-chart-wrapper student-chart-stage">
+        <svg id="grade-history-chart"
+             class="grade-history-chart student-chart"
+             role="img"
+             aria-label="Gráfico de evolução das notas">
+        </svg>
+      </div>
+    </div>
+
+    <div id="grade-history-empty" class="empty-state grade-history-empty" hidden>
+      <%= maestro_icon :chart %>
+      <strong>Não há notas suficientes para o gráfico.</strong>
+      <p>A curva aparece quando existem notas lançadas para o aluno ou para a turma.</p>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <%= maestro_icon :chart %>
+      <strong>Nenhuma nota encontrada.</strong>
+      <p>O gráfico aparece quando houver atividades avaliadas.</p>
+    </div>
+  <% end %>
+</section>
+
+<section class="data-card">
+  <div class="section-header">
+    <div>
+      <span class="section-eyebrow">Pendências</span>
+      <h2>Atividades em aberto</h2>
+      <p>
+        <%= pluralize(@pending_activity_rows.size, "atividade pendente", "atividades pendentes") %>.
+      </p>
+    </div>
+  </div>
+
+  <% if @pending_activity_rows.any? %>
+    <div class="student-pending-list">
+      <% @pending_activity_rows.each do |row| %>
+        <% activity = row[:activity] %>
+        <article class="student-pending-item">
+          <div>
+            <strong><%= activity.title %></strong>
+            <span>
+              <%= activity.lesson.course&.name || "Disciplina não informada" %>
+            </span>
+          </div>
+          <small>
+            <% if row[:due_date].present? %>
+              Limite: <%= l(row[:due_date], format: :short) %>
+            <% else %>
+              Sem data limite
+            <% end %>
+          </small>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <%= maestro_icon :check, html_class: "maestro-icon-success" %>
+      <strong>Nenhuma atividade pendente.</strong>
+      <p>As entregas deste aluno estão em dia.</p>
+    </div>
+  <% end %>
+</section>
+
+<% if @trajectory_alert.present? %>
+  <section class="data-card">
+    <h2>Risco à frente</h2>
+    <p><%= @trajectory_alert[:reason] %></p>
+  </section>
+<% end %>
+
+<% if @current_classroom %>
+  <section class="data-card">
+    <h2>Parecer do conselho (<%= @current_bimester %>º bimestre)</h2>
+    <% if @council_note %>
+      <p><%= @council_note.body %></p>
+    <% else %>
+      <p>Ainda não há parecer gerado para este aluno.</p>
+    <% end %>
+    <%= link_to "Abrir conselho de classe",
+                council_notes_path(classroom_id: @current_classroom.id, bimester: @current_bimester),
+                class: "button button-secondary" %>
+  </section>
+<% end %>
+
+<details class="data-card student-history-tools">
+  <summary>Histórico completo</summary>
+
+  <section class="student-history-block">
+    <h3>Turmas</h3>
+    <% if @enrollments.any? %>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Turma</th>
+              <th>Entrada</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @enrollments.each do |enrollment| %>
+              <tr>
+                <td>
+                  <%= link_to enrollment.classroom.name,
+                              classroom_path(enrollment.classroom) %>
+                </td>
+                <td><%= enrollment.enrolled_on.strftime("%d/%m/%Y") %></td>
+                <td>
+                  <% if enrollment.status == "active" %>
+                    <span class="status-badge status-active">Atual</span>
+                  <% else %>
+                    <span class="status-badge status-inactive">Encerrada</span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="muted-text">Nenhuma turma encontrada.</p>
+    <% end %>
+  </section>
+
+  <section class="student-history-block">
+    <h3>Frequência</h3>
+    <% if @attendance_records.any? %>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Turma</th>
+              <th>Situação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @attendance_records.each do |record| %>
+              <tr>
+                <td><%= record.attendance_date.strftime("%d/%m/%Y") %></td>
+                <td><%= record.classroom&.name || "Não informado" %></td>
+                <td>
+                  <% case record.status %>
+                  <% when "present" %>
+                    <span class="frequency-badge frequency-regular">Presente</span>
+                  <% when "absent" %>
+                    <span class="frequency-badge frequency-low">Ausente</span>
+                  <% when "justified" %>
+                    <span class="frequency-badge frequency-attention">Falta justificada</span>
+                  <% when "late" %>
+                    <span class="frequency-badge frequency-attention">Atrasado</span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="muted-text">Nenhum registro de frequência.</p>
+    <% end %>
+  </section>
+
+  <section class="student-history-block">
+    <h3>Atividades</h3>
+    <% if @student_activity_rows.any? %>
+      <div class="table-wrapper">
+        <table class="student-activities-history-table">
+          <thead>
+            <tr>
+              <th>Atividade</th>
+              <th>Disciplina</th>
+              <th>Data limite</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @student_activity_rows.each do |row| %>
+              <% activity = row[:activity] %>
+              <% lesson = activity.lesson %>
+              <% submission = row[:submission] %>
+              <tr>
+                <td>
+                  <strong><%= activity.title %></strong>
+                </td>
+                <td>
+                  <%= lesson&.course&.name || "Não informada" %>
+                </td>
+                <td>
+                  <% if row[:due_date].present? %>
+                    <%= l(row[:due_date], format: "%d/%m/%Y") %>
+                  <% else %>
+                    <span class="muted-text">Não informada</span>
+                  <% end %>
+                </td>
+                <td>
+                  <span class="activity-status-tag status-<%= row[:status_key] %>">
+                    <%= row[:status_label] %>
+                  </span>
+                  <% if submission&.submitted_on.present? %>
+                    <small class="table-secondary-text">
+                      Entregue em <%= l(submission.submitted_on, format: "%d/%m/%Y") %>
+                    </small>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="muted-text">Nenhuma atividade encontrada.</p>
+    <% end %>
+  </section>
+</details>
+
+<p class="classroom-back">
+  <% if @current_classroom.present? %>
+    <%= link_to "Voltar para a turma",
+                classroom_path(@current_classroom),
+                class: "back-link" %>
+  <% else %>
+    <%= link_to "Voltar para alunos",
+                students_path,
+                class: "back-link" %>
+  <% end %>
+</p>

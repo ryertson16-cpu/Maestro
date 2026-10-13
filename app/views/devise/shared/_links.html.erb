@@ -1,0 +1,9 @@
+<nav class="auth-links">
+  <% if controller_name != "sessions" %>
+    <%= link_to "Entrar", new_session_path(resource_name) %>
+  <% end %>
+
+  <% if devise_mapping.recoverable? && controller_name != "passwords" && controller_name != "registrations" %>
+    <%= link_to "Esqueci a senha", new_password_path(resource_name) %>
+  <% end %>
+</nav>

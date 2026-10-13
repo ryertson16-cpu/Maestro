@@ -1,0 +1,15 @@
+<% content_for :title, "Novo projeto | Maestro" %>
+
+<div class="page-header">
+  <div class="projects-page-title">
+    <%= maestro_icon :projects, size: :lg %>
+    <h1>Novo projeto</h1>
+    <p>Preencha a ficha. As etapas iniciais entram automaticamente conforme o tipo.</p>
+  </div>
+</div>
+
+<div class="card form-card">
+  <%= render "form", project: @project %>
+</div>
+
+<%= link_to "Voltar", projects_path, class: "back-link" %>

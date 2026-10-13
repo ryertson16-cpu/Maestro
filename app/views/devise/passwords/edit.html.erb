@@ -1,0 +1,55 @@
+<section class="auth-card">
+  <div class="auth-mark-wrap">
+    <%= maestro_assistant_mark(size: :hero) %>
+  </div>
+
+  <h1>Nova senha</h1>
+  <p class="auth-lead">Escolha uma senha nova para o Maestro</p>
+
+  <%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :put, class: "auth-form" }) do |f| %>
+    <%= render "devise/shared/error_messages", resource: resource %>
+    <%= f.hidden_field :reset_password_token %>
+
+    <div class="auth-field">
+      <%= f.label :password, "Nova senha", class: "visually-hidden" %>
+      <div class="auth-input">
+        <%= maestro_icon :lock, size: :sm, html_class: "auth-input-icon" %>
+        <%= f.password_field :password,
+                             autofocus: true,
+                             autocomplete: "new-password",
+                             required: true,
+                             placeholder: "Nova senha",
+                             id: "professor_password" %>
+        <button
+          type="button"
+          class="auth-password-toggle"
+          data-password-toggle="professor_password"
+          aria-label="Mostrar senha"
+        >
+          <%= maestro_icon :eye, size: :sm, html_class: "auth-eye" %>
+          <%= maestro_icon :eye_off, size: :sm, html_class: "auth-eye-off" %>
+        </button>
+      </div>
+    </div>
+
+    <div class="auth-field">
+      <%= f.label :password_confirmation, "Confirmar senha", class: "visually-hidden" %>
+      <div class="auth-input">
+        <%= maestro_icon :lock, size: :sm, html_class: "auth-input-icon" %>
+        <%= f.password_field :password_confirmation,
+                             autocomplete: "new-password",
+                             required: true,
+                             placeholder: "Confirmar senha" %>
+      </div>
+    </div>
+
+    <%= f.button class: "auth-submit" do %>
+      <span>Salvar senha</span>
+      <%= maestro_icon :arrow, size: :sm %>
+    <% end %>
+  <% end %>
+
+  <nav class="auth-links">
+    <%= link_to "Voltar ao login", new_session_path(resource_name) %>
+  </nav>
+</section>

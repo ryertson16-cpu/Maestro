@@ -1,0 +1,21 @@
+class Classroom < ApplicationRecord
+  belongs_to :professor
+  belongs_to :course
+  belongs_to :grade_level
+
+  has_many :students, dependent: :nullify
+  has_many :enrollments, dependent: :restrict_with_error
+  has_many :attendance_records, through: :enrollments
+
+  validates :name, presence: true
+  validates :school_year, presence: true,
+                          numericality: {
+                            only_integer: true,
+                            greater_than_or_equal_to: 2000,
+                            less_than_or_equal_to: 2100
+                          }
+  validates :shift, inclusion: {
+    in: %w[morning afternoon evening full_time],
+    allow_blank: true
+  }
+end

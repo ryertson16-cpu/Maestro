@@ -1,0 +1,267 @@
+<%
+  diary_path_for_lesson =
+    if lesson.classroom_id.present? && lesson.lesson_date.present?
+      attendance_records_path(
+        classroom_id: lesson.classroom_id,
+        attendance_date: lesson.lesson_date
+      )
+    else
+      attendance_records_path
+    end
+%>
+
+<%= form_with model: lesson, local: true do |form| %>
+  <% if lesson.errors.any? %>
+    <div class="form-errors">
+      <strong>Não foi possível salvar a aula:</strong>
+      <ul>
+        <% lesson.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+        <% if lesson.activity&.errors&.any? %>
+          <% lesson.activity.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <section class="data-card lesson-form-card">
+    <div class="lesson-form-header">
+      <div>
+        <span class="section-eyebrow">SIAGE</span>
+        <h2>Dados da aula</h2>
+        <p>
+          Disciplina e tempo vão no JSON da extensão. O tema é opcional.
+        </p>
+      </div>
+    </div>
+
+    <div class="form-grid diary-lesson-grid">
+      <div class="form-field">
+        <%= form.label :lesson_date, "Data da aula" %>
+        <%= form.date_field :lesson_date, required: true %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :classroom_id, "Turma" %>
+        <%= form.collection_select :classroom_id,
+                                   @classrooms,
+                                   :id,
+                                   :name,
+                                   { prompt: "Selecione uma turma" },
+                                   { required: true } %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :course_id, "Disciplina" %>
+        <%= form.collection_select :course_id,
+                                   @courses,
+                                   :id,
+                                   :name,
+                                   { include_blank: "Selecione a disciplina" },
+                                   { required: true } %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :siage_time_slot, "Tempo" %>
+        <%= form.select :siage_time_slot,
+                        options_for_select(
+                          Siage::TIME_SLOTS,
+                          lesson.siage_time_slot.presence || "1º tempo"
+                        ) %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :siage_period, "Período" %>
+        <%= form.select :siage_period,
+                        options_for_select(
+                          Siage::PERIODS,
+                          lesson.siage_period.presence ||
+                            Siage.period_for_date(lesson.lesson_date)
+                        ) %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :lesson_plan_template_id, "Plano do banco" %>
+        <%= form.collection_select :lesson_plan_template_id,
+                                   @plan_templates || [],
+                                   :id,
+                                   :title,
+                                   { include_blank: "Nenhum" } %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :theme, "Tema (opcional)" %>
+        <%= form.text_field :theme,
+                            placeholder: "Se vazio, usa Aula de + disciplina" %>
+      </div>
+    </div>
+  </section>
+
+  <details class="data-card lesson-form-extras">
+    <summary>Plano da aula</summary>
+    <p class="classroom-pending-help">
+      Objetivo, conteúdo e metodologia não vão no JSON do SIAGE.
+    </p>
+
+    <div class="form-grid">
+      <div class="form-field form-field-wide">
+        <%= form.label :objective, "Objetivo da aula" %>
+        <%= form.text_area :objective,
+                           rows: 3,
+                           placeholder: "O que os alunos deverão compreender ou realizar?" %>
+      </div>
+
+      <div class="form-field form-field-wide">
+        <%= form.label :content, "Conteúdo trabalhado" %>
+        <%= form.text_area :content,
+                           rows: 4,
+                           placeholder: "Descreva os conteúdos abordados." %>
+      </div>
+
+      <div class="form-field form-field-wide">
+        <%= form.label :methodology, "Metodologia utilizada" %>
+        <%= form.text_area :methodology,
+                           rows: 3,
+                           placeholder: "Ex.: exposição dialogada, prática, debate..." %>
+      </div>
+    </div>
+  </details>
+
+  <details class="data-card lesson-form-extras">
+    <summary>Campos avançados do SIAGE</summary>
+    <p class="classroom-pending-help">
+      No dia a dia o Maestro usa Aula e Avulso. Altere só se a extensão
+      precisar de outro valor.
+    </p>
+
+    <div class="form-grid">
+      <div class="form-field">
+        <%= form.label :siage_class_mode, "Modo de aula" %>
+        <%= form.select :siage_class_mode,
+                        options_for_select(
+                          Siage::CLASS_MODES,
+                          lesson.siage_class_mode.presence || "Aula"
+                        ) %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :siage_class_type, "Tipo de aula" %>
+        <%= form.select :siage_class_type,
+                        options_for_select(
+                          Siage::CLASS_TYPES,
+                          lesson.siage_class_type.presence || "Avulso"
+                        ) %>
+      </div>
+    </div>
+  </details>
+
+  <section class="data-card lesson-form-card">
+    <div class="activity-toggle-row">
+      <div>
+        <span class="section-eyebrow">Atividade</span>
+        <h2>Atividade vinculada</h2>
+        <p>O lançamento de notas continua em Atividades.</p>
+      </div>
+
+      <label class="toggle-field">
+        <%= form.check_box :has_activity, data: { activity_toggle: true } %>
+        <span class="toggle-slider"></span>
+        <span class="toggle-label">Adicionar atividade</span>
+      </label>
+    </div>
+
+    <% if lesson.persisted? && lesson.activity.present? && lesson.classroom_id.present? %>
+      <p class="lesson-activity-link">
+        <%= lesson.activity.title.presence || "Atividade sem título" %>
+        —
+        <%= link_to "Abrir em Atividades",
+                    grade_levels_path(
+                      classroom_id: lesson.classroom_id,
+                      activity_id: lesson.activity.id
+                    ) %>
+      </p>
+    <% end %>
+
+    <div class="lesson-activity-fields"
+         data-activity-fields
+         <%= "hidden" unless lesson.has_activity? %>>
+      <%= form.fields_for :activity do |activity_form| %>
+        <div class="form-grid">
+          <div class="form-field form-field-wide">
+            <%= activity_form.label :title, "Título da atividade" %>
+            <%= activity_form.text_field :title,
+                                         placeholder: "Ex.: Lista de exercícios — Unidade 3" %>
+          </div>
+
+          <div class="form-field">
+            <%= activity_form.label :activity_type, "Tipo da atividade" %>
+            <%= activity_form.select :activity_type,
+                                     grouped_options_for_select(
+                                       Lesson.activity_type_grouped_options,
+                                       activity_form.object.activity_type
+                                     ),
+                                     { include_blank: "Selecione o tipo da atividade" },
+                                     { class: "activity-type-select" } %>
+            <p class="activity-type-hint">
+              O tipo vira o título do PDF com o timbrado da escola (brasão e GRE).
+            </p>
+          </div>
+
+          <div class="form-field">
+            <%= activity_form.label :maximum_score, "Pontuação máxima" %>
+            <%= activity_form.number_field :maximum_score,
+                                           min: 0,
+                                           step: 0.01,
+                                           placeholder: "Ex.: 10" %>
+          </div>
+
+          <div class="form-field">
+            <%= activity_form.label :due_date, "Data de entrega" %>
+            <%= activity_form.date_field :due_date %>
+          </div>
+        </div>
+
+        <details class="lesson-activity-more">
+          <summary>Descrição e instruções</summary>
+          <div class="form-grid">
+            <div class="form-field form-field-wide">
+              <%= activity_form.label :description, "Questões da atividade" %>
+              <%= activity_form.text_area :description,
+                                          rows: 6,
+                                          placeholder: "Uma questão por linha. Elas saem no PDF com timbrado, como na lista de exercícios." %>
+            </div>
+
+            <div class="form-field form-field-wide">
+              <%= activity_form.label :instructions, "Instruções para os alunos" %>
+              <%= activity_form.text_area :instructions,
+                                          rows: 4,
+                                          placeholder: "Informe como a atividade deverá ser realizada." %>
+            </div>
+          </div>
+        </details>
+
+        <div class="activity-sheet-actions">
+          <% if activity_form.object.persisted? %>
+            <%= render "activities/sheet_button", activity: activity_form.object %>
+          <% else %>
+            <p class="activity-type-hint">
+              Salve a aula para gerar o PDF com o timbrado da escola.
+            </p>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <div class="lesson-actions">
+    <%= form.submit lesson.persisted? ? "Salvar alterações" : "Criar aula",
+                    class: "button button-primary" %>
+
+    <%= link_to "Cancelar",
+                diary_path_for_lesson,
+                class: "button button-secondary" %>
+  </div>
+<% end %>

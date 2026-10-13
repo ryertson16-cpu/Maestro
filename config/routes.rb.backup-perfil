@@ -1,0 +1,28 @@
+Rails.application.routes.draw do
+  devise_for :professors
+
+  resources :courses
+  resources :grade_levels
+  resources :classrooms
+  resources :students
+
+  resources :enrollments, only: %i[index new create show destroy] do
+    collection do
+      get "bulk_new/:classroom_id",
+          to: "enrollments#bulk_new",
+          as: :bulk_new
+
+      post "bulk_create/:classroom_id",
+           to: "enrollments#bulk_create",
+           as: :bulk_create
+    end
+  end
+
+  resources :attendance_records, only: [:index] do
+    collection do
+      post :save
+    end
+  end
+
+  root "dashboard#index"
+end

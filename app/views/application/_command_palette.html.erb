@@ -1,0 +1,67 @@
+<dialog id="command-palette" class="command-palette" data-command-palette aria-labelledby="command-palette-title">
+  <h2 id="command-palette-title" class="visually-hidden">Buscar no Maestro</h2>
+
+  <div class="command-palette-search">
+    <%= maestro_icon :search, size: :sm %>
+    <input type="search"
+           data-command-palette-input
+           placeholder="Buscar no Maestro…"
+           autocomplete="off"
+           spellcheck="false"
+           aria-controls="command-palette-results">
+    <kbd>Esc</kbd>
+  </div>
+
+  <div id="command-palette-results" class="command-palette-results" data-command-palette-results>
+    <% maestro_command_groups.each do |group| %>
+      <section class="command-palette-group" data-command-group>
+        <h3><%= group[:title] %></h3>
+
+        <% group[:items].each do |item| %>
+          <% if item[:href].present? %>
+            <%= link_to item[:href],
+                        class: "command-palette-item",
+                        data: {
+                          command_item: true,
+                          search: item[:search]
+                        } do %>
+              <% if item[:icon] == :assistant %>
+                <%= maestro_assistant_mark(size: :xs) %>
+              <% else %>
+                <%= maestro_icon item[:icon], size: :sm %>
+              <% end %>
+              <span>
+                <strong><%= item[:label] %></strong>
+                <% if item[:hint].present? %>
+                  <small><%= item[:hint] %></small>
+                <% end %>
+              </span>
+            <% end %>
+          <% else %>
+            <button type="button"
+                    class="command-palette-item"
+                    data-command-item
+                    data-command-action="<%= item[:action] %>"
+                    data-search="<%= item[:search] %>">
+              <% if item[:icon] == :assistant %>
+                <%= maestro_assistant_mark(size: :xs) %>
+              <% else %>
+                <%= maestro_icon item[:icon], size: :sm %>
+              <% end %>
+              <span>
+                <strong><%= item[:label] %></strong>
+                <% if item[:hint].present? %>
+                  <small><%= item[:hint] %></small>
+                <% end %>
+              </span>
+            </button>
+          <% end %>
+        <% end %>
+      </section>
+    <% end %>
+  </div>
+
+  <p class="command-palette-empty" hidden data-command-palette-empty>
+    Nenhum resultado para essa busca.
+  </p>
+</dialog>

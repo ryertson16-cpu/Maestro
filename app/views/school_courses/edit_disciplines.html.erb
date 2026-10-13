@@ -1,0 +1,80 @@
+<div class="page-header">
+  <div>
+    <%= link_to "← Voltar para cursos",
+                courses_path,
+                class: "back-link" %>
+
+    <div class="courses-page-title">
+      <%= maestro_icon :courses, size: :lg %>
+      <h1>Disciplinas do curso</h1>
+      <p>
+        <strong><%= @school_course.name %></strong>
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="card discipline-selection-card">
+  <% if @available_courses.any? %>
+    <%= form_with url: update_disciplines_school_course_path(@school_course),
+                  method: :patch do |form| %>
+
+      <p class="selection-help">
+        Selecione as disciplinas que farão parte deste curso.
+      </p>
+
+      <div class="discipline-selection-list">
+        <% current_area = nil %>
+
+        <% @available_courses.each do |course| %>
+          <% if current_area != course.knowledge_area %>
+            <% current_area = course.knowledge_area %>
+
+            <h2 class="discipline-area-heading">
+              <%= course.knowledge_area_label %>
+            </h2>
+          <% end %>
+
+          <label class="discipline-selection-item">
+            <%= check_box_tag "course_ids[]",
+                              course.id,
+                              @selected_course_ids.include?(course.id) %>
+
+            <span class="discipline-selection-content">
+              <strong><%= course.name %></strong>
+
+              <% if course.description.present? %>
+                <small><%= course.description %></small>
+              <% end %>
+            </span>
+
+            <span class="knowledge-area-tag knowledge-area-<%= course.knowledge_area_color %>">
+              <%= course.knowledge_area_label %>
+            </span>
+          </label>
+        <% end %>
+      </div>
+
+      <div class="form-actions">
+        <%= form.submit "Salvar disciplinas",
+                        class: "button button-primary" %>
+
+        <%= link_to "Cancelar",
+                    courses_path,
+                    class: "button button-ghost" %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="empty-state">
+      <strong>Nenhuma disciplina disponível.</strong>
+
+      <p>
+        Cadastre disciplinas antes de vinculá-las a um curso.
+      </p>
+
+      <%= link_to "Cadastrar disciplina",
+                  new_course_path,
+                  class: "button button-primary" %>
+    </div>
+  <% end %>
+</div>

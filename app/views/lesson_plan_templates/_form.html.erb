@@ -1,0 +1,54 @@
+<% content_for :title, "#{@template.new_record? ? 'Novo plano' : 'Editar plano'} | Maestro" %>
+
+<div class="page-header">
+  <div>
+    <h1><%= @template.new_record? ? "Novo plano" : "Editar plano" %></h1>
+  </div>
+</div>
+
+<section class="form-card">
+  <%= form_with model: @template, local: true do |form| %>
+    <% if @template.errors.any? %>
+      <div class="form-errors">
+        <ul>
+          <% @template.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div class="form-field">
+      <%= form.label :title, "Título" %>
+      <%= form.text_field :title, required: true %>
+    </div>
+    <div class="form-field">
+      <%= form.label :course_id, "Disciplina" %>
+      <%= form.collection_select :course_id, @courses, :id, :name, include_blank: "Qualquer disciplina" %>
+    </div>
+    <div class="form-field">
+      <%= form.label :theme, "Tema" %>
+      <%= form.text_field :theme %>
+    </div>
+    <div class="form-field">
+      <%= form.label :objective, "Objetivo" %>
+      <%= form.text_area :objective, rows: 3 %>
+    </div>
+    <div class="form-field">
+      <%= form.label :content, "Conteúdo" %>
+      <%= form.text_area :content, rows: 4 %>
+    </div>
+    <div class="form-field">
+      <%= form.label :methodology, "Metodologia" %>
+      <%= form.text_area :methodology, rows: 3 %>
+    </div>
+    <div class="form-field">
+      <%= form.label :skills, "Habilidades (BNCC / SEE-PB)" %>
+      <%= form.text_area :skills, rows: 2, placeholder: "Ex.: EF07MA12 — porcentagem" %>
+    </div>
+    <div class="form-actions">
+      <%= form.submit class: "button button-primary" %>
+      <%= link_to "Cancelar", lesson_plan_templates_path, class: "button button-secondary" %>
+    </div>
+  <% end %>
+</section>

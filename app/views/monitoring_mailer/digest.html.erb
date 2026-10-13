@@ -1,0 +1,22 @@
+<p>Olá<%= @professor.name.present? ? ", #{@professor.name.split.first}" : "" %>.</p>
+
+<p>
+  Resumo dos alertas da turma
+  <strong><%= @classroom.name %></strong>
+  em <strong><%= @month_label %></strong>.
+</p>
+
+<p>
+  <%= @alerts.size %>
+  <%= @alerts.size == 1 ? "aluno precisa" : "alunos precisam" %>
+  de acompanhamento.
+</p>
+
+<% @alerts.each do |alert| %>
+  <h3><%= alert.student.name %></h3>
+  <pre style="font-family: inherit; white-space: pre-wrap;"><%= alert.recado_text %></pre>
+<% end %>
+
+<p>
+  Acesse o monitoramento no Maestro para ver os detalhes e registrar o próximo passo.
+</p>

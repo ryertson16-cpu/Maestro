@@ -1,0 +1,51 @@
+<details class="header-bell<%= " is-active" if controller_name == "automation_notices" %>">
+  <summary class="header-lira header-bell-toggle"
+           title="Avisos do Maestro">
+    <%= maestro_icon :bell, size: :sm %>
+    <span class="header-bell-label">Avisos</span>
+    <% if automation_unread_count.positive? %>
+      <span class="pending-count-badge"
+            aria-label="<%= pluralize(automation_unread_count, "aviso não lido", "avisos não lidos") %>">
+        <%= automation_unread_count %>
+      </span>
+    <% end %>
+  </summary>
+
+  <div class="header-bell-panel">
+    <div class="header-bell-heading">
+      <strong>Automações</strong>
+      <% if automation_unread_count.positive? %>
+        <%= button_to "Marcar lidos",
+                      mark_all_read_automation_notices_path,
+                      method: :patch,
+                      class: "button button-ghost button-small",
+                      form: { data: { skip_confirm: true } } %>
+      <% end %>
+    </div>
+
+    <% notices = automation_header_notices %>
+    <% if notices.any? %>
+      <ul class="header-bell-list">
+        <% notices.each do |notice| %>
+          <li>
+            <%= link_to automation_notice_path(notice),
+                        class: "header-bell-item#{' is-unread' if notice.unread?}" do %>
+              <strong><%= notice.title %></strong>
+              <span><%= notice.body %></span>
+              <time><%= l(notice.created_at) %></time>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="header-bell-empty">
+        Nenhum aviso ainda. Com o Maestro aberto, a automação avisa aqui e no WhatsApp.
+      </p>
+    <% end %>
+
+    <div class="header-bell-footer">
+      <%= link_to "Ver todos", automation_notices_path %>
+      <%= link_to "Ajustar", settings_path(anchor: "automacoes") %>
+    </div>
+  </div>
+</details>

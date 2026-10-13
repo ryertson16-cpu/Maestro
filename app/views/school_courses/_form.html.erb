@@ -1,0 +1,45 @@
+<%= form_with model: school_course do |form| %>
+  <% if school_course.errors.any? %>
+    <div class="form-errors">
+      <h2>
+        <%= pluralize(
+              school_course.errors.count,
+              "erro",
+              "erros"
+            ) %>
+        impediram o salvamento:
+      </h2>
+
+      <ul>
+        <% school_course.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="field">
+    <%= form.label :name, "Nome do curso" %>
+
+    <%= form.text_field :name,
+                        required: true,
+                        placeholder: "Ex.: Técnico em Administração" %>
+  </div>
+
+  <div class="field">
+    <%= form.label :description, "Descrição" %>
+
+    <%= form.text_area :description,
+                       placeholder: "Descrição opcional do curso" %>
+  </div>
+
+  <div class="field checkbox-field">
+    <%= form.check_box :active %>
+    <%= form.label :active, "Curso ativo" %>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit "Salvar curso",
+                    class: "button button-primary" %>
+  </div>
+<% end %>
