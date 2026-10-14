@@ -26,6 +26,8 @@ class LessonsController < ApplicationController
     @classrooms = current_professor.classrooms.order(:name)
     @courses = current_professor.courses.active.order(:name)
     @plan_templates = current_professor.lesson_plan_templates.order(:title)
+    apply_timetable_prefill(@lesson)
+    @weekday_entries = weekday_entries_for(@lesson)
     @lesson.build_activity
   end
 
@@ -185,6 +187,29 @@ class LessonsController < ApplicationController
     @classrooms = current_professor.classrooms.order(:name)
     @courses = current_professor.courses.active.order(:name)
     @plan_templates = current_professor.lesson_plan_templates.order(:title)
+  end
+
+  def apply_timetable_prefill(lesson)
+    return if lesson.classroom_id.blank? || lesson.lesson_date.blank? || params[:period].blank?
+
+    entry = current_professor.timetable_entries.find_by(
+      classroom_id: lesson.classroom_id,
+      weekday: lesson.lesson_date.cwday,
+      period: params[:period].to_i
+    )
+    return unless entry
+
+    lesson.course_id ||= entry.course_id
+    lesson.siage_time_slot = entry.time_slot_label
+    lesson.theme ||= "Aula de #{entry.course&.name || 'componente'}"
+  end
+
+  def weekday_entries_for(lesson)
+    return TimetableEntry.none if lesson.lesson_date.blank?
+
+    scope = current_professor.timetable_entries.includes(:classroom, :course).where(weekday: lesson.lesson_date.cwday).order(:period)
+    scope = scope.where(classroom_id: lesson.classroom_id) if lesson.classroom_id.present?
+    scope
   end
 
   def lesson_date_from_params

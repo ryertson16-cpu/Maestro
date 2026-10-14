@@ -87,7 +87,7 @@ module ApplicationHelper
     case controller_name
     when "attendance_records", "siage_exports", "siage_ledgers"
       :diario
-    when "lessons", "school_calendars", "lesson_plan_templates"
+    when "lessons", "school_calendars", "lesson_plan_templates", "timetables"
       :diario
     when "classrooms", "students", "enrollments", "projects", "project_stages"
       :turmas
@@ -126,9 +126,11 @@ module ApplicationHelper
         icon: :diary,
         href: maestro_nav_path(:attendance_records_path, classroom),
         items: [
-          { label: "Chamada", href: maestro_nav_path(:attendance_records_path, classroom), hint: "Aula, frequência e JSON do SIAGE" },
+          { label: "Chamada", href: maestro_nav_path(:attendance_records_path, classroom), hint: "Aula, chamada e Frequência no SIAGE" },
           { label: "SIAGE", href: siage_ledger_path, hint: "Livro-razão dos envios de todas as turmas", emphasis: true },
-          { label: "Ajuda SIAGE", href: siage_help_path, hint: "Como preencher a extensão", emphasis: true },
+          { label: "Abrir SIAGE", href: siage_open_path, hint: "Extensão #{Siage::EXTENSION_VERSION}: login, Frequência e Avaliações", emphasis: true },
+          { label: "Ajuda SIAGE", href: siage_help_path, hint: "Como usar a extensão #{Siage::EXTENSION_VERSION}", emphasis: true },
+          { label: "Meu horário", href: timetable_path, hint: "Grade da semana a partir do PDF da escola" },
           { label: "Calendário", href: maestro_nav_path(:school_calendar_path, classroom), hint: "Dias letivos e gerar aula" },
           { label: "Aulas", href: maestro_nav_path(:lessons_path, classroom), hint: "Aulas já registradas" },
           { label: "Planos", href: lesson_plan_templates_path, hint: "Modelos de plano" }
@@ -309,8 +311,10 @@ module ApplicationHelper
         title: "Sugestões",
         items: [
           command_item("Início", root_path, :cards, "Painel inicial", "home dashboard inicio painel"),
-          command_item("SIAGE · livro", siage_ledger_path, :siage, "Envios da extensão", "siage livro razao exportar"),
-          command_item("Ajuda SIAGE", siage_help_path, :siage, "Como usar a extensão JSON", "siage json extensao"),
+          command_item("SIAGE · livro", siage_ledger_path, :siage, "Envios da extensão #{Siage::EXTENSION_VERSION}", "siage livro razao exportar"),
+          command_item("Abrir SIAGE", siage_open_path, :siage, "Login, Frequência e Avaliações", "siage abrir portal cpf senha"),
+          command_item("Ajuda SIAGE", siage_help_path, :siage, "Como usar a extensão #{Siage::EXTENSION_VERSION}", "siage json extensao aula"),
+          command_item("Meu horário", timetable_path, :calendar, "Grade individual da semana", "horario pdf quadro aula"),
           command_item("Calendário", school_calendar_path, :calendar, "Dias letivos", "feriado aula"),
           command_item("Diário", maestro_nav_path(:attendance_records_path), :diary, "Aula, chamada e SIAGE", "frequencia chamada siage"),
           command_item("Turmas", classrooms_path, :classrooms, "Lista de turmas", "turma"),
@@ -368,10 +372,12 @@ module ApplicationHelper
       title: "Atalhos",
       items: [
         command_item("Registrar aula", new_lesson_path, :activities, "Nova aula; a atividade é opcional", "atividade lista exercicio prova aula"),
+        command_item("Meu horário", timetable_path, :calendar, "Grade individual da semana", "horario pdf quadro"),
         command_item("Nova turma", new_classroom_path, :classrooms, "Cadastrar turma", "criar turma"),
         command_item("Calendário", school_calendar_path, :calendar, "Dias letivos", "feriado aula"),
-        command_item("SIAGE · livro", siage_ledger_path, :siage, "Envios da extensão", "siage livro"),
-        command_item("Ajuda SIAGE", siage_help_path, :siage, "Como usar a extensão JSON", "siage json"),
+        command_item("SIAGE · livro", siage_ledger_path, :siage, "Envios da extensão #{Siage::EXTENSION_VERSION}", "siage livro"),
+        command_item("Abrir SIAGE", siage_open_path, :siage, "Login, Frequência e Avaliações", "siage abrir portal"),
+        command_item("Ajuda SIAGE", siage_help_path, :siage, "Como usar a extensão #{Siage::EXTENSION_VERSION}", "siage json aula"),
         command_item("Cursos", courses_path, :courses, "Disciplinas e níveis", "disciplina curso")
       ]
     }
@@ -382,7 +388,7 @@ module ApplicationHelper
         command_item("Configurações", settings_path, :sliders, "Conta e preferências", "perfil conta"),
         command_item("Assinatura", assinatura_path, :check, "Mensalidade do Maestro", "plano pix pagar assinatura"),
         command_item("Automações", settings_path(anchor: "automacoes"), :bell, "Avisos neste PC", "agente chamada siage backup"),
-        command_item("Perfil", edit_profile_path, :people, "Nome, foto e WhatsApp", "foto whatsapp"),
+        command_item("Perfil", edit_profile_path, :people, "Nome, foto, CPF, senha SIAGE e WhatsApp", "foto whatsapp cpf senha siage"),
         command_item("Escola", edit_school_path, :pin, "Nome, GRE e brasão", "brasao gre regional timbrado"),
         {
           label: "Alternar modo dia/noite",

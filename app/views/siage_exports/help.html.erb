@@ -5,37 +5,35 @@
     <%= maestro_icon :siage, size: :lg %>
     <h1>Vínculo com o SIAGE (SEE-PB)</h1>
     <p>
-      O Maestro baixa um arquivo <strong>JSON</strong>. A extensão
-      <strong>Maestro → SIAGE 1.7.6</strong> lê esse arquivo e preenche
-      o portal <code>professor.see.pb.gov.br</code>. Ela não conversa
-      sozinha com o caderno: é JSON + clique na tela certa.
+      O caderno conversa com a extensão <strong><%= Siage::EXTENSION_LABEL %></strong>.
+      No livro-razão, <strong>Abrir SIAGE</strong> entrega a chamada e as notas;
+      CPF e senha do perfil preenchem o login. A senha fica cifrada no caderno.
     </p>
   </div>
 </div>
 
 <section class="data-card siage-help-card">
-  <h2>O que a extensão 1.7.6 faz</h2>
+  <h2>O que a extensão faz</h2>
   <ul class="siage-help-list">
     <li>
-      Carrega o JSON da aula, da frequência ou das notas.
+      Com <strong>Abrir SIAGE</strong>, recebe a chamada e as notas do caderno,
+      preenche CPF e senha do perfil, clica em <strong>Selecionar</strong>,
+      <strong>Diário</strong>, <strong>Visualizar Minhas Turmas</strong>
+      e na prancheta da turma do arquivo.
     </li>
     <li>
-      Na tela de <strong>registro de aula</strong>, escolhe mês e dia no
-      calendário, preenche a aula e clica em Registrar e Salvar.
+      A chamada vai para a aba <strong>Frequência</strong>
+      (Registrar Frequência → data, período e tempo).
+      Verde = presença, vermelho = falta, azul = falta justificada.
+      Atraso (laranja no caderno) entra como presença no SIAGE
+      (<strong>atraso não é falta</strong>).
     </li>
     <li>
-      Na tela de <strong>frequência</strong>, casa o nome do aluno e liga
-      o interruptor. Presente e atraso ficam no verde
-      (<strong>atraso não é falta</strong>). Falta e justificada são as
-      únicas que mudam a situação.
+      As notas vão para a aba <strong>Registro de Avaliações</strong>
+      (unidades e recuperações). A média do período e a REC GLOBAL o SIAGE calcula.
     </li>
     <li>
-      Na tela de <strong>notas</strong>, preenche as unidades e as
-      recuperações. A média do período o SIAGE calcula.
-    </li>
-    <li>
-      Tenta clicar em <strong>Salvar</strong>. Não pede senha. Não grava
-      senha. Só funciona com você já logado no portal.
+      Também aceita JSON ou planilha no popup, se você quiser anexar o arquivo à mão.
     </li>
   </ul>
 </section>
@@ -46,13 +44,14 @@
     <li>Abra o Chrome e acesse <code>chrome://extensions</code>.</li>
     <li>Ative <strong>Modo do desenvolvedor</strong>.</li>
     <li>
-      Clique em <strong>Carregar sem compactação</strong> (ou
-      <strong>Atualizar</strong> se já estiver carregada) e escolha a pasta
-      <code>extensions/siage-chrome</code> do Maestro.
+      Clique em <strong>Carregar sem compactação</strong> e escolha a pasta
+      <code>C:\Users\ryert\Desktop\siage-presenca</code> (ou
+      <code>extensions/siage-presenca</code> no projeto).
     </li>
     <li>
-      Confira se o cartão mostra <strong>Maestro → SIAGE (SEE-PB)</strong>
-      na versão <strong>1.7.6</strong>.
+      Confira se o cartão mostra <strong><%= Siage::EXTENSION_NAME %></strong>
+      na versão <strong><%= Siage::EXTENSION_VERSION %></strong>.
+      Use o ↻ do cartão, não o Atualizar do topo.
     </li>
   </ol>
 </section>
@@ -65,21 +64,23 @@
       disciplina e tempo. Faça a chamada.
     </li>
     <li>
-      Clique em <strong>Salvar e baixar este tempo</strong>. O Maestro
-      baixa o arquivo e deixa a aula na fila do livro-razão.
+      Clique em <strong>Salvar e baixar este tempo</strong> ou deixe as aulas
+      pendentes no livro-razão.
     </li>
     <li>
-      Entre em
-      <%= link_to Siage::ORIGIN, Siage::ORIGIN, target: "_blank", rel: "noopener" %>
-      já logado e abra a tela correspondente: aula, frequência ou notas.
+      Cadastre <strong>CPF</strong> e <strong>senha do SIAGE</strong> em
+      <%= link_to "Editar perfil", edit_profile_path %>
+      (uma vez).
     </li>
     <li>
-      Clique no ícone da extensão, escolha o JSON e
-      <strong>Preencher esta página</strong>.
+      No livro-razão, clique em
+      <%= link_to "Abrir SIAGE", siage_open_path %>.
+      A extensão <%= Siage::EXTENSION_VERSION %> abre o portal, entra na turma
+      e preenche a aba <strong>Frequência</strong> e, se houver notas,
+      <strong>Registro de Avaliações</strong>.
     </li>
     <li>
-      A extensão de presença marca Conferido ou Falhou depois de cada
-      aula. No
+      A extensão marca Conferido ou Falhou depois de cada aula. No
       <%= link_to "livro-razão", siage_ledger_path %>
       os botões continuam disponíveis.
     </li>
@@ -101,9 +102,9 @@
 <section class="data-card siage-help-card">
   <h2>Livro-razão</h2>
   <p>
-    No livro-razão, <strong>Planilha das pendentes</strong> baixa um CSV
-    com todas as turmas. A extensão de presença troca de turma no portal
-    sozinha; não precisa mudar a tela à mão entre uma turma e outra.
+    No livro-razão, <strong>Abrir SIAGE</strong> entrega as aulas pendentes
+    à extensão. <strong>Planilha das pendentes</strong> continua disponível
+    se você quiser o CSV. A extensão troca de turma no portal sozinha.
   </p>
   <p>
     Baixar JSON ou CSV só coloca a aula <strong>na fila</strong>.
@@ -112,10 +113,9 @@
     como falha. <strong>Falhou</strong> é o erro de verdade no envio.
   </p>
   <p>
-    Notas: baixe o JSON em <strong>Exportar 3 unidades para o SIAGE</strong>,
-    abra a tela de notas da turma no portal e anexe o arquivo na extensão.
-    Ela pergunta se é <strong>Salvar parcialmente</strong> (ainda dá para
-    mudar) ou <strong>Lançar notas</strong> (o SIAGE trava). O livro guarda
-    Parcial ou Lançado. REC GLOBAL e média do período o portal calcula.
+    Notas: <strong>Abrir SIAGE</strong> já leva o JSON do bimestre.
+    Na aba <strong>Registro de Avaliações</strong> a extensão preenche as unidades.
+    <strong>Salvar parcialmente</strong> ainda dá para mudar;
+    <strong>Lançar notas</strong> o SIAGE trava. O livro guarda Parcial ou Lançado.
   </p>
 </section>

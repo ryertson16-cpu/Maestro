@@ -29,7 +29,20 @@ threads_count = ENV.fetch("RAILS_MAX_THREADS", 3)
 threads threads_count, threads_count
 
 # 0.0.0.0: no Windows, 127.0.0.1 não alcança o Puma do WSL se ele escuta só em localhost.
-bind "tcp://0.0.0.0:#{ENV.fetch("PORT", 3000)}"
+# O banner do Puma mostra http://0.0.0.0:PORTA, que o navegador não abre; o endereço útil é 127.0.0.1.
+maestro_port = ENV.fetch("PORT", 3000)
+bind "tcp://0.0.0.0:#{maestro_port}"
+
+on_booted do
+  next unless ENV.fetch("RAILS_ENV", "development") == "development"
+
+  $stdout.puts <<~MSG
+
+    Abra o Maestro neste endereço:
+      http://127.0.0.1:#{maestro_port}
+
+  MSG
+end
 
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart

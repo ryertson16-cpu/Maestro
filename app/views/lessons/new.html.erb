@@ -3,20 +3,42 @@
     <h1>Registrar aula</h1>
     <p>
       Use esta página para plano completo e atividade. No dia a dia, aula,
-      chamada e JSON do SIAGE ficam no
+      chamada e o envio ao SIAGE (aba Frequência) ficam no
       <%= link_to "Diário de classe", attendance_records_path %>.
     </p>
   </div>
 </div>
+
+<% if @weekday_entries.present? %>
+  <section class="data-card lesson-form-card">
+    <div class="lesson-form-header">
+      <div>
+        <h2>Seu horário neste dia</h2>
+        <p>
+          Vem da grade em <%= link_to "Meu horário", timetable_path %>.
+          Clique num tempo para preencher turma, disciplina e horário.
+        </p>
+      </div>
+    </div>
+    <div class="my-timetable-slots" data-my-timetable-slots>
+      <% @weekday_entries.each do |entry| %>
+        <%= link_to new_lesson_path(classroom_id: entry.classroom_id, lesson_date: @lesson.lesson_date, period: entry.period),
+                    class: "button button-secondary" do %>
+          <%= entry.period %>º · <%= entry.classroom.name %>
+          <% if entry.course %>· <%= entry.course.name %><% end %>
+        <% end %>
+      <% end %>
+    </div>
+  </section>
+<% end %>
 
 <section class="data-card lesson-form-card timetable-import-card" data-timetable-import>
   <div class="lesson-form-header">
     <div>
       <h2>Gerar aula pelo horário da escola</h2>
       <p>
-        Anexe o PDF do horário da escola. O Maestro preenche disciplina, tempo
-        e tema nesta página. Depois revise e salve. No calendário, o mesmo PDF
-        cria a aula no diário.
+        Prefira gerar a grade em <%= link_to "Meu horário", timetable_path %>
+        e criar as aulas por lá. Ou anexe o PDF do dia para preencher só esta aula.
       </p>
     </div>
   </div>

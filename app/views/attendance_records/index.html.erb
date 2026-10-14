@@ -3,10 +3,13 @@
     <%= maestro_icon :diary, size: :lg %>
     <span class="section-eyebrow">Diário</span>
     <h1>Diário de classe</h1>
-    <p>Aula, chamada e JSON do SIAGE. Cada tempo tem a sua chamada. Atraso não é falta.</p>
+    <p>Aula, chamada e SIAGE. Cada tempo tem a sua chamada. Atraso não é falta. No portal, a chamada vai para a aba Frequência.</p>
   </div>
 
   <nav class="diary-header-links" aria-label="Atalhos do diário">
+    <%= link_to "Abrir SIAGE",
+                siage_open_path({ classroom_id: @classroom&.id }.compact),
+                class: "button button-primary button-small" %>
     <%= link_to siage_ledger_path,
                 class: "button button-secondary button-small button-with-badge" do %>
       Livro SIAGE

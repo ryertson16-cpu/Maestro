@@ -203,6 +203,21 @@ Rails.application.routes.draw do
        to: "siage/extension_results#create",
        as: :siage_extension_result
 
+  get "/horario",
+      to: "timetables#show",
+      as: :timetable
+
+  post "/horario",
+       to: "timetables#create"
+
+  get "/horario/aulas",
+      to: "timetables#slots",
+      as: :timetable_slots
+
+  post "/horario/gerar-semana",
+       to: "timetables#generate_week",
+       as: :generate_timetable_week
+
   get "/calendario",
       to: "school_calendars#show",
       as: :school_calendar
@@ -256,6 +271,10 @@ Rails.application.routes.draw do
   get "/siage",
       to: "siage_exports#help",
       as: :siage_help
+
+  get "/siage/abrir",
+      to: "siage_exports#open",
+      as: :siage_open
 
   get "/siage/lessons/:lesson_id",
       to: "siage_exports#lesson",

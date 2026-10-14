@@ -11,6 +11,7 @@
   </div>
 
   <nav class="diary-header-links" aria-label="Atalhos do calendário">
+    <%= link_to "Meu horário", timetable_path, class: "button button-ghost button-small" %>
     <%= link_to "Diário",
                 @classroom.present? ? attendance_records_path(classroom_id: @classroom.id) : attendance_records_path,
                 class: "button button-ghost button-small" %>

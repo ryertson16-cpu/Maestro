@@ -7,6 +7,11 @@
   const visivel = (el) => !!el && !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
   const q = (sel, raiz = document) => [...raiz.querySelectorAll(sel)];
   const pageText = () => (document.body?.innerText || "").slice(0, 4000);
+  async function aguardar(fn, ms = 8000) {
+    const fim = Date.now() + ms;
+    while (Date.now() < fim) { const r = fn(); if (r) return r; await esperar(150); }
+    return null;
+  }
 
   function ehTelaDeNotas() {
     const t = pageText();
@@ -122,21 +127,114 @@
     });
   }
 
-  async function clicarConfirmacao() {
-    await esperar(400);
-    const sim = botaoPorTexto(/^(sim|confirmar|ok|lancar)$/);
-    if (sim) sim.click();
+  function avisoNaTela() {
+    return q(".swal2-popup .swal2-title, .swal2-popup .swal2-html-container, .toast-message, .toast-body, .ui-toast-detail, .ui-toast-summary, .p-toast-detail")
+      .filter(visivel).map((e) => e.textContent.trim()).filter(Boolean).join(" ").slice(0, 160);
   }
 
-  async function salvarNoSiage(modo) {
+  function mensagemDoSistema() {
+    const m = q(".toast-message, .toast-body, .ui-toast-detail, .ui-toast-summary, .p-toast-detail, .swal2-html-container, .swal2-title, .alert, .invalid-feedback, .ui-message-error")
+      .filter(visivel).map((e) => e.textContent.trim()).filter(Boolean);
+    return m.join(" ").slice(0, 160);
+  }
+
+  function tipoDoAviso(texto) {
+    const t = norm(texto);
+    if ((/senha/.test(t) && /incorret|invalid|errad|nao confere|nao corresponde/.test(t)) || /credenc/.test(t)) return "senha";
+    if (/sucesso|salv[oa] com|lancad[oa] com|registrad[oa] com|realizad[oa] com/.test(t)) return "sucesso";
+    if (/deseja|tem certeza|confirma/.test(t)) return "pergunta";
+    if (t) return "falha";
+    return "";
+  }
+
+  function campoSenhaVisivel() {
+    return q("input[type=password]").find(visivel);
+  }
+
+  function preencherSenha(campo, senha) {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(campo, senha);
+    for (const tipo of ["input", "keyup", "change", "blur"]) {
+      campo.dispatchEvent(new Event(tipo, { bubbles: true }));
+    }
+  }
+
+  function confirmarCaixaDaSenha(campo) {
+    let caixa = campo.closest(".modal-content, .modal, .ui-dialog, .p-dialog, .swal2-popup, [role=dialog], mat-dialog-container");
+    if (!caixa) {
+      caixa = campo;
+      for (let k = 0; k < 6 && caixa.parentElement; k++) {
+        caixa = caixa.parentElement;
+        if (q("button", caixa).length) break;
+      }
+    }
+    const ok = q("button, input[type=submit], .swal2-confirm", caixa)
+      .filter((b) => visivel(b) && !b.disabled)
+      .find((b) => /^(confirmar|salvar|ok|enviar|assinar|registrar|continuar|sim|lancar)$/.test(norm(b.textContent || b.value)));
+    if (ok) ok.click();
+    else campo.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Enter", keyCode: 13 }));
+  }
+
+  function camposTravados() {
+    const linhas = linhasDeNotas();
+    return linhas.length > 0 && linhas.every((item) => item.inputs.every((input) => input.disabled || input.readOnly));
+  }
+
+  async function lerSenha(fallback) {
+    if (fallback) return fallback;
+    try { return (await chrome.storage.session.get("senha")).senha || ""; } catch (e) { return ""; }
+  }
+
+  async function confirmarComSenha(senha) {
+    const fim = Date.now() + 180000;
+    let senhaEnviada = false;
+
+    while (Date.now() < fim) {
+      const aviso = avisoNaTela();
+      if (aviso) {
+        const tipo = tipoDoAviso(aviso);
+        if (tipo === "senha") return { ok: false, msg: "senha não aceita: " + aviso };
+        if (tipo === "pergunta") {
+          const sim = q(".swal2-confirm, .p-confirm-dialog-accept, .modal.show .btn-primary").find(visivel)
+            || botaoPorTexto(/^(sim|confirmar|ok|lancar)$/);
+          if (sim) sim.click();
+          await esperar(500);
+          continue;
+        }
+        if (tipo === "sucesso") return { ok: true };
+        if (tipo === "falha") return { ok: false, msg: "o SIAGE respondeu: " + aviso };
+      }
+
+      const campoSenha = campoSenhaVisivel();
+      if (campoSenha) {
+        if (!senha) return { ok: false, msg: "o SIAGE pediu a senha; digite-a na extensão (campo Senha do SIAGE)" };
+        if (tipoDoAviso(mensagemDoSistema()) === "senha") {
+          return { ok: false, msg: "senha não aceita: " + mensagemDoSistema() };
+        }
+        if (!senhaEnviada || campoSenha.value !== senha) {
+          preencherSenha(campoSenha, senha);
+          await esperar(300);
+          confirmarCaixaDaSenha(campoSenha);
+          senhaEnviada = true;
+          await esperar(800);
+        }
+        continue;
+      }
+
+      if (senhaEnviada && camposTravados()) return { ok: true };
+      await esperar(400);
+    }
+
+    if (senhaEnviada) return { ok: true };
+    return { ok: false, msg: "o SIAGE não pediu a senha nem confirmou o lançamento" };
+  }
+
+  async function salvarNoSiage(modo, senha) {
     const botao = modo === "launch"
       ? botaoPorTexto(/lancar notas/)
       : botaoPorTexto(/salvar parcialmente/);
     if (!botao) return { ok: false, msg: modo === "launch" ? "não achei Lançar notas" : "não achei Salvar parcialmente" };
     botao.click();
-    await clicarConfirmacao();
-    await esperar(800);
-    return { ok: true };
+    return confirmarComSenha(senha);
   }
 
   function avisarMaestro(payload, status, message) {
@@ -173,7 +271,13 @@
       return { ok: false, msg: "Não casei os nomes dos alunos com a lista do SIAGE." };
     }
 
-    const salvo = await salvarNoSiage(modo);
+    const senha = await lerSenha(msg.senha);
+    if (modo === "launch" && !senha) {
+      avisarMaestro(payload, "failed", "falta a senha do SIAGE");
+      return { ok: false, msg: "Digite a senha do SIAGE na extensão para lançar as notas." };
+    }
+
+    const salvo = await salvarNoSiage(modo, senha);
     if (!salvo.ok) {
       avisarMaestro(payload, "failed", salvo.msg);
       return { ok: false, msg: `Notas preenchidas, mas ${salvo.msg}. Confira no portal.` };
@@ -193,4 +297,29 @@
       return true;
     }
   });
+
+  function casarPayloadNotas(lista) {
+    const t = norm(pageText());
+    return (lista || []).find((payload) => {
+      const nome = payload && payload.classroom && payload.classroom.name;
+      if (!nome) return false;
+      const n = norm(nome);
+      if (t.includes(n)) return true;
+      const m = n.match(/(\d+)\s*([a-z])\b/) || n.match(/(\d+)\s*(?:serie)?\s*([a-z])\b/);
+      if (!m) return false;
+      return new RegExp(`(^|[^0-9])${m[1]}\\s*(?:serie\\s*)?${m[2]}([^a-z]|$)`).test(t);
+    }) || ((lista || []).length === 1 ? lista[0] : null);
+  }
+
+  setTimeout(async () => {
+    if (!ehTelaDeNotas() || window.__siageNotasAuto) return;
+    let handoff = null;
+    try { handoff = (await chrome.storage.local.get("handoff")).handoff; } catch (e) { return; }
+    const payload = casarPayloadNotas(handoff && handoff.grades);
+    if (!payload) return;
+    window.__siageNotasAuto = true;
+    let senha = "";
+    try { senha = (await chrome.storage.session.get("senha")).senha || ""; } catch (e) {}
+    trabalharNotas({ payload, saveMode: "partial", senha }).catch(() => {});
+  }, 1800);
 })();

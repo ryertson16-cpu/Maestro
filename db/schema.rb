@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_11_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_13_193000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -312,6 +312,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_120000) do
 
   create_table "professors", force: :cascade do |t|
     t.text "bio"
+    t.string "cpf"
     t.datetime "created_at", null: false
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
@@ -323,9 +324,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_120000) do
     t.string "reset_password_token"
     t.string "school_name"
     t.string "sex"
+    t.text "siage_password"
     t.datetime "updated_at", null: false
     t.string "whatsapp_number"
     t.datetime "whatsapp_welcome_sent_at"
+    t.index ["cpf"], name: "index_professors_on_cpf", unique: true
     t.index ["email"], name: "index_professors_on_email", unique: true
     t.index ["reset_password_token"], name: "index_professors_on_reset_password_token", unique: true
     t.index ["whatsapp_number"], name: "index_professors_on_whatsapp_number", unique: true

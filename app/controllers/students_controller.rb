@@ -150,19 +150,30 @@ class StudentsController < ApplicationController
   end
 
   def destroy
-    if @student.destroy
-      redirect_to students_path,
-                  notice: "Aluno excluído com sucesso."
-    else
-      redirect_to students_path,
-                  alert: @student.errors.full_messages.to_sentence
-    end
+    name = @student.name
+    classroom_id = @student.enrollments.find_by(status: "active")&.classroom_id
+
+    @student.destroy_with_history!
+
+    redirect_to after_destroy_path(classroom_id),
+                notice: "#{name} foi excluído do cadastro."
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed => error
+    redirect_to student_path(@student),
+                alert: error.record&.errors&.full_messages&.to_sentence.presence ||
+                       "Não foi possível excluir o aluno."
   end
 
   private
 
   def set_student
     @student = current_professor.students.find(params[:id])
+  end
+
+  def after_destroy_path(classroom_id)
+    return classroom_path(classroom_id) if classroom_id.present? &&
+                                           current_professor.classrooms.exists?(classroom_id)
+
+    students_path
   end
 
   def load_student_report_data

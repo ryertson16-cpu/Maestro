@@ -11,6 +11,14 @@ module Maestro20
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.1
 
+    # Senha do SIAGE (encrypts :siage_password). Sem isso o Rails 8.1 exige
+    # active_record_encryption no credentials.yml.enc.
+    require "digest"
+    encryption_seed = "maestro-2-0-siage-password"
+    config.active_record.encryption.primary_key = Digest::SHA256.hexdigest("#{encryption_seed}-primary")
+    config.active_record.encryption.deterministic_key = Digest::SHA256.hexdigest("#{encryption_seed}-deterministic")
+    config.active_record.encryption.key_derivation_salt = Digest::SHA256.hexdigest("#{encryption_seed}-salt")
+
     config.time_zone = "Brasilia"
     config.active_record.default_timezone = :local
 

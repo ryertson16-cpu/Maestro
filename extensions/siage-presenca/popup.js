@@ -94,7 +94,7 @@ function ehCabecalho(celulas) {
 // Recebe linhas (arrays de células) e monta os grupos turma+componente
 function montarGrupos(linhas) {
   const erros = [];
-  let col = { data: 0, tempos: 1, turma: 2, componente: 3, faltas: 4, justificados: 5, id: -1, token: -1, origin: -1 };
+  let col = { data: 0, tempos: 1, turma: 2, componente: 3, faltas: 4, justificados: 5, atrasados: -1, id: -1, token: -1, origin: -1 };
   let inicio = 0;
   const primeira = linhas[0] || [];
   if (ehCabecalho(primeira) || primeira.map(norm).some((c) => c === "data")) {
@@ -107,6 +107,7 @@ function montarGrupos(linhas) {
       componente: achar(/^(componente|disciplina)/),
       faltas: achar(/^faltas?$/),
       justificados: achar(/^justific/),
+      atrasados: achar(/^atras/),
       id: achar(/^id/),
       token: achar(/^token/),
       origin: achar(/^maestro$/)
@@ -130,6 +131,7 @@ function montarGrupos(linhas) {
     const componente = col.componente >= 0 ? String(l[col.componente] ?? "").trim() || null : null;
     const faltas = col.faltas >= 0 ? nomesDaCelula(l[col.faltas]) : [];
     const justificados = col.justificados >= 0 ? nomesDaCelula(l[col.justificados]) : [];
+    const atrasados = col.atrasados >= 0 ? nomesDaCelula(l[col.atrasados]) : [];
     const maestroId = col.id >= 0 ? String(l[col.id] ?? "").trim() : "";
     const rowToken = col.token >= 0 ? String(l[col.token] ?? "").trim() : "";
     const rowOrigin = col.origin >= 0 ? String(l[col.origin] ?? "").trim() : "";
@@ -143,9 +145,20 @@ function montarGrupos(linhas) {
       tempos.forEach((t) => { if (!a.tempos.includes(t)) a.tempos.push(t); });
       a.faltas = unirNomes(a.faltas, faltas);
       a.justificados = unirNomes(a.justificados, justificados);
+      a.atrasados = unirNomes(a.atrasados, atrasados);
       if (maestroId && !(a.maestroIds || []).includes(maestroId)) a.maestroIds.push(maestroId);
     } else {
-      const a = { data, tempos, faltas, justificados, maestroIds: maestroId ? [maestroId] : [], estado: "pendente", msg: "" };
+      const a = {
+        data,
+        data_br: data.split("-").reverse().join("/"),
+        tempos,
+        faltas,
+        justificados,
+        atrasados,
+        maestroIds: maestroId ? [maestroId] : [],
+        estado: "pendente",
+        msg: ""
+      };
       g.porData.set(data, a);
       g.aulas.push(a);
     }
@@ -153,7 +166,11 @@ function montarGrupos(linhas) {
   const escolhido = $("periodo").value;
   const lista = [...grupos.values()].filter((g) => g.aulas.length).map(({ porData, ...g }) => {
     g.aulas.sort((a, b) => a.data.localeCompare(b.data));
-    g.aulas.forEach((a) => { a.periodo = escolhido === "auto" ? periodoPelaData(a.data) : +escolhido; });
+    g.aulas.forEach((a) => {
+      a.periodo = escolhido === "auto" ? periodoPelaData(a.data) : +escolhido;
+      a.periodo_label = a.periodo ? `${a.periodo}º Período` : "";
+      a.data_br = a.data_br || a.data.split("-").reverse().join("/");
+    });
     return g;
   });
   return { grupos: lista, erros, token, origin };
@@ -354,21 +371,26 @@ $("arquivoNotas").addEventListener("change", async () => {
   }
 });
 
-async function acordarNotas(aba, saveMode) {
+async function acordarNotas(aba, saveMode, senha) {
   try { await chrome.tabs.sendMessage(aba.id, { tipo: "ping-notas" }); }
   catch (e) {
     await chrome.scripting.executeScript({ target: { tabId: aba.id }, files: ["grades.js"] });
     await new Promise((r) => setTimeout(r, 300));
   }
-  return chrome.tabs.sendMessage(aba.id, { tipo: "iniciar-notas", payload: payloadNotas, saveMode });
+  return chrome.tabs.sendMessage(aba.id, { tipo: "iniciar-notas", payload: payloadNotas, saveMode, senha });
 }
 
 async function enviarNotas(saveMode) {
   if (!payloadNotas) return mostrar("Escolha o JSON de notas exportado pelo Maestro.", "erro");
+  const senha = $("senha").value.trim();
+  if (saveMode === "launch" && !senha) {
+    return mostrar("Digite a senha do SIAGE (campo acima) para lançar as notas.", "erro");
+  }
+  if (senha) await chrome.storage.session.set({ senha });
   const aba = await abaDoSiage();
   if (!aba) return mostrar("Abra a tela de notas da turma no SIAGE nesta aba.", "erro");
   try {
-    const r = await acordarNotas(aba, saveMode);
+    const r = await acordarNotas(aba, saveMode, senha);
     if (!r || !r.ok) return mostrar((r && r.msg) || "Não consegui preencher as notas.", "erro");
     mostrar(r.msg || "Notas enviadas ao SIAGE.", "ok");
   } catch (e) {

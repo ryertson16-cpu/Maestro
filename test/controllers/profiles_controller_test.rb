@@ -25,6 +25,33 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Sexo"
   end
 
+  test "saves cpf digits for SIAGE login" do
+    sign_in @professor
+    patch profile_path, params: {
+      professor: { cpf: "123.456.789-09" }
+    }
+
+    assert_redirected_to settings_path
+    assert_equal "12345678909", @professor.reload.cpf
+  end
+
+  test "saves siage password and keeps it when the field is blank" do
+    sign_in @professor
+    patch profile_path, params: {
+      professor: { siage_password: "segredo-siage" }
+    }
+
+    assert_redirected_to settings_path
+    assert_equal "segredo-siage", @professor.reload.siage_password
+
+    patch profile_path, params: {
+      professor: { preferred_name: "Ana", siage_password: "" }
+    }
+
+    assert_equal "segredo-siage", @professor.reload.siage_password
+    assert_equal "Ana", @professor.preferred_name
+  end
+
   test "saves preferred name and sex from settings" do
     sign_in @professor
     patch profile_path, params: {

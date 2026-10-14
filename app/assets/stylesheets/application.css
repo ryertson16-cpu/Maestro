@@ -7123,6 +7123,126 @@ html[data-theme="night"] .monitoring-status-late {
   color: #b45309;
 }
 
+.timetable-scope-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.timetable-scope-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-muted);
+  cursor: pointer;
+}
+
+.timetable-scope-card.is-selected {
+  border-color: var(--glass-stroke-active);
+  background: var(--color-primary-light);
+  box-shadow: var(--shadow-small);
+}
+
+.timetable-scope-card input {
+  margin-bottom: 6px;
+}
+
+.timetable-scope-card span {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.timetable-week-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  margin-top: 12px;
+}
+
+.timetable-week-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+}
+
+.timetable-week-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+.weekly-timetable thead th small {
+  display: block;
+  font-weight: 400;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.weekly-timetable-wrap {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.weekly-timetable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+  font-size: 0.9rem;
+}
+
+.weekly-timetable th,
+.weekly-timetable td {
+  border: 1px solid var(--border, #e5e7eb);
+  padding: 8px;
+  vertical-align: top;
+}
+
+.weekly-timetable thead th {
+  background: var(--surface-2, #f8fafc);
+  text-align: center;
+}
+
+.weekly-timetable tbody th {
+  white-space: nowrap;
+  text-align: left;
+}
+
+.weekly-timetable tbody th small {
+  display: block;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+.weekly-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weekly-slot span {
+  color: #4b5563;
+}
+
+.button-compact {
+  width: fit-content;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+.my-timetable-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .diary-lesson-card {
   margin: 8px 0 16px;
   padding: 22px;

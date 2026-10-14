@@ -4,6 +4,34 @@ class SiageExportsController < ApplicationController
   def help
   end
 
+  def open
+    @classroom = current_professor.classrooms.find_by(id: params[:classroom_id])
+    @handoff = Siage::Handoff.payload(
+      professor: current_professor,
+      origin: request.base_url,
+      classroom: @classroom
+    )
+    aulas = Array(@handoff.dig("job", "grupos")).sum { |grupo| Array(grupo["aulas"]).size }
+    notas = Array(@handoff["grades"]).size
+
+    open_lessons = Siage::Ledger.new(professor: current_professor, classroom: @classroom).open_lessons
+    open_lessons.each do |lesson|
+      record_shipment(
+        classroom: lesson.classroom,
+        kind: "lesson",
+        lesson: lesson,
+        filename: "siage-abrir.csv"
+      )
+    end
+
+    @resumo = {
+      aulas: aulas,
+      notas: notas,
+      cpf: current_professor.cpf.present?,
+      senha: current_professor.siage_password.present?
+    }
+  end
+
   def lesson
     lesson = current_professor.lessons
                               .includes(:classroom, :course)

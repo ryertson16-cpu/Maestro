@@ -1,0 +1,58 @@
+<% content_for :title, "Abrir SIAGE | Maestro" %>
+
+<script type="application/json" id="maestro-siage-handoff"><%= raw json_escape(@handoff.to_json) %></script>
+
+<div class="page-header page-header-with-action">
+  <div class="siage-page-title">
+    <%= maestro_icon :siage, size: :lg %>
+    <span class="section-eyebrow">SIAGE</span>
+    <h1>Enviar ao SIAGE</h1>
+    <p>
+      O Maestro abre o portal e entrega a chamada (aba Frequência), as notas (Registro de Avaliações), CPF e senha do perfil à extensão <%= Siage::EXTENSION_VERSION %>.
+    </p>
+  </div>
+
+  <nav class="diary-header-links" aria-label="Atalhos do livro SIAGE">
+    <%= link_to "Livro-razão", siage_ledger_path({ classroom_id: @classroom&.id }.compact), class: "button button-ghost button-small" %>
+    <%= link_to "Ajuda SIAGE", siage_help_path, class: "button button-ghost button-small" %>
+  </nav>
+</div>
+
+<section class="data-card siage-help-card">
+  <h2>O que vai nesta abertura</h2>
+  <ul class="siage-help-list">
+    <li>
+      CPF no login:
+      <% if @resumo[:cpf] %>
+        o cadastro do perfil.
+      <% else %>
+        ainda não informado —
+        <%= link_to "adicione no perfil", edit_profile_path %>.
+      <% end %>
+    </li>
+    <li>
+      Senha do SIAGE:
+      <% if @resumo[:senha] %>
+        cadastrada no perfil; a extensão preenche sozinha.
+      <% else %>
+        ainda não informada —
+        <%= link_to "adicione no perfil", edit_profile_path %>.
+      <% end %>
+    </li>
+    <li><strong><%= @resumo[:aulas] %></strong> aula(s) pendente(s) para a aba Frequência.</li>
+    <li><strong><%= @resumo[:notas] %></strong> turma(s) com nota para a aba Registro de Avaliações.</li>
+  </ul>
+
+  <p>
+    <%= link_to "Abrir SIAGE",
+                Siage::ORIGIN + "/auth",
+                class: "button button-primary",
+                data: { siage_open: true },
+                target: "_blank",
+                rel: "noopener" %>
+  </p>
+  <p class="classroom-pending-help">
+    Com a extensão <%= Siage::EXTENSION_VERSION %> carregada, este botão abre o portal, preenche CPF e senha, chega na turma e usa a aba <strong>Frequência</strong> para a chamada.
+    Sem a extensão, só abre a tela de login.
+  </p>
+</section>

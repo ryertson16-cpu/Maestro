@@ -1,0 +1,178 @@
+<% content_for :title, "Meu horário | Maestro" %>
+
+<div class="page-header">
+  <div>
+    <h1>Meu horário</h1>
+    <p>
+      Anexe o PDF do horário da escola (todas as turmas e professores).
+      O Maestro monta só a sua grade. Depois escolha a semana — inclusive
+      semanas passadas — e crie as aulas de uma turma ou do horário completo.
+    </p>
+  </div>
+</div>
+
+<section class="data-card timetable-import-card">
+  <div class="lesson-form-header">
+    <div>
+      <h2>Gerar grade a partir do PDF</h2>
+      <p>
+        O arquivo é o quadro geral da semana. O Maestro procura o nome
+        <strong><%= current_professor.greeting_name %></strong> e preenche segunda a sexta.
+      </p>
+    </div>
+  </div>
+
+  <%= form_with url: timetable_path, method: :post, multipart: true, local: true do %>
+    <div class="timetable-import-actions">
+      <label class="button button-secondary timetable-file-label">
+        Anexar PDF do horário da escola
+        <input type="file" name="timetable" accept="application/pdf,.pdf" required>
+      </label>
+      <button type="submit" class="button button-primary">Gerar meu horário</button>
+    </div>
+  <% end %>
+</section>
+
+<% if @all_entries.any? %>
+  <section class="data-card">
+    <div class="lesson-form-header">
+      <div>
+        <h2>Como gerar as aulas</h2>
+        <p>
+          Semana de <%= l(@week_start) %> a <%= l(@week_start + 4) %>.
+          <strong>Horário completo</strong> lança todas as turmas da sua grade.
+          <strong>Uma turma</strong> lança só os tempos daquela turma.
+        </p>
+      </div>
+    </div>
+
+    <%= form_with url: timetable_path, method: :get, local: true, html: { class: "timetable-week-form" } do %>
+      <div class="timetable-scope-grid">
+        <label class="timetable-scope-card <%= @scope == "all" ? "is-selected" : "" %>">
+          <%= radio_button_tag :scope, "all", @scope == "all", onchange: "this.form.submit()" %>
+          <strong>Horário completo</strong>
+          <span>Todas as turmas da sua grade nesta semana.</span>
+        </label>
+
+        <label class="timetable-scope-card <%= @scope == "classroom" ? "is-selected" : "" %>">
+          <%= radio_button_tag :scope, "classroom", @scope == "classroom", onchange: "this.form.submit()" %>
+          <strong>Uma turma</strong>
+          <span>Só os tempos da turma escolhida.</span>
+        </label>
+      </div>
+
+      <div class="timetable-week-bar">
+        <label>
+          Semana de
+          <input type="date" name="week" value="<%= @anchor.iso8601 %>" required onchange="this.form.submit()">
+        </label>
+
+        <% if @scope == "classroom" %>
+          <label>
+            Turma
+            <select name="classroom_id" required onchange="this.form.submit()">
+              <option value="">Escolha a turma</option>
+              <% @timetable_classrooms.each do |classroom| %>
+                <option value="<%= classroom.id %>" <%= "selected" if @classroom&.id == classroom.id %>>
+                  <%= classroom.name %>
+                </option>
+              <% end %>
+            </select>
+          </label>
+        <% end %>
+
+        <button type="submit" class="button button-secondary">Atualizar grade</button>
+      </div>
+    <% end %>
+
+    <div class="timetable-week-bar">
+      <% confirm = if @classroom
+                     "Criar só as aulas da #{@classroom.name} de #{l(@week_start)} a #{l(@week_start + 4)}? As que já existirem são mantidas."
+                   else
+                     "Criar o horário completo (todas as turmas da grade) de #{l(@week_start)} a #{l(@week_start + 4)}? As que já existirem são mantidas."
+                   end %>
+      <% generate_label = @classroom ? "Criar aulas da #{@classroom.name}" : "Criar horário completo desta semana" %>
+      <%= button_to generate_label,
+                    generate_timetable_week_path,
+                    method: :post,
+                    params: {
+                      week: @week_start,
+                      scope: @scope,
+                      classroom_id: @classroom&.id
+                    },
+                    class: "button button-primary",
+                    disabled: @scope == "classroom" && @classroom.blank?,
+                    data: { confirm_message: confirm } %>
+    </div>
+  </section>
+
+  <section class="data-card">
+    <div class="lesson-form-header">
+      <div>
+        <h2>
+          <% if @classroom %>
+            Grade da <%= @classroom.name %>
+          <% else %>
+            Grade completa
+          <% end %>
+        </h2>
+        <p>
+          <%= @entries.size %> tempo(s) neste recorte.
+          Clique em <strong>Criar aula</strong> para abrir só aquele tempo.
+        </p>
+      </div>
+    </div>
+
+    <div class="weekly-timetable-wrap">
+      <table class="weekly-timetable">
+        <thead>
+          <tr>
+            <th>Tempo</th>
+            <% @weekdays.each do |weekday| %>
+              <th>
+                <%= TimetableEntry::WEEKDAY_LABELS[weekday] %>
+                <small><%= l(@week_dates[weekday], format: :short) %></small>
+              </th>
+            <% end %>
+          </tr>
+        </thead>
+        <tbody>
+          <% @periods.each do |period| %>
+            <% clock = Lessons::WeeklyTimetableImporter::PERIOD_CLOCK[period] %>
+            <tr>
+              <th>
+                <strong><%= period %>º</strong>
+                <% if clock %>
+                  <small><%= clock.join("–") %></small>
+                <% end %>
+              </th>
+              <% @weekdays.each do |weekday| %>
+                <% entry = @grid[[weekday, period]]&.first %>
+                <% day = @week_dates[weekday] %>
+                <td>
+                  <% if entry %>
+                    <div class="weekly-slot">
+                      <strong><%= entry.classroom.name %></strong>
+                      <span><%= entry.course&.name || "Componente" %></span>
+                      <%= link_to "Criar aula",
+                                  new_lesson_path(
+                                    classroom_id: entry.classroom_id,
+                                    lesson_date: day,
+                                    period: entry.period
+                                  ),
+                                  class: "button button-secondary button-compact" %>
+                    </div>
+                  <% end %>
+                </td>
+              <% end %>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+<% else %>
+  <section class="data-card">
+    <p>Ainda não há grade. Anexe o PDF do horário geral para gerar a sua.</p>
+  </section>
+<% end %>

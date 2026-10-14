@@ -46,7 +46,21 @@ async function reportarLivro(msg) {
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (!msg || msg.tipo !== "maestro-ledger") return;
-  reportarLivro(msg).then(sendResponse);
-  return true;
+  if (!msg) return;
+  if (msg.tipo === "maestro-ledger") {
+    reportarLivro(msg).then(sendResponse);
+    return true;
+  }
+  if (msg.tipo === "abrir-siage") {
+    const handoff = msg.handoff || {};
+    const senha = String(handoff.senha || "").trim();
+    const gravar = senha
+      ? chrome.storage.session.set({ senha }).then(() => chrome.storage.local.set({ handoff, job: handoff.job || null }))
+      : chrome.storage.local.set({ handoff, job: handoff.job || null });
+    gravar.then(() => {
+      chrome.tabs.create({ url: "https://professor.see.pb.gov.br/auth" });
+      sendResponse({ ok: true });
+    });
+    return true;
+  }
 });

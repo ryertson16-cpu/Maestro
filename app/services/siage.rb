@@ -1,6 +1,9 @@
 module Siage
   HOST = "professor.see.pb.gov.br"
   ORIGIN = "https://#{HOST}"
+  EXTENSION_NAME = "SIAGE Presença Automática"
+  EXTENSION_VERSION = "4.8.1"
+  EXTENSION_LABEL = "#{EXTENSION_NAME} #{EXTENSION_VERSION}".freeze
 
   PERIODS = [
     "1º Período",

@@ -6,10 +6,13 @@
     <%= maestro_icon :siage, size: :lg %>
     <span class="section-eyebrow">SIAGE</span>
     <h1>Livro-razão SIAGE</h1>
-    <p>Envios de presença e notas. A planilha das pendentes junta as turmas num arquivo; a extensão troca de turma no portal.</p>
+    <p>Envios de chamada (aba Frequência) e notas (Registro de Avaliações). A extensão <%= Siage::EXTENSION_VERSION %> troca de turma no portal.</p>
   </div>
 
   <nav class="diary-header-links" aria-label="Atalhos do livro SIAGE">
+    <%= link_to "Abrir SIAGE",
+                siage_open_path({ classroom_id: @classroom&.id }.compact),
+                class: "button button-primary button-small" %>
     <%= link_to siage_ledger_export_path({ classroom_id: @classroom&.id }.compact),
                 class: "button button-primary button-small button-with-badge" do %>
       Planilha das pendentes
@@ -156,7 +159,7 @@
       <h2>Notas no SIAGE</h2>
       <p class="classroom-pending-help">
         <strong>Parcial</strong> ainda pode ser alterada no portal.
-        <strong>Lançado</strong> o SIAGE trava. Exporte o JSON em Notas e médias e anexe na extensão.
+        <strong>Lançado</strong> o SIAGE trava. <strong>Abrir SIAGE</strong> leva as notas à aba Registro de Avaliações; o JSON em Notas e médias continua disponível.
       </p>
     </div>
   </div>

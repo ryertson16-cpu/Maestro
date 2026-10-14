@@ -103,6 +103,15 @@
   <%= link_to "Editar",
               edit_student_path(@student),
               class: "button button-secondary" %>
+
+  <%= button_to "Excluir aluno",
+                student_path(@student),
+                method: :delete,
+                class: "button-link-danger",
+                data: {
+                  turbo_confirm:
+                    "Excluir #{@student.name} apaga a matrícula, as notas e a frequência. Não dá para desfazer."
+                } %>
 </div>
 
 <section class="attendance-summary classroom-show-summary" aria-label="Resumo de frequência">

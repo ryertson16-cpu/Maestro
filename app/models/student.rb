@@ -6,6 +6,9 @@ class Student < ApplicationRecord
   has_many :attendance_records, through: :enrollments
 
   has_many :activity_recipients, dependent: :destroy
+  has_many :activity_submissions, dependent: :delete_all
+  has_many :council_notes, dependent: :delete_all
+  has_many :recovery_grades, dependent: :delete_all
 
   has_one_attached :photo
 
@@ -28,6 +31,22 @@ class Student < ApplicationRecord
 
   validate :course_belongs_to_professor
   validate :legacy_classroom_belongs_to_professor
+
+  def destroy_with_history!
+    transaction do
+      ActivitySubmission.where(student_id: id).delete_all
+      ActivityRecipient.where(student_id: id).delete_all
+      CouncilNote.where(student_id: id).delete_all
+      RecoveryGrade.where(student_id: id).delete_all
+
+      enrollment_ids = Enrollment.where(student_id: id).pluck(:id)
+      AttendanceRecord.where(enrollment_id: enrollment_ids).delete_all
+      Enrollment.where(student_id: id).delete_all
+
+      photo.purge if photo.attached?
+      delete
+    end
+  end
 
   private
 

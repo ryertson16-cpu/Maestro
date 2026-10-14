@@ -94,6 +94,29 @@
       </div>
 
       <div class="profile-form-field">
+        <%= form.label :cpf, "CPF do SIAGE" %>
+        <%= form.telephone_field :cpf,
+                                 inputmode: "numeric",
+                                 autocomplete: "off",
+                                 placeholder: "Somente números" %>
+        <small>
+          Usado para preencher o login em professor.see.pb.gov.br.
+        </small>
+      </div>
+
+      <div class="profile-form-field">
+        <%= form.label :siage_password, "Senha do SIAGE" %>
+        <%= form.password_field :siage_password,
+                                autocomplete: "new-password",
+                                value: "",
+                                placeholder: @professor.siage_password.present? ? "Cadastrada — deixe em branco para manter" : "A extensão preenche no portal" %>
+        <small>
+          Fica cifrada no caderno e a extensão usa só para entrar no SIAGE.
+          Em branco, a senha atual não muda.
+        </small>
+      </div>
+
+      <div class="profile-form-field">
         <%= form.label :whatsapp_number, "WhatsApp do Maestro" %>
         <%= form.telephone_field :whatsapp_number,
                                  placeholder: "83999999999" %>

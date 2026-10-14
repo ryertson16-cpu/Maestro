@@ -52,8 +52,17 @@ class Professor < ApplicationRecord
   validates :whatsapp_number,
             uniqueness: { allow_blank: true }
 
+  validates :cpf,
+            uniqueness: { allow_blank: true },
+            format: { with: /\A\d{11}\z/, message: "informe 11 dígitos" },
+            allow_blank: true
+
+  encrypts :siage_password
+
   before_validation :normalize_whatsapp_number
+  before_validation :normalize_cpf
   before_validation :normalize_preferred_name
+  before_validation :normalize_siage_password
   before_save :reset_whatsapp_welcome, if: :will_save_change_to_whatsapp_number?
 
   def greeting_name
@@ -113,8 +122,18 @@ class Professor < ApplicationRecord
     self.whatsapp_number = Lira::Phone.digits(whatsapp_number).presence
   end
 
+  def normalize_cpf
+    self.cpf = cpf.to_s.gsub(/\D/, "").presence
+  end
+
   def normalize_preferred_name
     self.preferred_name = preferred_name.to_s.strip.presence
+  end
+
+  def normalize_siage_password
+    return unless will_save_change_to_siage_password?
+
+    self.siage_password = siage_password.to_s.strip.presence
   end
 
   def reset_whatsapp_welcome

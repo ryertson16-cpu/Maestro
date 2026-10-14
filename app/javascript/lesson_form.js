@@ -12,6 +12,20 @@ function initializeLessonForm() {
   }
 
   initializeTimetableImport()
+  initializeMyTimetableDate()
+}
+
+function initializeMyTimetableDate() {
+  const dateField = document.getElementById("lesson_lesson_date")
+  if (!dateField || dateField.dataset.myTimetableBound === "true") return
+  dateField.dataset.myTimetableBound = "true"
+  dateField.addEventListener("change", () => {
+    const url = new URL(window.location.href)
+    if (dateField.value) url.searchParams.set("lesson_date", dateField.value)
+    const classroom = document.getElementById("lesson_classroom_id")?.value
+    if (classroom) url.searchParams.set("classroom_id", classroom)
+    window.location.assign(url.toString())
+  })
 }
 
 function initializeTimetableImport() {

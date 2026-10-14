@@ -40,6 +40,53 @@ module Siage
       end
     end
 
+    def as_job
+      grupos = {}
+
+      lesson_records.each do |lesson|
+        turma = turma_label_for(lesson.classroom)
+        componente = componente_for(lesson)
+        chave = "#{turma}|#{componente}"
+        grupo = grupos[chave] ||= { "turma" => turma, "componente" => componente, "aulas" => [] }
+        iso = lesson.lesson_date.iso8601
+        tempos = tempos_for(lesson).split(",").map(&:presence).compact
+        aula = grupo["aulas"].find { |item| item["data"] == iso }
+
+        if aula
+          tempos.each { |tempo| aula["tempos"] << tempo unless aula["tempos"].include?(tempo) }
+          aula["faltas"] = (aula["faltas"] + name_list_for(lesson, :absent)).uniq
+          aula["justificados"] = (aula["justificados"] + name_list_for(lesson, :justified)).uniq
+          aula["atrasados"] = (Array(aula["atrasados"]) + name_list_for(lesson, :late)).uniq
+          id = lesson.id.to_s
+          aula["maestroIds"] << id unless aula["maestroIds"].include?(id)
+        else
+          grupo["aulas"] << {
+            "data" => iso,
+            "data_br" => lesson.lesson_date.strftime("%d/%m/%Y"),
+            "tempos" => tempos,
+            "faltas" => name_list_for(lesson, :absent),
+            "justificados" => name_list_for(lesson, :justified),
+            "atrasados" => name_list_for(lesson, :late),
+            "maestroIds" => [lesson.id.to_s],
+            "estado" => "pendente",
+            "msg" => "",
+            "periodo" => Siage.bimester_for_date(lesson.lesson_date),
+            "periodo_label" => "#{Siage.bimester_for_date(lesson.lesson_date)}º Período"
+          }
+        end
+      end
+
+      grupos = grupos.values
+      {
+        "status" => grupos.any? ? "aguardando-login" : "concluido",
+        "teste" => false,
+        "grupos" => grupos,
+        "token" => extension_token,
+        "origin" => @origin.to_s,
+        "criado" => Time.current.to_i
+      }
+    end
+
     private
 
     attr_reader :professor, :classroom
@@ -97,12 +144,15 @@ module Siage
         "Componente curricular"
     end
 
-    def names_for(lesson, status)
+    def name_list_for(lesson, status)
       records_for(lesson).select { |record| record.public_send("#{status}?") }
                          .map { |record| record.student.name.to_s.strip }
                          .reject(&:blank?)
                          .uniq
-                         .join(" | ")
+    end
+
+    def names_for(lesson, status)
+      name_list_for(lesson, status).join(" | ")
     end
 
     def records_for(lesson)

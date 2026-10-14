@@ -38,14 +38,18 @@ class ProfilesController < ApplicationController
   end
 
   def profile_params
-    params.require(:professor).permit(
+    attrs = params.require(:professor).permit(
       :name,
       :preferred_name,
       :sex,
       :phone,
+      :cpf,
+      :siage_password,
       :whatsapp_number,
       :bio,
       :profile_photo
     )
+    attrs.delete(:siage_password) if attrs[:siage_password].blank?
+    attrs
   end
 end
