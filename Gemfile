@@ -78,5 +78,6 @@ gem "csv", "~> 3.3"
 
 gem "prawn", "~> 2.5"
 gem "prawn-table", "~> 0.2"
+gem "rqrcode", "~> 2.2"
 
 gem "pdf-reader", "~> 2.12"

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_13_193000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_14_180000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -44,6 +44,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_193000) do
     t.string "adaptation_kind"
     t.boolean "adapted", default: false, null: false
     t.integer "bimester", default: 1, null: false
+    t.string "correction_token"
     t.datetime "created_at", null: false
     t.text "description"
     t.date "due_date"
@@ -56,10 +57,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_193000) do
     t.datetime "updated_at", null: false
     t.decimal "weight", precision: 5, scale: 2, default: "1.0", null: false
     t.index ["adapted"], name: "index_activities_on_adapted"
+    t.index ["correction_token"], name: "index_activities_on_correction_token", unique: true
     t.index ["lesson_id"], name: "index_activities_on_lesson_id"
     t.index ["parent_activity_id"], name: "index_activities_on_parent_activity_id"
     t.check_constraint "bimester BETWEEN 1 AND 4", name: "activities_bimester_between_one_and_four"
     t.check_constraint "weight > 0", name: "activities_weight_greater_than_zero"
+  end
+
+  create_table "activity_questions", force: :cascade do |t|
+    t.integer "activity_id", null: false
+    t.json "choices", default: [], null: false
+    t.string "correct_letter"
+    t.datetime "created_at", null: false
+    t.string "kind", default: "objective", null: false
+    t.decimal "points", precision: 6, scale: 2, default: "1.0", null: false
+    t.integer "position", default: 1, null: false
+    t.text "prompt", null: false
+    t.integer "question_id"
+    t.datetime "updated_at", null: false
+    t.index ["activity_id", "position"], name: "index_activity_questions_on_activity_id_and_position", unique: true
+    t.index ["activity_id"], name: "index_activity_questions_on_activity_id"
+    t.index ["question_id"], name: "index_activity_questions_on_question_id"
   end
 
   create_table "activity_recipients", force: :cascade do |t|
@@ -74,6 +92,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_193000) do
 
   create_table "activity_submissions", force: :cascade do |t|
     t.integer "activity_id", null: false
+    t.json "answers", default: {}, null: false
     t.datetime "created_at", null: false
     t.integer "professor_id", null: false
     t.decimal "score", precision: 3, scale: 1
@@ -379,6 +398,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_193000) do
     t.index ["professor_id"], name: "index_projects_on_professor_id"
   end
 
+  create_table "questions", force: :cascade do |t|
+    t.json "choices", default: [], null: false
+    t.string "correct_letter"
+    t.integer "course_id"
+    t.datetime "created_at", null: false
+    t.string "kind", default: "objective", null: false
+    t.decimal "points", precision: 6, scale: 2, default: "1.0", null: false
+    t.integer "professor_id", null: false
+    t.text "prompt", null: false
+    t.string "tag"
+    t.datetime "updated_at", null: false
+    t.index ["course_id"], name: "index_questions_on_course_id"
+    t.index ["kind"], name: "index_questions_on_kind"
+    t.index ["professor_id"], name: "index_questions_on_professor_id"
+    t.index ["tag"], name: "index_questions_on_tag"
+  end
+
   create_table "recovery_grades", force: :cascade do |t|
     t.integer "bimester", null: false
     t.integer "classroom_id", null: false
@@ -663,6 +699,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_193000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "activities", "activities", column: "parent_activity_id"
   add_foreign_key "activities", "lessons"
+  add_foreign_key "activity_questions", "activities"
+  add_foreign_key "activity_questions", "questions"
   add_foreign_key "activity_recipients", "activities"
   add_foreign_key "activity_recipients", "students"
   add_foreign_key "activity_submissions", "activities"
@@ -702,6 +740,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_193000) do
   add_foreign_key "project_stages", "lessons"
   add_foreign_key "project_stages", "projects"
   add_foreign_key "projects", "professors"
+  add_foreign_key "questions", "courses"
+  add_foreign_key "questions", "professors"
   add_foreign_key "recovery_grades", "classrooms"
   add_foreign_key "recovery_grades", "professors"
   add_foreign_key "recovery_grades", "students"

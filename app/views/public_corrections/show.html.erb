@@ -1,0 +1,83 @@
+<% content_for :title, "Corrigir #{@activity.title} | Maestro" %>
+
+<section class="correction-card">
+  <p class="correction-kicker">Gabarito · <%= @classroom.name %></p>
+  <h1><%= @activity.title %></h1>
+  <p><%= @activity.activity_type %> · <%= @activity.bimester_label %></p>
+</section>
+
+<% if @just_graded && @student && @score.present? %>
+  <section class="correction-score" aria-live="polite">
+    <p>Nota de <%= @student.name %></p>
+    <strong><%= format("%.1f", @score).tr(".", ",") %></strong>
+    <%= link_to "Corrigir próximo aluno",
+                gabarito_path(@activity.correction_token),
+                class: "button button-primary button-block" %>
+  </section>
+<% elsif @student %>
+  <section class="correction-card">
+    <p class="correction-kicker">Aluno</p>
+    <h2><%= @student.name %></h2>
+    <%= link_to "Trocar aluno", gabarito_path(@activity.correction_token), class: "correction-switch" %>
+  </section>
+
+  <%= form_with url: gabarito_grade_path(@activity.correction_token),
+                method: :post,
+                local: true,
+                class: "correction-form" do %>
+    <%= hidden_field_tag :student_id, @student.id %>
+
+    <% @items.each do |item| %>
+      <fieldset class="correction-item">
+        <legend><%= item.position %>. <%= item.prompt %></legend>
+        <% if item.objective? %>
+          <div class="correction-keys">
+            <% item.choice_pairs.each do |letter, _text| %>
+              <label class="correction-key">
+                <%= radio_button_tag "answers[#{item.id}]",
+                                     letter,
+                                     @answers[item.id.to_s].to_s == letter %>
+                <span><%= letter %></span>
+              </label>
+            <% end %>
+          </div>
+        <% else %>
+          <label class="correction-discursive">
+            Pontos (máx. <%= format("%.1f", item.points).tr(".", ",") %>)
+            <%= number_field_tag "answers[#{item.id}]",
+                                 @answers[item.id.to_s],
+                                 min: 0,
+                                 max: item.points,
+                                 step: 0.1,
+                                 inputmode: "decimal" %>
+          </label>
+        <% end %>
+      </fieldset>
+    <% end %>
+
+    <% if @items.empty? %>
+      <p>Esta atividade ainda não tem questões montadas.</p>
+    <% else %>
+      <%= submit_tag "Lançar nota", class: "button button-primary button-block" %>
+    <% end %>
+  <% end %>
+<% else %>
+  <section class="correction-card">
+    <h2>Quem é o aluno?</h2>
+    <p>Depois do QR do gabarito, escolha o aluno ou leia o QR da folha dele.</p>
+    <input type="search"
+           class="correction-search"
+           data-student-filter
+           placeholder="Buscar pelo nome"
+           autocomplete="off">
+  </section>
+
+  <nav class="correction-students">
+    <% @students.each do |student| %>
+      <%= link_to student.name,
+                  gabarito_aluno_path(@activity.correction_token, student),
+                  class: "correction-student",
+                  data: { student_name: student.name } %>
+    <% end %>
+  </nav>
+<% end %>

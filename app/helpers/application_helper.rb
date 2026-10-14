@@ -91,7 +91,7 @@ module ApplicationHelper
       :diario
     when "classrooms", "students", "enrollments", "projects", "project_stages"
       :turmas
-    when "grades", "activities", "bimester_closings"
+    when "grades", "activities", "bimester_closings", "questions", "corrections", "activity_questions", "public_corrections"
       :atividades
     when "monitoring", "council_notes"
       :monitoramento
@@ -155,6 +155,8 @@ module ApplicationHelper
         href: maestro_nav_path(:grade_levels_path, classroom),
         items: [
           { label: "Entregas e notas", href: maestro_nav_path(:grade_levels_path, classroom), hint: "Inclui atividades adaptadas" },
+          { label: "Banco de questões", href: questions_path, hint: "Questões próprias para montar atividades" },
+          { label: "Corrigir por QR", href: corrections_path, hint: "Ler o QR da folha e lançar a nota" },
           {
             label: "Médias e fechamento",
             href: classroom ? grades_path(classroom_id: classroom.id) : grade_levels_path,
@@ -320,6 +322,8 @@ module ApplicationHelper
           command_item("Turmas", classrooms_path, :classrooms, "Lista de turmas", "turma"),
           command_item("Alunos", students_path, :students, "Matrículas e fichas", "aluno matricula"),
           command_item("Atividades", maestro_nav_path(:grade_levels_path), :activities, "Entregas e notas", "nota lista exercicio"),
+          command_item("Banco de questões", questions_path, :clipboard, "Montar provas com o banco próprio", "questao objetiva discursiva banco"),
+          command_item("Corrigir por QR", corrections_path, :check, "Câmera no QR da atividade", "qrcode correcao gabarito prova"),
           command_item("Projetos", projects_path, :projects, "Professor e Escola Nota 10", "projeto"),
           command_item("Monitoramento", monitoring_path, :monitoring, "Alertas e conselho", "alerta pendencia"),
           command_item("Cursos", courses_path, :courses, "Disciplinas e níveis", "disciplina"),

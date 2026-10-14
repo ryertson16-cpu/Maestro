@@ -1,0 +1,16 @@
+<% content_for :title, "Corrigir por QR | Maestro" %>
+
+<div class="page-header">
+  <h1>Corrigir por QR Code</h1>
+  <p>No celular, abra o app Câmera e leia o QR do gabarito. Também pode usar a câmera abaixo se este aparelho já estiver no Maestro.</p>
+</div>
+
+<section class="data-card qr-scanner-card" data-qr-scanner>
+  <video data-qr-video playsinline autoplay muted></video>
+  <p class="activity-type-hint" data-qr-status>Pedindo câmera…</p>
+
+  <%= form_with url: corrections_path, method: :get, local: true, class: "question-bank-filters" do %>
+    <%= text_field_tag :t, @token, placeholder: "Ou cole o token do QR", autocomplete: "off" %>
+    <%= submit_tag "Abrir atividade", class: "button button-primary" %>
+  <% end %>
+</section>

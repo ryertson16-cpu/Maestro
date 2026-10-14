@@ -40,6 +40,12 @@ class Activity < ApplicationRecord
            through: :activity_recipients,
            source: :student
 
+  has_many :activity_questions,
+           -> { order(:position) },
+           dependent: :destroy
+
+  before_validation :ensure_correction_token, on: :create
+
   validates :title,
             presence: true
 
@@ -134,6 +140,20 @@ class Activity < ApplicationRecord
     true
   end
 
+  def assembled?
+    activity_questions.any?
+  end
+
+  def ensure_correction_token!
+    ensure_correction_token
+    save! if correction_token_changed? || !persisted?
+    correction_token
+  end
+
+  def correction_path_token
+    ensure_correction_token!
+  end
+
   def counts_toward_average_for?(student)
     return false unless assigned_to?(student)
     return false if complements?
@@ -152,6 +172,10 @@ class Activity < ApplicationRecord
   end
 
   private
+
+  def ensure_correction_token
+    self.correction_token = SecureRandom.base58(24) if correction_token.blank?
+  end
 
   def due_date_cannot_be_before_lesson_date
     return if due_date.blank? || lesson.blank?

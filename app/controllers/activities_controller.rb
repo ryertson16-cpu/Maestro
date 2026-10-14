@@ -3,15 +3,88 @@ class ActivitiesController < ApplicationController
   before_action :set_activity, except: :create
 
   def sheet
+    @activity.ensure_correction_token!
     pdf = Documents::ActivitySheet.new(
       professor: current_professor,
-      activity: @activity
+      activity: @activity,
+      correction_url: gabarito_public_url(@activity),
+      students: @classroom.students.order(:name),
+      student_url: ->(student) { gabarito_student_url(@activity, student) }
     ).render
 
     send_data pdf,
               filename: sheet_filename,
               type: "application/pdf",
               disposition: "attachment"
+  end
+
+  def assemble
+    @activity.ensure_correction_token!
+    if params[:correction_host].present?
+      session[:correction_host] = params[:correction_host].to_s.strip
+                                    .sub(%r{/g/.*\z}, "")
+                                    .sub(%r{/\z}, "")
+    end
+    @correction_url = gabarito_public_url(@activity)
+    @items = @activity.activity_questions.includes(:question)
+    @courses = current_professor.courses.order(:name)
+    @bank = current_professor
+            .questions
+            .includes(:course)
+            .search(params[:q])
+            .order(updated_at: :desc)
+    @bank = @bank.where(kind: params[:kind]) if params[:kind].present?
+    if params[:course_id].present?
+      @bank = @bank.where(course_id: params[:course_id])
+    elsif @activity.lesson.course_id.present? && params[:q].blank? && params[:kind].blank?
+      @bank = @bank.where(course_id: [nil, @activity.lesson.course_id])
+    end
+    used_ids = @items.filter_map(&:question_id)
+    @bank = @bank.where.not(id: used_ids) if used_ids.any?
+  end
+
+  def correct
+    @activity.ensure_correction_token!
+    if params[:t].present? && params[:t].to_s != @activity.correction_token
+      redirect_to corrections_path, alert: "Este QR Code não confere com a atividade."
+      return
+    end
+
+    @items = @activity.activity_questions
+    @classroom = current_professor.classrooms.find(@activity.lesson.classroom_id)
+    @students = @classroom.students.order(:name)
+    @student = @students.find_by(id: params[:student_id])
+    @submission = if @student
+                    @activity.activity_submissions.find_by(student: @student)
+                  end
+    @answers = @submission&.answers.presence || {}
+  end
+
+  def grade
+    student = current_professor.students.find(params[:student_id])
+    answers = params[:answers].presence || {}
+    answers = answers.to_unsafe_h if answers.respond_to?(:to_unsafe_h)
+    score = Activities::Grader.new(@activity).score(answers)
+
+    submission = ActivitySubmission.find_or_initialize_by(
+      activity: @activity,
+      student: student
+    )
+    submission.professor = current_professor
+    submission.answers = answers
+    submission.score = score
+    submission.submitted_on ||= Date.current
+
+    if submission.save
+      redirect_to correct_activity_path(
+        @activity,
+        t: @activity.correction_token,
+        student_id: student.id
+      ), notice: "Correção lançada: nota #{format('%.1f', score).tr('.', ',')}."
+    else
+      redirect_to correct_activity_path(@activity, t: @activity.correction_token, student_id: student.id),
+                  alert: submission.errors.full_messages.to_sentence
+    end
   end
 
   def adapt
@@ -156,6 +229,18 @@ class ActivitiesController < ApplicationController
       :parent_activity_id,
       student_ids: []
     )
+  end
+
+  def correction_host
+    session[:correction_host].presence || request.base_url
+  end
+
+  def gabarito_public_url(activity)
+    "#{correction_host}/g/#{activity.correction_token}"
+  end
+
+  def gabarito_student_url(activity, student)
+    "#{correction_host}/g/#{activity.correction_token}/a/#{student.id}"
   end
 
   def sheet_filename

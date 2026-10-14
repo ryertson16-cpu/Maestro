@@ -1,0 +1,134 @@
+<% content_for :title, "Montar atividade | Maestro" %>
+
+<div class="page-header page-header-with-action">
+  <div>
+    <h1>Montar atividade</h1>
+    <p>
+      <%= @activity.title %>
+      —
+      <%= @activity.lesson.classroom.name %>
+      <% if @activity.lesson.course %>
+        · <%= @activity.lesson.course.name %>
+      <% end %>
+    </p>
+  </div>
+  <div class="page-header-actions">
+    <%= render "activities/sheet_button", activity: @activity %>
+    <%= link_to "Corrigir no celular",
+                @correction_url,
+                class: "button button-primary",
+                target: "_blank",
+                rel: "noopener" %>
+  </div>
+</div>
+
+<section class="data-card">
+  <h2>QR do gabarito</h2>
+  <p class="activity-type-hint">
+    Abra a câmera do celular (não precisa estar logado) e aponte para este código
+    ou para o QR impresso no PDF. O endereço precisa ser o que o celular alcança
+    — o IP da rede, não localhost.
+  </p>
+  <%= form_with url: assemble_activity_path(@activity), method: :get, local: true, class: "question-bank-filters" do %>
+    <%= text_field_tag :correction_host,
+                       @correction_url.to_s.sub(%r{/g/.*\z}, ""),
+                       placeholder: "http://192.168.0.10:3000" %>
+    <%= submit_tag "Atualizar QR", class: "button button-secondary" %>
+  <% end %>
+  <% if @correction_url.present? %>
+    <div class="gabarito-qr">
+      <%= raw RQRCode::QRCode.new(@correction_url).as_svg(module_size: 4, viewbox: true) %>
+      <p><code><%= @correction_url %></code></p>
+    </div>
+  <% end %>
+</section>
+
+<section class="data-card">
+  <h2>Questões desta atividade</h2>
+  <p class="activity-type-hint">
+    O PDF usa o timbrado da escola, o QR do gabarito e um QR por aluno na folha de respostas.
+  </p>
+
+  <% if @items.any? %>
+    <ol class="assembled-questions">
+      <% @items.each do |item| %>
+        <li>
+          <div class="assembled-question-body">
+            <strong><%= item.prompt %></strong>
+            <div class="activity-type-hint">
+              <%= item.objective? ? "Objetiva · gabarito #{item.correct_letter}" : "Discursiva" %>
+              · <%= format("%.1f", item.points).tr(".", ",") %> pt
+            </div>
+          </div>
+          <div class="page-header-actions">
+            <%= button_to "↑",
+                          move_activity_activity_question_path(@activity, item, direction: "up"),
+                          method: :patch,
+                          class: "button button-secondary button-small",
+                          disabled: item.position <= 1 %>
+            <%= button_to "↓",
+                          move_activity_activity_question_path(@activity, item, direction: "down"),
+                          method: :patch,
+                          class: "button button-secondary button-small" %>
+            <%= button_to "Retirar",
+                          activity_activity_question_path(@activity, item),
+                          method: :delete,
+                          class: "button button-secondary button-small",
+                          data: { turbo_confirm: "Retirar esta questão da atividade?" } %>
+          </div>
+        </li>
+      <% end %>
+    </ol>
+  <% else %>
+    <p>Ainda não há questões. Escolha no banco abaixo.</p>
+  <% end %>
+</section>
+
+<section class="data-card">
+  <h2>Banco próprio</h2>
+  <%= form_with url: assemble_activity_path(@activity), method: :get, local: true, class: "question-bank-filters" do %>
+    <%= text_field_tag :q, params[:q], placeholder: "Buscar no banco" %>
+    <%= select_tag :kind,
+                   options_for_select([["Todos os tipos", ""]] + Question::KINDS.map { |value, label| [label, value] }, params[:kind]) %>
+    <%= select_tag :course_id,
+                   options_from_collection_for_select(@courses, :id, :name, params[:course_id]),
+                   include_blank: "Qualquer disciplina" %>
+    <%= submit_tag "Filtrar", class: "button button-secondary" %>
+    <%= link_to "Nova questão", new_question_path, class: "button button-secondary" %>
+  <% end %>
+
+  <% if @bank.any? %>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Questão</th>
+            <th>Tipo</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @bank.each do |question| %>
+            <tr>
+              <td>
+                <%= truncate(question.prompt, length: 160) %>
+                <% if question.tag.present? %>
+                  <div class="activity-type-hint"><%= question.tag %></div>
+                <% end %>
+              </td>
+              <td><%= question.kind_label %></td>
+              <td>
+                <%= button_to "Incluir",
+                              activity_activity_questions_path(@activity, question_id: question.id),
+                              method: :post,
+                              class: "button button-primary button-small" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p>Não há questões disponíveis neste filtro.</p>
+  <% end %>
+</section>

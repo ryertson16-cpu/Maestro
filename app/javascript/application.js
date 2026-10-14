@@ -16,6 +16,9 @@ import "school_calendar"
 import "lira_chat"
 import "maestro_quick"
 import "attendance_offline"
+import "question_form"
+import "qr_scanner"
+import "correction"
 
 document.addEventListener("click", function (event) {
   const button = event.target.closest("[data-fill-today]");

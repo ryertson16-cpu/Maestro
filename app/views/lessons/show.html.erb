@@ -109,7 +109,12 @@
         <p><%= @lesson.activity.title %></p>
       </div>
 
-      <%= render "activities/sheet_button", activity: @lesson.activity %>
+      <div class="page-header-actions">
+        <%= link_to "Montar questões",
+                    assemble_activity_path(@lesson.activity),
+                    class: "button button-primary" %>
+        <%= render "activities/sheet_button", activity: @lesson.activity %>
+      </div>
     </div>
 
     <div class="lesson-detail-grid">

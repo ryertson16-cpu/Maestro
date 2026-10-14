@@ -1,0 +1,62 @@
+<% content_for :title, "Banco de questões | Maestro" %>
+
+<div class="page-header page-header-with-action">
+  <div>
+    <h1>Banco de questões</h1>
+    <p>Questões suas, para montar atividades com o timbrado da escola e corrigir pelo QR Code.</p>
+  </div>
+  <%= link_to "Nova questão", new_question_path, class: "button button-primary" %>
+</div>
+
+<section class="data-card">
+  <%= form_with url: questions_path, method: :get, local: true, class: "question-bank-filters" do %>
+    <%= text_field_tag :q, params[:q], placeholder: "Buscar enunciado ou tag" %>
+    <%= select_tag :kind,
+                   options_for_select([["Todos os tipos", ""]] + Question::KINDS.map { |value, label| [label, value] }, params[:kind]) %>
+    <%= select_tag :course_id,
+                   options_from_collection_for_select(@courses, :id, :name, params[:course_id]),
+                   include_blank: "Qualquer disciplina" %>
+    <%= submit_tag "Filtrar", class: "button button-secondary" %>
+  <% end %>
+
+  <% if @questions.any? %>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Questão</th>
+            <th>Tipo</th>
+            <th>Disciplina</th>
+            <th>Pontos</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @questions.each do |question| %>
+            <tr>
+              <td>
+                <strong><%= truncate(question.prompt, length: 140) %></strong>
+                <% if question.tag.present? %>
+                  <div class="activity-type-hint"><%= question.tag %></div>
+                <% end %>
+              </td>
+              <td><%= question.kind_label %></td>
+              <td><%= question.course&.name || "Qualquer" %></td>
+              <td><%= format("%.1f", question.points).tr(".", ",") %></td>
+              <td class="page-header-actions">
+                <%= link_to "Editar", edit_question_path(question), class: "button button-secondary button-small" %>
+                <%= button_to "Excluir",
+                              question_path(question),
+                              method: :delete,
+                              class: "button button-secondary button-small",
+                              data: { turbo_confirm: "Remover esta questão do banco?" } %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p>Nenhuma questão neste filtro. Crie a primeira para montar uma atividade.</p>
+  <% end %>
+</section>

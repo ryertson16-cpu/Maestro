@@ -251,6 +251,12 @@
                               class: "button button-secondary button-small" %>
                 <% end %>
 
+                <%= link_to "Montar questões",
+                            assemble_activity_path(activity),
+                            class: "button button-secondary button-small" %>
+                <%= link_to "Corrigir QR",
+                            activity.correction_token.present? ? gabarito_path(activity.correction_token) : assemble_activity_path(activity),
+                            class: "button button-secondary button-small" %>
                 <%= render "activities/sheet_button",
                            activity: activity,
                            css_class: "button button-secondary button-small" %>

@@ -245,10 +245,16 @@
 
         <div class="activity-sheet-actions">
           <% if activity_form.object.persisted? %>
+            <%= link_to "Montar com o banco de questões",
+                        assemble_activity_path(activity_form.object),
+                        class: "button button-primary" %>
             <%= render "activities/sheet_button", activity: activity_form.object %>
+            <%= link_to "Corrigir no celular",
+                        activity_form.object.correction_token.present? ? gabarito_path(activity_form.object.correction_token) : assemble_activity_path(activity_form.object),
+                        class: "button button-secondary" %>
           <% else %>
             <p class="activity-type-hint">
-              Salve a aula para gerar o PDF com o timbrado da escola.
+              Salve a aula para montar as questões, gerar o PDF com o timbrado e o QR de correção.
             </p>
           <% end %>
         </div>

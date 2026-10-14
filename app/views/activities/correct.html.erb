@@ -1,0 +1,70 @@
+<% content_for :title, "Corrigir atividade | Maestro" %>
+
+<div class="page-header">
+  <h1>Corrigir pelo QR</h1>
+  <p>
+    <%= @activity.title %>
+    —
+    <%= @classroom.name %>
+  </p>
+</div>
+
+<section class="data-card">
+  <%= form_with url: correct_activity_path(@activity), method: :get, local: true, class: "question-bank-filters" do %>
+    <%= hidden_field_tag :t, @activity.correction_token %>
+    <%= select_tag :student_id,
+                   options_from_collection_for_select(@students, :id, :name, @student&.id),
+                   prompt: "Escolha o aluno",
+                   onchange: "this.form.requestSubmit()" %>
+    <%= submit_tag "Abrir gabarito", class: "button button-secondary" %>
+  <% end %>
+</section>
+
+<% if @student %>
+  <section class="data-card">
+    <%= form_with url: grade_activity_path(@activity), method: :post, local: true do %>
+      <%= hidden_field_tag :student_id, @student.id %>
+
+      <ol class="correction-items">
+        <% @items.each do |item| %>
+          <li>
+            <p><strong><%= item.position %>. <%= item.prompt %></strong></p>
+            <% if item.objective? %>
+              <div class="correction-bubbles">
+                <% item.choice_pairs.each do |letter, text| %>
+                  <label class="correction-bubble">
+                    <%= radio_button_tag "answers[#{item.id}]",
+                                         letter,
+                                         @answers[item.id.to_s].to_s == letter %>
+                    <span><%= letter %></span>
+                    <em><%= text %></em>
+                  </label>
+                <% end %>
+              </div>
+            <% else %>
+              <label>
+                Pontos (máx. <%= format("%.1f", item.points).tr(".", ",") %>)
+                <%= number_field_tag "answers[#{item.id}]",
+                                     @answers[item.id.to_s],
+                                     min: 0,
+                                     max: item.points,
+                                     step: 0.1 %>
+              </label>
+            <% end %>
+          </li>
+        <% end %>
+      </ol>
+
+      <div class="lesson-actions">
+        <%= submit_tag "Lançar nota", class: "button button-primary" %>
+      </div>
+    <% end %>
+  </section>
+<% elsif @items.empty? %>
+  <section class="data-card">
+    <p>
+      Esta atividade ainda não tem questões montadas.
+      <%= link_to "Montar agora", assemble_activity_path(@activity) %>.
+    </p>
+  </section>
+<% end %>

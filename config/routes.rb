@@ -113,10 +113,37 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :questions, except: :show
+
+  get "/correcoes",
+      to: "corrections#index",
+      as: :corrections
+
+  get "/g/:token",
+      to: "public_corrections#show",
+      as: :gabarito
+
+  get "/g/:token/a/:student_id",
+      to: "public_corrections#show",
+      as: :gabarito_aluno
+
+  post "/g/:token",
+       to: "public_corrections#grade",
+       as: :gabarito_grade
+
   resources :activities, only: %i[create update] do
+    resources :activity_questions, only: %i[create destroy] do
+      member do
+        patch :move
+      end
+    end
+
     member do
       get :sheet, defaults: { format: :pdf }
       get :adapt
+      get :assemble, path: "montar"
+      get :correct, path: "corrigir"
+      post :grade, path: "corrigir"
     end
   end
 

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Corrigir | Maestro" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#5b4bdb">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+  <body class="correction-body">
+    <main class="correction-shell">
+      <%= yield %>
+    </main>
+    <div id="toast-host" class="toast-host" aria-live="polite"></div>
+    <script type="application/json" id="toast-flashes"><%= raw json_escape(maestro_toasts.to_json) %></script>
+  </body>
+</html>

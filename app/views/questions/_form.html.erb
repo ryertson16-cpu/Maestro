@@ -1,0 +1,73 @@
+<%= form_with model: question, local: true do |form| %>
+  <% if question.errors.any? %>
+    <div class="form-errors">
+      <strong>Não foi possível salvar a questão:</strong>
+      <ul>
+        <% question.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <section class="data-card lesson-form-card" data-question-form>
+    <div class="form-grid">
+      <div class="form-field form-field-wide">
+        <%= form.label :prompt, "Enunciado" %>
+        <%= form.text_area :prompt, rows: 4, required: true %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :kind, "Tipo" %>
+        <%= form.select :kind,
+                         Question::KINDS.map { |value, label| [label, value] },
+                         {},
+                         data: { question_kind: true } %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :course_id, "Disciplina" %>
+        <%= form.collection_select :course_id,
+                                   @courses,
+                                   :id,
+                                   :name,
+                                   include_blank: "Qualquer" %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :points, "Pontos" %>
+        <%= form.number_field :points, min: 0.1, step: 0.1 %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :tag, "Tag (opcional)" %>
+        <%= form.text_field :tag, placeholder: "Ex.: genética, 1º bimestre" %>
+      </div>
+    </div>
+
+    <div class="question-choices" data-question-choices>
+      <h2>Alternativas</h2>
+      <p class="activity-type-hint">Marque o gabarito. Só as linhas preenchidas entram na questão.</p>
+
+      <% Question::LETTERS.each do |letter| %>
+        <% pair = question.choice_pairs.find { |item_letter, _text| item_letter == letter } %>
+        <div class="question-choice-row">
+          <label class="question-choice-key">
+            <%= form.radio_button :correct_letter, letter %>
+            <span><%= letter %></span>
+          </label>
+          <%= text_field_tag "question[choice_texts][]",
+                             pair&.last,
+                             class: "question-choice-text",
+                             placeholder: "Texto da alternativa #{letter}" %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <div class="lesson-actions">
+    <%= form.submit question.persisted? ? "Salvar questão" : "Guardar no banco",
+                    class: "button button-primary" %>
+    <%= link_to "Cancelar", questions_path, class: "button button-secondary" %>
+  </div>
+<% end %>
