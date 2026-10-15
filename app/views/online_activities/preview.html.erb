@@ -1,0 +1,106 @@
+<% content_for :title, "Conferir atividade online | Maestro" %>
+
+<div class="page-header">
+  <div>
+    <h1>Conferir respostas</h1>
+    <p>
+      Pontuação da planilha convertida para 0 a 10 (máximo encontrado: <%= format("%.1f", @max_raw_score).tr(".", ",") %>).
+      Quem já tem nota nesta atividade não é alterado: só entram os alunos ainda sem nota.
+    </p>
+  </div>
+</div>
+
+<section class="data-card">
+  <%= form_with url: online_activity_path, method: :post, local: true, data: { skip_confirm: true, turbo: false } do %>
+    <div class="form-grid">
+      <div class="form-field form-field-wide">
+        <%= label_tag :title, "Título da atividade" %>
+        <%= text_field_tag :title, @title, required: true %>
+      </div>
+      <div class="form-field">
+        <%= label_tag :lesson_date, "Data da aula" %>
+        <%= date_field_tag :lesson_date, @lesson_date, required: true %>
+      </div>
+      <div class="form-field">
+        <%= label_tag :course_id, "Disciplina" %>
+        <%= select_tag :course_id,
+                       options_from_collection_for_select(@courses, :id, :name, @course_id),
+                       include_blank: "Da turma, se houver" %>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Incluir</th>
+            <th>Nome na planilha</th>
+            <th>Turma</th>
+            <th>Aluno</th>
+            <th>Nota</th>
+            <th>Envio</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @items.each_with_index do |item, index| %>
+            <tr>
+              <td>
+                <%= hidden_field_tag "items[][name]", item[:name] %>
+                <%= hidden_field_tag "items[][submitted_at]", item[:submitted_at] %>
+                <% if item[:already_scored] %>
+                  <%= hidden_field_tag "items[][include]", "1" %>
+                  <%= check_box_tag "items[][include_locked]", "1", false, disabled: true %>
+                <% else %>
+                  <%= check_box_tag "items[][include]", "1", item[:student_id].present? && item[:classroom_id].present? %>
+                <% end %>
+              </td>
+              <td>
+                <%= item[:name] %>
+                <div class="activity-type-hint"><%= item[:match_label] %></div>
+              </td>
+              <td>
+                <%= select_tag "items[][classroom_id]",
+                               options_from_collection_for_select(@classrooms, :id, :name, item[:classroom_id]),
+                               include_blank: item[:classroom_label].presence || "Turma" %>
+              </td>
+              <td>
+                <%= select_tag "items[][student_id]",
+                               grouped_options_for_select(
+                                 @classrooms.map { |room| [room.name, room.students.order(:name).map { |student| [student.name, student.id] }] },
+                                 item[:student_id]
+                               ),
+                               include_blank: "Escolher aluno" %>
+              </td>
+              <td>
+                <%= number_field_tag "items[][score]",
+                                     item[:score],
+                                     min: 0,
+                                     max: 10,
+                                     step: 0.1,
+                                     disabled: item[:already_scored] %>
+                <% if item[:already_scored] %>
+                  <%= hidden_field_tag "items[][score]", item[:score] %>
+                <% end %>
+                <% if item[:raw_score] %>
+                  <div class="activity-type-hint">Planilha: <%= format("%.1f", item[:raw_score]).tr(".", ",") %></div>
+                <% end %>
+              </td>
+              <td>
+                <% if item[:submitted_at] %>
+                  <%= l(item[:submitted_at].to_date) %>
+                <% else %>
+                  —
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="lesson-actions">
+      <%= submit_tag "Lançar notas de quem ainda não tem", class: "button button-primary" %>
+      <%= link_to "Voltar", new_online_activity_path, class: "button button-secondary" %>
+    </div>
+  <% end %>
+</section>

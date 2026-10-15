@@ -39,9 +39,6 @@ module ApplicationHelper
     if icon_name.to_s == "monitoring"
       toast[:icon_url] ||= toast["icon_url"].presence || asset_path("monitoring-icon.png")
     end
-    if icon_name.to_s == "siage"
-      toast[:icon_url] ||= toast["icon_url"].presence || asset_path("siage-icon.png")
-    end
     if icon_name.to_s.in?(%w[bell avisos notices])
       toast[:icon_url] ||= toast["icon_url"].presence || asset_path("notices-icon.png")
     end
@@ -89,21 +86,19 @@ module ApplicationHelper
       :diario
     when "lessons", "school_calendars", "lesson_plan_templates", "timetables"
       :diario
-    when "classrooms", "students", "enrollments", "projects", "project_stages"
+    when "classrooms", "students", "enrollments", "projects", "project_stages", "courses", "school_courses"
       :turmas
-    when "grades", "activities", "bimester_closings", "questions", "corrections", "activity_questions", "public_corrections"
+    when "grades", "activities", "bimester_closings", "questions", "corrections", "activity_questions", "public_corrections", "online_activities"
       :atividades
     when "monitoring", "council_notes"
       :monitoramento
-    when "courses", "school_courses"
-      :cursos
     when "profiles", "settings", "schools"
       nil
     when "grade_levels"
       if action_name.in?(%w[index exam_result save_submissions])
         :atividades
       else
-        :cursos
+        :turmas
       end
     end
   end
@@ -126,14 +121,12 @@ module ApplicationHelper
         icon: :diary,
         href: maestro_nav_path(:attendance_records_path, classroom),
         items: [
-          { label: "Chamada", href: maestro_nav_path(:attendance_records_path, classroom), hint: "Aula, chamada e Frequência no SIAGE" },
-          { label: "SIAGE", href: siage_ledger_path, hint: "Livro-razão dos envios de todas as turmas", emphasis: true },
-          { label: "Abrir SIAGE", href: siage_open_path, hint: "Extensão #{Siage::EXTENSION_VERSION}: login, Frequência e Avaliações", emphasis: true },
-          { label: "Ajuda SIAGE", href: siage_help_path, hint: "Como usar a extensão #{Siage::EXTENSION_VERSION}", emphasis: true },
-          { label: "Meu horário", href: timetable_path, hint: "Grade da semana a partir do PDF da escola" },
           { label: "Calendário", href: maestro_nav_path(:school_calendar_path, classroom), hint: "Dias letivos e gerar aula" },
+          { label: "Meu horário", href: timetable_path, hint: "Grade da semana a partir do PDF da escola" },
           { label: "Aulas", href: maestro_nav_path(:lessons_path, classroom), hint: "Aulas já registradas" },
-          { label: "Planos", href: lesson_plan_templates_path, hint: "Modelos de plano" }
+          { label: "Planos", href: lesson_plan_templates_path, hint: "Modelos de plano de aula" },
+          { label: "Abrir SIAGE", href: siage_open_path, hint: "Extensão #{Siage::EXTENSION_VERSION}: login, Frequência e Avaliações", emphasis: true },
+          { label: "Envios SIAGE", href: siage_ledger_path, hint: "Livro-razão de todas as turmas", emphasis: true }
         ]
       },
       {
@@ -142,9 +135,7 @@ module ApplicationHelper
         icon: :classrooms,
         href: classrooms_path,
         items: [
-          { label: "Turma atual", href: classroom ? classroom_path(classroom) : classrooms_path, hint: classroom ? classroom.name : "Cadastre uma turma" },
-          { label: "Todas as turmas", href: classrooms_path, hint: "Lista e atalhos de cada turma" },
-          { label: "Alunos", href: students_path, hint: "Fichas e matrículas" },
+          { label: "Alunos", href: students_path, hint: "Fichas, frequência e matrícula na turma" },
           { label: "Projetos", href: projects_path, hint: "Professor e Escola Nota 10" }
         ]
       },
@@ -154,14 +145,9 @@ module ApplicationHelper
         icon: :activities,
         href: maestro_nav_path(:grade_levels_path, classroom),
         items: [
-          { label: "Entregas e notas", href: maestro_nav_path(:grade_levels_path, classroom), hint: "Inclui atividades adaptadas" },
-          { label: "Banco de questões", href: questions_path, hint: "Questões próprias para montar atividades" },
-          { label: "Corrigir por QR", href: corrections_path, hint: "Ler o QR da folha e lançar a nota" },
-          {
-            label: "Médias e fechamento",
-            href: classroom ? grades_path(classroom_id: classroom.id) : grade_levels_path,
-            hint: "Boletim, médias e fechar bimestre"
-          }
+          { label: "Banco de questões", href: questions_path, hint: "Questões próprias para montar a atividade" },
+          { label: "Corrigir por QR", href: corrections_path, hint: "Câmera no gabarito e lançar a nota" },
+          { label: "Atividade online", href: new_online_activity_path, hint: "Planilha do Forms: aula, nota e presença" }
         ]
       },
       {
@@ -170,13 +156,12 @@ module ApplicationHelper
         icon: :monitoring,
         href: maestro_nav_path(:monitoring_path, classroom),
         items: [
-          { label: "Alertas", href: maestro_nav_path(:monitoring_path, classroom), hint: "Tags e recados" },
-          {
+          ({
             label: "Conselho",
-            href: classroom ? council_notes_path(classroom_id: classroom.id) : monitoring_path,
+            href: council_notes_path(classroom_id: classroom.id),
             hint: "Pareceres do bimestre"
-          }
-        ]
+          } if classroom)
+        ].compact
       }
     ]
   end
@@ -191,7 +176,7 @@ module ApplicationHelper
     items = maestro_nav_groups.map do |group|
       {
         key: group[:key],
-        label: group[:key] == :monitoramento ? "Alertas" : group[:label],
+        label: group[:label],
         href: group[:href],
         icon: group[:icon]
       }
@@ -313,20 +298,22 @@ module ApplicationHelper
         title: "Sugestões",
         items: [
           command_item("Início", root_path, :cards, "Painel inicial", "home dashboard inicio painel"),
-          command_item("SIAGE · livro", siage_ledger_path, :siage, "Envios da extensão #{Siage::EXTENSION_VERSION}", "siage livro razao exportar"),
+          command_item("Diário", maestro_nav_path(:attendance_records_path), :diary, "Aula, chamada e Frequência", "frequencia chamada siage"),
           command_item("Abrir SIAGE", siage_open_path, :siage, "Login, Frequência e Avaliações", "siage abrir portal cpf senha"),
-          command_item("Ajuda SIAGE", siage_help_path, :siage, "Como usar a extensão #{Siage::EXTENSION_VERSION}", "siage json extensao aula"),
-          command_item("Meu horário", timetable_path, :calendar, "Grade individual da semana", "horario pdf quadro aula"),
+          command_item("Envios SIAGE", siage_ledger_path, :siage, "Livro-razão da extensão #{Siage::EXTENSION_VERSION}", "siage livro razao exportar"),
+          command_item("Ajuda SIAGE", siage_help_path, :siage, "Como usar a extensão #{Siage::EXTENSION_VERSION}", "siage json extensao aula ajuda"),
+          command_item("Meu horário", timetable_path, :calendar, "Grade da semana", "horario pdf quadro aula"),
           command_item("Calendário", school_calendar_path, :calendar, "Dias letivos", "feriado aula"),
-          command_item("Diário", maestro_nav_path(:attendance_records_path), :diary, "Aula, chamada e SIAGE", "frequencia chamada siage"),
           command_item("Turmas", classrooms_path, :classrooms, "Lista de turmas", "turma"),
-          command_item("Alunos", students_path, :students, "Matrículas e fichas", "aluno matricula"),
+          command_item("Alunos", students_path, :students, "Fichas", "aluno"),
+          command_item("Matrículas", enrollments_path, :people, "Vínculo de aluno e turma", "matricula"),
           command_item("Atividades", maestro_nav_path(:grade_levels_path), :activities, "Entregas e notas", "nota lista exercicio"),
           command_item("Banco de questões", questions_path, :clipboard, "Montar provas com o banco próprio", "questao objetiva discursiva banco"),
+          command_item("Atividade online", new_online_activity_path, :activities, "Planilha do Google Forms", "forms planilha questionario online nota presenca"),
           command_item("Corrigir por QR", corrections_path, :check, "Câmera no QR da atividade", "qrcode correcao gabarito prova"),
           command_item("Projetos", projects_path, :projects, "Professor e Escola Nota 10", "projeto"),
           command_item("Monitoramento", monitoring_path, :monitoring, "Alertas e conselho", "alerta pendencia"),
-          command_item("Cursos", courses_path, :courses, "Disciplinas e níveis", "disciplina"),
+          command_item("Disciplinas", courses_path, :courses, "Componentes e níveis", "disciplina curso"),
           {
             label: "Maestro",
             hint: "Lembrete rápido, sem abrir o chat",
@@ -376,13 +363,8 @@ module ApplicationHelper
       title: "Atalhos",
       items: [
         command_item("Registrar aula", new_lesson_path, :activities, "Nova aula; a atividade é opcional", "atividade lista exercicio prova aula"),
-        command_item("Meu horário", timetable_path, :calendar, "Grade individual da semana", "horario pdf quadro"),
         command_item("Nova turma", new_classroom_path, :classrooms, "Cadastrar turma", "criar turma"),
-        command_item("Calendário", school_calendar_path, :calendar, "Dias letivos", "feriado aula"),
-        command_item("SIAGE · livro", siage_ledger_path, :siage, "Envios da extensão #{Siage::EXTENSION_VERSION}", "siage livro"),
-        command_item("Abrir SIAGE", siage_open_path, :siage, "Login, Frequência e Avaliações", "siage abrir portal"),
-        command_item("Ajuda SIAGE", siage_help_path, :siage, "Como usar a extensão #{Siage::EXTENSION_VERSION}", "siage json aula"),
-        command_item("Cursos", courses_path, :courses, "Disciplinas e níveis", "disciplina curso")
+        command_item("Nova questão", new_question_path, :clipboard, "Guardar no banco próprio", "questao objetiva banco")
       ]
     }
 

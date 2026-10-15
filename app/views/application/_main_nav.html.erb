@@ -1,6 +1,7 @@
 <nav class="main-nav" aria-label="Navegação principal" data-main-nav>
   <% maestro_nav_groups.each do |group| %>
     <% active = maestro_nav_section == group[:key] %>
+    <% panel_items = group[:items].reject { |item| item[:href] == group[:href] } %>
     <div class="nav-item<%= " is-active" if active %>" data-nav-item>
       <%= link_to group[:href],
                   class: ["nav-link", ("is-active" if active)].compact.join(" ") do %>
@@ -10,6 +11,7 @@
         <% end %>
       <% end %>
 
+      <% if panel_items.any? %>
       <button type="button"
               class="nav-caret"
               data-nav-caret
@@ -21,7 +23,7 @@
       </button>
 
       <div class="nav-panel" hidden data-nav-panel>
-        <% group[:items].each do |item| %>
+        <% panel_items.each do |item| %>
           <%= link_to item[:href],
                       class: ["nav-panel-link", ("is-emphasis" if item[:emphasis])].compact.join(" ") do %>
             <span>
@@ -38,6 +40,7 @@
           <% end %>
         <% end %>
       </div>
+      <% end %>
     </div>
   <% end %>
 </nav>

@@ -12,5 +12,8 @@ class MarketingControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "O caderno que"
     assert_includes response.body, "Criar conta"
     assert_includes response.body, "SIAGE"
+    assert_includes response.body, "fonts.googleapis.com"
+    assert_includes response.body, "family=Inter"
+    assert_includes response.body, "family=Outfit"
   end
 end

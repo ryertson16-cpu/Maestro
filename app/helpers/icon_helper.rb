@@ -1,54 +1,52 @@
 module IconHelper
   ICONS = {
     people: <<~SVG,
-      <circle cx="7" cy="8.4" r="2"/>
-      <path d="M3.6 16.7c.35-2.15 1.6-3.35 3.4-3.35 1.1 0 2.05.5 2.7 1.35"/>
-      <circle cx="17" cy="8.4" r="2"/>
-      <path d="M14.3 14.7c.65-.85 1.6-1.35 2.7-1.35 1.8 0 3.05 1.2 3.4 3.35"/>
-      <circle cx="12" cy="7.3" r="2.4"/>
-      <path d="M7.3 17.4c.5-2.55 2.15-3.95 4.7-3.95s4.2 1.4 4.7 3.95"/>
+      <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
     SVG
     calendar: <<~SVG,
-      <rect x="4" y="6" width="16" height="14" rx="2"/>
-      <path d="M8 4v4M16 4v4M4 10h16"/>
-      <path d="M8 14h2.2M12.2 14h2.2M8 17h2.2"/>
+      <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
     SVG
     clipboard: <<~SVG,
-      <rect x="6" y="5.5" width="12" height="15" rx="2"/>
-      <rect x="9" y="3.2" width="6" height="4" rx="1"/>
-      <path d="M9 11.2h6M9 14.2h6M9 17.2h4"/>
+      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
     SVG
     sliders: <<~SVG,
-      <path d="M5 7h14M5 12h14M5 17h14"/>
-      <circle cx="9" cy="7" r="1.7"/>
-      <circle cx="15" cy="12" r="1.7"/>
-      <circle cx="11" cy="17" r="1.7"/>
+      <path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
     SVG
     folder: <<~SVG,
-      <path d="M3.8 9h6.1l1.6 2.1H20.2v8.2a1.6 1.6 0 0 1-1.6 1.6H5.4A1.6 1.6 0 0 1 3.8 19.3V9z"/>
-      <path d="M3.8 9V7.6A1.6 1.6 0 0 1 5.4 6h4.2l1.4 1.8"/>
+      <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
     SVG
     cards: <<~SVG,
-      <rect x="7.2" y="6.2" width="12.2" height="13.5" rx="1.6"/>
-      <path d="M6.2 8.2V7.4A1.6 1.6 0 0 1 7.8 5.8h9"/>
-      <rect x="4.6" y="4.4" width="12.2" height="13.5" rx="1.6"/>
+      <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
     SVG
     chart: <<~SVG,
-      <path d="M5 19V11.5M10 19V7M15 19v-6.5M20 19V9"/>
+      <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+    SVG
+    diary: <<~SVG,
+      <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+    SVG
+    classrooms: <<~SVG,
+      <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+    SVG
+    students: <<~SVG,
+      <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+    SVG
+    monitoring: <<~SVG,
+      <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+    SVG
+    projects: <<~SVG,
+      <path d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm0 0v4"/>
+    SVG
+    courses: <<~SVG,
+      <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
     SVG
     bell: <<~SVG,
-      <path d="M6.2 16.8h11.6l-1.1-1.2V11a4.7 4.7 0 0 0-9.4 0v4.6z"/>
-      <path d="M10.2 16.8a1.8 1.8 0 0 0 3.6 0"/>
-      <path d="M12 4.2V5.4"/>
+      <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
     SVG
     warning: <<~SVG,
-      <path d="M12 4.2 21.2 19.6H2.8L12 4.2z"/>
-      <path d="M12 10v5"/>
-      <circle cx="12" cy="17.4" r="0.85" fill="currentColor" stroke="none"/>
+      <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
     SVG
     lock: <<~SVG,
-      <rect x="6" y="10.8" width="12" height="9" rx="1.7"/>
-      <path d="M8.4 10.8V8.2a3.6 3.6 0 0 1 7.2 0v2.6"/>
+      <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
     SVG
     sync: <<~SVG,
       <path d="M16.8 7.2A6.8 6.8 0 0 1 12 19"/>
@@ -57,87 +55,75 @@ module IconHelper
       <path d="M7.8 19.8v-3.2H4.6"/>
     SVG
     share: <<~SVG,
-      <circle cx="6.2" cy="12" r="2.1"/>
-      <circle cx="17.4" cy="6.4" r="2.1"/>
-      <circle cx="17.4" cy="17.6" r="2.1"/>
-      <path d="M8.2 11.2 15.4 7.4M8.2 12.8l7.2 3.8"/>
+      <path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+    SVG
+    siage: <<~SVG,
+      <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
     SVG
     check: <<~SVG,
-      <circle cx="12" cy="12" r="8.2"/>
-      <path d="M8.2 12.2 10.8 14.8 15.8 9.4"/>
+      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
     SVG
     mail: <<~SVG,
-      <rect x="3.5" y="6.5" width="17" height="11.5" rx="1.8"/>
-      <path d="M4.2 7.8 12 13.2 19.8 7.8"/>
+      <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
     SVG
     chat: <<~SVG,
-      <path d="M5 6.5h14a1.8 1.8 0 0 1 1.8 1.8v8.2A1.8 1.8 0 0 1 19 18.3h-5.2L8.4 21.2v-2.9H5A1.8 1.8 0 0 1 3.2 16.5V8.3A1.8 1.8 0 0 1 5 6.5z"/>
-      <path d="M8 11h8M8 14h5"/>
+      <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
     SVG
     pin: <<~SVG,
-      <path d="M12 21s6.2-6.1 6.2-10.4A6.2 6.2 0 0 0 5.8 10.6C5.8 14.9 12 21 12 21z"/>
-      <circle cx="12" cy="10.4" r="2.1"/>
+      <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+      <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
     SVG
     user: <<~SVG,
-      <circle cx="12" cy="8" r="3.2"/>
-      <path d="M5.2 19c.6-3.2 2.8-5 6.8-5s6.2 1.8 6.8 5"/>
+      <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
     SVG
     eye: <<~SVG,
-      <path d="M2.6 12s3.6-6.4 9.4-6.4S21.4 12 21.4 12 17.8 18.4 12 18.4 2.6 12 2.6 12z"/>
-      <circle cx="12" cy="12" r="3"/>
+      <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+      <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
     SVG
     eye_off: <<~SVG,
-      <path d="M3.2 3.2 20.8 20.8"/>
-      <path d="M9.1 5.3A10.6 10.6 0 0 1 12 5.6c5.8 0 9.4 6.4 9.4 6.4a16 16 0 0 1-3.3 3.9"/>
-      <path d="M6.1 7.8A16 16 0 0 0 2.6 12s3.6 6.4 9.4 6.4c1.1 0 2.2-.2 3.2-.6"/>
-      <path d="M9.9 9.9A3 3 0 0 0 14 14"/>
+      <path d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
     SVG
     moon: <<~SVG,
-      <path d="M16.2 3.4A8.6 8.6 0 1 0 20.6 16.2 6.6 6.6 0 0 1 16.2 3.4z"/>
+      <path fill="currentColor" stroke="none" d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z"/>
     SVG
     sun: <<~SVG,
-      <circle cx="12" cy="12" r="3.6"/>
-      <path d="M12 3.2v2.2M12 18.6v2.2M4.8 4.8l1.6 1.6M17.6 17.6l1.6 1.6M3.2 12h2.2M18.6 12h2.2M4.8 19.2l1.6-1.6M17.6 6.4l1.6-1.6"/>
+      <path fill="currentColor" stroke="none" d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z"/>
     SVG
     arrow: <<~SVG,
-      <path d="M5 12h12.4"/>
-      <path d="M13.2 6.4 19.6 12l-6.4 5.6"/>
+      <path d="M14 5l7 7m0 0l-7 7m7-7H3"/>
     SVG
     search: <<~SVG,
-      <circle cx="11" cy="11" r="6.2"/>
-      <path d="M16 16.4 20.2 20.6"/>
+      <circle cx="11" cy="11" r="8"/>
+      <path d="m21 21-4.3-4.3"/>
     SVG
     target: <<~SVG,
-      <circle cx="12" cy="12" r="8.2"/>
-      <circle cx="12" cy="12" r="4.4"/>
-      <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/>
-      <path d="M12 3.8v2.4M12 17.8v2.4M3.8 12h2.4M17.8 12h2.4"/>
+      <circle cx="12" cy="12" r="8"/>
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M2 12h2M20 12h2"/>
     SVG
   }.freeze
 
-  IMAGE_ICONS = {
-    monitoring: { file: "monitoring-icon.png", alt: "" },
-    clipboard: { file: "activities-icon.png", alt: "" },
-    activities: { file: "activities-icon.png", alt: "" },
-    diary: { file: "diary-icon.png", alt: "" },
-    diario: { file: "diary-icon.png", alt: "" },
-    classrooms: { file: "classrooms-icon.png", alt: "" },
-    turmas: { file: "classrooms-icon.png", alt: "" },
-    students: { file: "students-icon.png", alt: "" },
-    alunos: { file: "students-icon.png", alt: "" },
-    target: { file: "projects-icon.png", alt: "" },
-    projects: { file: "projects-icon.png", alt: "" },
-    courses: { file: "courses-icon.png", alt: "" },
-    cursos: { file: "courses-icon.png", alt: "" },
-    share: { file: "siage-icon.png", alt: "" },
-    siage: { file: "siage-icon.png", alt: "" },
-    bell: { file: "notices-icon.png", alt: "" },
-    avisos: { file: "notices-icon.png", alt: "" },
-    notices: { file: "notices-icon.png", alt: "" }
+  ICON_ALIASES = {
+    avisos: :bell,
+    notices: :bell,
+    diario: :diary,
+    activities: :clipboard,
+    turmas: :classrooms,
+    alunos: :students,
+    cursos: :courses
   }.freeze
 
+  DAISY_STROKE_ICONS = %i[
+    search user lock mail eye eye_off arrow check warning bell
+    people calendar clipboard sliders folder cards chart diary
+    classrooms students monitoring projects courses chat pin target
+    share siage
+  ].freeze
+
+  IMAGE_ICONS = {}.freeze
+
   def maestro_icon(name, html_class: nil, size: nil)
-    key = name.to_s.to_sym
+    key = ICON_ALIASES.fetch(name.to_s.to_sym, name.to_s.to_sym)
     classes = [
       "maestro-icon",
       ("maestro-icon-#{size}" if size),
@@ -156,10 +142,12 @@ module IconHelper
     inner = ICONS[key]
     return if inner.blank?
 
+    stroke_width = DAISY_STROKE_ICONS.include?(key) ? "2" : "1.55"
+
     content_tag(:span, class: classes, "aria-hidden": true) do
       raw(
         %(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ) +
-          %(stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round">) +
+          %(stroke-width="#{stroke_width}" stroke-linecap="round" stroke-linejoin="round">) +
           inner +
           %(</svg>)
       )

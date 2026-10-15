@@ -62,6 +62,10 @@ Rails.application.routes.draw do
     end
   end
 
+  resource :online_activity, only: %i[new create] do
+    post :preview, on: :collection
+  end
+
   resources :classrooms
 
   resources :students do

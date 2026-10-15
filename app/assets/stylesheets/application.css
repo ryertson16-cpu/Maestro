@@ -52,6 +52,9 @@
   --color-table: #ffffff;
   --focus-ring: rgba(91, 75, 219, 0.16);
 
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: Outfit, Inter, ui-sans-serif, system-ui, sans-serif;
+
   color-scheme: light;
 }
 
@@ -111,14 +114,7 @@ body {
   margin: 0;
   background: var(--color-background);
   color: var(--color-text);
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.6;
 }
@@ -162,6 +158,7 @@ h3,
 h4 {
   margin-top: 0;
   color: var(--color-text);
+  font-family: var(--font-display);
   line-height: 1.25;
 }
 
@@ -217,6 +214,7 @@ hr {
   align-items: center;
   gap: 10px;
   color: var(--color-text);
+  font-family: var(--font-display);
   font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: -0.03em;
@@ -756,9 +754,15 @@ html[data-theme="night"] .bottom-nav-link.is-active {
   margin: 0 0 4px;
 }
 
-.dashboard-launch-tile img.maestro-icon-image {
+.dashboard-launch-tile img.maestro-icon-image,
+.dashboard-launch-tile .maestro-icon {
   width: 48px;
   height: 48px;
+}
+
+.dashboard-launch-tile .maestro-icon svg {
+  width: 24px;
+  height: 24px;
 }
 
 .dashboard-launch-tile h2 {
@@ -1102,6 +1106,11 @@ html[data-theme="night"] .dashboard-hero {
 .maestro-icon-lg {
   width: 56px;
   height: 56px;
+}
+
+.maestro-icon-lg svg {
+  width: 28px;
+  height: 28px;
 }
 
 img.maestro-icon-image {
@@ -1899,9 +1908,17 @@ button.button-link-danger:hover {
   gap: 10px;
 }
 
-.classroom-hub-title-with-icon img.maestro-icon-image {
+.classroom-hub-title-with-icon img.maestro-icon-image,
+.classroom-hub-title-with-icon .maestro-icon {
   width: 28px;
   height: 28px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.classroom-hub-title-with-icon .maestro-icon svg {
+  width: 22px;
+  height: 22px;
 }
 
 .classroom-hub-panel p {
@@ -6351,7 +6368,16 @@ button.monitoring-filter-chip:hover {
 .projects-page-title img.maestro-icon-image,
 .courses-page-title img.maestro-icon-image,
 .siage-page-title img.maestro-icon-image,
-.avisos-page-title img.maestro-icon-image {
+.avisos-page-title img.maestro-icon-image,
+.siage-page-title .maestro-icon,
+.monitoring-page-title .maestro-icon,
+.activities-page-title .maestro-icon,
+.diary-page-title .maestro-icon,
+.classrooms-page-title .maestro-icon,
+.students-page-title .maestro-icon,
+.projects-page-title .maestro-icon,
+.courses-page-title .maestro-icon,
+.avisos-page-title .maestro-icon {
   grid-row: 1 / span 3;
   width: 56px;
   height: 56px;
@@ -7956,6 +7982,8 @@ html[data-theme="night"] .auth-social-button {
 .header-lira .maestro-icon {
   width: 18px;
   height: 18px;
+  background: transparent;
+  box-shadow: none;
 }
 
 .header-lira img.maestro-icon-image {
@@ -9865,6 +9893,14 @@ html[data-theme="night"] .marketing-grid article {
 .vitrine-rail .maestro-icon-image {
   width: 26px;
   height: 26px;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+}
+
+.vitrine-rail .maestro-icon svg {
+  width: 22px;
+  height: 22px;
 }
 
 .vitrine-kicker {
@@ -9957,6 +9993,14 @@ html[data-theme="night"] .marketing-grid article {
 .vitrine-pillars .maestro-icon-image {
   width: 36px;
   height: 36px;
+  background: transparent;
+  box-shadow: none;
+  color: #c4b5ff;
+}
+
+.vitrine-pillars .maestro-icon svg {
+  width: 28px;
+  height: 28px;
 }
 
 .vitrine-picks {
@@ -9994,12 +10038,24 @@ html[data-theme="night"] .marketing-grid article {
   box-shadow: var(--shadow-small);
 }
 
+.vitrine-picks-grid img,
+.vitrine-picks-grid .maestro-icon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 10px;
+  place-items: center;
+  object-fit: contain;
+}
+
 .vitrine-picks-grid img {
-  display: block;
   width: 88px;
   height: 88px;
-  margin-bottom: 10px;
-  object-fit: contain;
+}
+
+.vitrine-picks-grid .maestro-icon svg {
+  width: 28px;
+  height: 28px;
 }
 
 .vitrine-pick-lira {

@@ -1,0 +1,50 @@
+<% content_for :title, "Atividade online | Maestro" %>
+
+<div class="page-header">
+  <div>
+    <h1>Atividade online</h1>
+    <p>
+      Envie a planilha de respostas do Google Forms. O Maestro cria a aula,
+      a atividade, lança a nota de quem enviou e marca esses alunos como presentes.
+      Quem não está no arquivo não recebe falta.
+    </p>
+  </div>
+</div>
+
+<section class="data-card">
+  <%= form_with url: preview_online_activity_path,
+                method: :post,
+                local: true,
+                multipart: true,
+                data: { skip_confirm: true, turbo: false } do %>
+    <div class="form-grid">
+      <div class="form-field form-field-wide">
+        <%= label_tag :spreadsheet, "Planilha de respostas (.xlsx ou .csv)" %>
+        <%= file_field_tag :spreadsheet, accept: ".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv", required: true %>
+      </div>
+
+      <div class="form-field form-field-wide">
+        <%= label_tag :title, "Título da atividade" %>
+        <%= text_field_tag :title, params[:title], placeholder: "Ex.: Lista de exercícios — funções orgânicas" %>
+      </div>
+
+      <div class="form-field">
+        <%= label_tag :lesson_date, "Data da aula (opcional)" %>
+        <%= date_field_tag :lesson_date, params[:lesson_date] %>
+        <p class="activity-type-hint">Se vazio, usa o primeiro envio da planilha.</p>
+      </div>
+
+      <div class="form-field">
+        <%= label_tag :course_id, "Disciplina" %>
+        <%= select_tag :course_id,
+                       options_from_collection_for_select(@courses, :id, :name, params[:course_id]),
+                       include_blank: "Da turma, se houver" %>
+      </div>
+    </div>
+
+    <div class="lesson-actions">
+      <%= submit_tag "Ler planilha", class: "button button-primary" %>
+      <%= link_to "Cancelar", grade_levels_path, class: "button button-secondary" %>
+    </div>
+  <% end %>
+</section>

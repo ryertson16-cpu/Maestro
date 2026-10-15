@@ -12,6 +12,8 @@ module Lessons
            .strip
     end
 
+    NAME_PARTICLES = %w[de da do das dos e a o as os].freeze
+
     def similar?(left, right)
       a = normalize(left)
       b = normalize(right)
@@ -24,6 +26,58 @@ module Lessons
       return true if tokens_a.first == tokens_b.first && tokens_a.first.to_s.length >= 4
 
       (tokens_a & tokens_b).size >= 1 && [tokens_a, tokens_b].min_by(&:size).size == 1
+    end
+
+    def match_student(name, students)
+      ranked = Array(students).filter_map do |student|
+        score = student_name_score(name, student.name)
+        next if score <= 0
+
+        [student, score]
+      end
+      return if ranked.empty?
+
+      best = ranked.map(&:last).max
+      winners = ranked.select { |(_student, score)| score == best }
+      winners.one? ? winners.first.first : nil
+    end
+
+    def student_name_score(left, right)
+      a = significant_name_tokens(left)
+      b = significant_name_tokens(right)
+      return 0 if a.empty? || b.empty?
+      return 100 if a == b
+      return 95 if a.sort == b.sort
+
+      shorter, longer = a.size <= b.size ? [a, b] : [b, a]
+      return 0 if shorter.size < 2
+      return 0 unless tokens_covered?(shorter, longer)
+
+      50 + (shorter.size * 10) - ((longer.size - shorter.size) * 2)
+    end
+
+    def significant_name_tokens(value)
+      normalize(value).split.reject { |token| NAME_PARTICLES.include?(token) }
+    end
+
+    def tokens_covered?(needles, haystack)
+      unused = haystack.dup
+      needles.all? do |needle|
+        index = unused.index { |candidate| name_token_match?(needle, candidate) }
+        next false unless index
+
+        unused.delete_at(index)
+        true
+      end
+    end
+
+    def name_token_match?(left, right)
+      return true if left == right
+      return true if left.length >= 3 && right.length >= 3 && (left.start_with?(right) || right.start_with?(left))
+      return true if left.length == 1 && right.start_with?(left)
+      return true if right.length == 1 && left.start_with?(right)
+
+      false
     end
 
     def discipline_match?(left, right)

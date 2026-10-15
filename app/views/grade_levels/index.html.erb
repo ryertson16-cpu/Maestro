@@ -19,8 +19,11 @@
     <p>Escolha a turma e a atividade para lançar entregas e notas. Projetos ficam em Turmas. REC só nesta tela, por atividade.</p>
   </div>
 
-  <% if @classroom.present? %>
-    <nav class="diary-header-links" aria-label="Atalhos de atividades">
+  <nav class="diary-header-links" aria-label="Atalhos de atividades">
+    <%= link_to "Atividade online",
+                new_online_activity_path,
+                class: "button button-primary button-small" %>
+    <% if @classroom.present? %>
       <%= link_to "Notas e médias",
                   grades_path(classroom_id: @classroom.id),
                   class: "button button-ghost button-small" %>
@@ -34,8 +37,8 @@
       <%= link_to "Registrar aula",
                   new_lesson_path(classroom_id: @classroom.id),
                   class: "button button-ghost button-small" %>
-    </nav>
-  <% end %>
+    <% end %>
+  </nav>
 </div>
 
 <% if @classrooms.blank? %>
