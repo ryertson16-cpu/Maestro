@@ -236,7 +236,7 @@
                             student_path(row.student),
                             class: "button button-secondary button-small" %>
 
-                <% if row.attendance_alert.present? || row.late_alert.present? %>
+                <% if row.attendance_alert.present? || row.late_alert.present? || row.trajectory_alert.present? %>
                   <%= link_to "Diário",
                               attendance_records_path(
                                 classroom_id: @selected_classroom.id,
@@ -341,7 +341,7 @@
                   </div>
                 <% end %>
 
-                <% if row.attendance_alert.present? || row.late_alert.present? %>
+                <% if row.attendance_alert.present? || row.late_alert.present? || row.trajectory_alert.present? %>
                   <div class="monitoring-alert-panel <%= row.attendance_alert&.dig(:severity) == :danger ? "monitoring-panel-danger" : "monitoring-panel-warning" %>">
                     <div class="monitoring-panel-heading">
                       <div>
@@ -360,6 +360,11 @@
                     <% if row.late_alert.present? %>
                       <p class="monitoring-attendance-message">
                         <%= row.late_alert[:reason] %>
+                      </p>
+                    <% end %>
+                    <% if row.trajectory_alert.present? %>
+                      <p class="monitoring-attendance-message">
+                        <%= row.trajectory_alert[:reason] %>
                       </p>
                     <% end %>
                   </div>

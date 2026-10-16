@@ -29,7 +29,8 @@ module Monitoring
         unscored_activities.any? ||
         grade_alerts.any? ||
         attendance_alert.present? ||
-        late_alert.present?
+        late_alert.present? ||
+        trajectory_alert.present?
     end
 
     def tags
@@ -55,12 +56,12 @@ module Monitoring
         items << { tone: "warning", label: "Atenção, média entre 4 e 6" }
       end
 
-      if attendance_alert&.dig(:severity) == :warning
-        items << { tone: "warning", label: "Atenção, frequência entre 75% e 80%" }
-      end
-
       if late_alert.present?
         items << { tone: "late", label: "Atenção, chegando atrasado" }
+      end
+
+      if trajectory_alert.present?
+        items << { tone: "warning", label: trajectory_alert[:label] || "Risco à frente" }
       end
 
       items << { tone: "ok", label: "Em dia" } if items.empty?
@@ -90,7 +91,7 @@ module Monitoring
       when "danger" then severity == :danger
       when "activities" then pending_activities.any?
       when "grades" then grade_alerts.any? || unscored_activities.any?
-      when "attendance" then attendance_alert.present? || late_alert.present?
+      when "attendance" then attendance_alert.present? || late_alert.present? || trajectory_alert.present?
       else true
       end
     end
@@ -136,6 +137,11 @@ module Monitoring
 
       if late_alert.present?
         lines << late_alert[:reason]
+        lines << ""
+      end
+
+      if trajectory_alert.present?
+        lines << trajectory_alert[:reason]
         lines << ""
       end
 

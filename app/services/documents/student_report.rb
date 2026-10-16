@@ -424,18 +424,13 @@ module Documents
     end
 
     def attendance_snapshot(records)
-      total = records.size
-      absent = records.count(&:absent?)
-      late = records.count(&:late?)
+      snapshot = Attendance::Frequency.snapshot(records)
+      late = snapshot[:late]
+      total = snapshot[:total]
 
-      {
-        present: records.count(&:present?),
-        absent: absent,
-        justified: records.count(&:justified?),
-        late: late,
-        percentage: total.zero? ? nil : (((total - absent).to_f / total) * 100).round(1),
+      snapshot.merge(
         late_ratio: total.zero? ? nil : ((late.to_f / total) * 100).round(1)
-      }
+      )
     end
 
     def activity_status(row)

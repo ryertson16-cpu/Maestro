@@ -112,23 +112,13 @@ class AttendanceRecordsController < ApplicationController
       )
     end
 
-    month_dates = weekdays_in_month(attendance_date.beginning_of_month)
-
     month_records = AttendanceRecord.where(
       professor: current_professor,
       enrollment: enrollment,
-      attendance_date: month_dates
+      attendance_date: Attendance::Frequency.month_range(attendance_date)
     )
 
-    total = month_records.count
-    absences = month_records.where(status: "absent").count
-
-    percentage =
-      if total.zero?
-        0
-      else
-        ((total - absences).to_f / total * 100).round(1)
-      end
+    percentage = Attendance::Frequency.percentage(month_records) || 0
 
     render json: {
       success: true,

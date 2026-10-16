@@ -13,61 +13,61 @@
 </div>
 
 <% if @lessons.any? %>
-  <section class="lesson-list">
-    <% @lessons.each do |lesson| %>
-      <article class="lesson-list-card">
-        <div class="lesson-list-card-main">
-          <span class="lesson-date">
-            <%= l(lesson.lesson_date, format: :long) %>
-          </span>
+  <section class="monitoring-classrooms-section" aria-label="Aulas registradas">
+    <div class="lesson-list-grid">
+      <% @lessons.each do |lesson| %>
+        <article class="monitoring-classroom-card classroom-hub-card lesson-list-card">
+          <%= link_to lesson_path(lesson), class: "classroom-hub-main" do %>
+            <div class="monitoring-classroom-card-top">
+              <div>
+                <%= maestro_icon :diary, size: :sm %>
+                <h3><%= lesson.theme %></h3>
+              </div>
 
-          <h2>
-            <%= link_to lesson.theme, lesson_path(lesson) %>
-          </h2>
+              <span class="monitoring-classroom-badge is-ok">
+                <%= l(lesson.lesson_date, format: :short) %>
+              </span>
+            </div>
 
-          <p>
-            <strong>Turma:</strong>
-            <%= lesson.classroom.name %>
-          </p>
-
-          <p>
-            <strong>Disciplina:</strong>
-            <%= lesson.course&.name || "Não informada" %>
-          </p>
-
-          <% if lesson.activity.present? %>
-            <span class="lesson-activity-badge">
-              Atividade:
-              <%= lesson.activity.activity_type %>
-            </span>
+            <div class="monitoring-classroom-card-info">
+              <span><%= lesson.classroom.name %></span>
+              <span><%= lesson.course&.name || "Disciplina não informada" %></span>
+              <% if lesson.siage_period.present? %>
+                <span><%= lesson.siage_period %></span>
+              <% end %>
+              <% if lesson.activity&.activity_type.present? %>
+                <span><%= lesson.activity.activity_type %></span>
+              <% end %>
+            </div>
           <% end %>
-        </div>
 
-        <div class="lesson-list-card-actions">
-          <%= link_to(
-            "Ver aula",
-            lesson_path(lesson),
-            class: "button button-secondary"
-          ) %>
+          <div class="classroom-hub-actions">
+            <%= link_to(
+              "Ver aula",
+              lesson_path(lesson),
+              class: "button button-secondary button-small"
+            ) %>
 
-          <%= link_to(
-            "Frequência",
-            attendance_records_path(
-              classroom_id: lesson.classroom_id,
-              attendance_date: lesson.lesson_date
-            ),
-            class: "button button-primary"
-          ) %>
+            <%= link_to(
+              "Frequência",
+              attendance_records_path(
+                classroom_id: lesson.classroom_id,
+                attendance_date: lesson.lesson_date
+              ),
+              class: "button button-primary button-small"
+            ) %>
 
-          <%= render "lessons/delete_button",
-                     lesson: lesson,
-                     compact: true %>
-        </div>
-      </article>
-    <% end %>
+            <%= render "lessons/delete_button",
+                       lesson: lesson,
+                       compact: true %>
+          </div>
+        </article>
+      <% end %>
+    </div>
   </section>
 <% else %>
   <section class="empty-state">
+    <%= maestro_icon :diary %>
     <strong>Nenhuma aula registrada.</strong>
     <p>Comece registrando a primeira aula do diário.</p>
 

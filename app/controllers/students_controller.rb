@@ -45,7 +45,7 @@ class StudentsController < ApplicationController
         .where(
           professor: current_professor,
           enrollment_id: @enrollments.map(&:id),
-          attendance_date: @month_dates
+          attendance_date: Attendance::Frequency.month_range(@attendance_month)
         )
         .index_by do |record|
           [record.enrollment_id, record.attendance_date]
@@ -202,22 +202,24 @@ class StudentsController < ApplicationController
       .includes(:lesson, enrollment: :classroom)
       .order(attendance_date: :desc)
 
-    @attendance_total = @attendance_records.size
-    @attendance_present = @attendance_records.count(&:present?)
-    @attendance_absent = @attendance_records.count(&:absent?)
-    @attendance_justified = @attendance_records.count(&:justified?)
-    @attendance_late = @attendance_records.count(&:late?)
-
-    @attendance_percentage =
-      if @attendance_total.zero?
-        nil
+    @attendance_month = Date.current.beginning_of_month
+    enrollment = @current_enrollments.first
+    month_records =
+      if enrollment
+        @attendance_records.select do |record|
+          record.enrollment_id == enrollment.id &&
+            Attendance::Frequency.month_range(@attendance_month).cover?(record.attendance_date)
+        end
       else
-        (
-          (
-            @attendance_total - @attendance_absent
-          ).to_f / @attendance_total * 100
-        ).round(1)
+        []
       end
+    month_snapshot = Attendance::Frequency.snapshot(month_records)
+    @attendance_total = month_snapshot[:total]
+    @attendance_present = month_snapshot[:present]
+    @attendance_absent = month_snapshot[:absent]
+    @attendance_justified = month_snapshot[:justified]
+    @attendance_late = month_snapshot[:late]
+    @attendance_percentage = month_snapshot[:percentage]
 
     classroom_ids = @enrollments.map(&:classroom_id).compact.uniq
 
@@ -307,6 +309,9 @@ class StudentsController < ApplicationController
     end
 
     @current_classroom = @current_enrollments.first&.classroom
+    @recovery_grades_by_student_and_bimester = RecoveryGrade
+      .where(professor: current_professor, classroom_id: classroom_ids)
+      .index_by { |item| [item.student_id, item.classroom_id, item.bimester] }
     @grade_history = build_grade_history(activities)
     @current_bimester = Siage.bimester_for_date(Date.current)
     if @current_classroom
@@ -374,17 +379,18 @@ class StudentsController < ApplicationController
         classroom = classroom_activities.first.lesson.classroom
         students = comparison_students_for(classroom)
 
-        student_average =
-          weighted_average_for_student(
-            @student.id,
-            classroom_activities
-          )
+        student_average = Grades::BimesterScore.new(
+          student: @student,
+          activities: classroom_activities,
+          recovery: recovery_for(@student, classroom, bimester)
+        ).final_score
 
         class_student_averages = students.filter_map do |student|
-          weighted_average_for_student(
-            student.id,
-            classroom_activities
-          )
+          Grades::BimesterScore.new(
+            student: student,
+            activities: classroom_activities,
+            recovery: recovery_for(student, classroom, bimester)
+          ).final_score
         end
 
         student_averages << student_average if student_average.present?
@@ -433,32 +439,8 @@ class StudentsController < ApplicationController
     students + [@student]
   end
 
-  def weighted_average_for_student(student_id, activities)
-    weighted_total = 0.0
-    total_weight = 0.0
-
-    activities.each do |activity|
-      student = Student.new(id: student_id)
-      next unless activity.counts_toward_average_for?(student)
-
-      submission =
-        activity.activity_submissions.find do |item|
-          item.student_id == student_id &&
-            NumericScore.recorded?(item.score)
-        end
-
-      next unless submission
-
-      weight = activity.weight.to_f
-      next if weight <= 0
-
-      weighted_total += submission.score.to_f * weight
-      total_weight += weight
-    end
-
-    return nil if total_weight.zero?
-
-    (weighted_total / total_weight).round(2)
+  def recovery_for(student, classroom, bimester)
+    @recovery_grades_by_student_and_bimester&.[]([student.id, classroom.id, bimester])
   end
 
   def activity_discipline_name(activity)
@@ -748,14 +730,11 @@ class StudentsController < ApplicationController
   end
 
   def monthly_percentage_for(enrollment)
-    records = @month_dates.filter_map do |date|
-      @attendance_records[[enrollment.id, date]]
+    records = @attendance_records.filter_map do |(enrollment_id, _date), record|
+      record if enrollment_id == enrollment.id
     end
 
-    return if records.empty?
-
-    absent = records.count(&:absent?)
-    ((records.size - absent).to_f / records.size * 100).round(1)
+    Attendance::Frequency.percentage(records)
   end
 
   def selected_attendance_month

@@ -63,7 +63,7 @@ module Monitoring
         warning: alerted.count { |row| row.severity == :warning },
         activities: alerted.count { |row| row.pending_activities.any? },
         grades: alerted.count { |row| row.grade_alerts.any? || row.unscored_activities.any? },
-        attendance: alerted.count { |row| row.attendance_alert.present? || row.late_alert.present? }
+        attendance: alerted.count { |row| row.attendance_alert.present? || row.late_alert.present? || row.trajectory_alert.present? }
       }
     end
 
@@ -141,7 +141,7 @@ module Monitoring
                            .where(
                              professor: professor,
                              enrollment_id: enrollments.map(&:id),
-                             attendance_date: month_dates
+                             attendance_date: Attendance::Frequency.month_range(month)
                            )
                            .group_by(&:enrollment_id)
 
@@ -206,37 +206,15 @@ module Monitoring
       end
 
       activities_by_bimester.filter_map do |bimester, bimester_activities|
-        weighted_total = 0.to_d
-        total_weight = 0.to_d
-
-        bimester_activities.each do |item|
-          activity = item[:activity]
-          next unless activity.counts_toward_average_for?(student)
-
-          source = activity.replacing_version_for(student) || activity
-          submission = activity.submission_for_average(student)
-
-          next if submission.blank?
-          next unless NumericScore.recorded?(submission.score)
-          next if source.weight.blank?
-          next if source.weight.to_d <= 0
-
-          weighted_total += submission.score.to_d * source.weight.to_d
-          total_weight += source.weight.to_d
-        end
-
-        next if total_weight.zero?
-
-        average = (weighted_total / total_weight).round(2)
-        recovery = recovery_grades[[student.id, bimester]]
-
-        final_score = NumericScore.round_final(
-          if recovery&.score.present?
-            [average, recovery.score.to_d].max
-          else
-            average
-          end
+        score = Grades::BimesterScore.new(
+          student: student,
+          activities: bimester_activities.map { |item| item[:activity] },
+          recovery: recovery_grades[[student.id, bimester]]
         )
+        average = score.average
+        next unless NumericScore.recorded?(average)
+
+        final_score = score.final_score
 
         next unless final_score < 6
 
@@ -253,32 +231,17 @@ module Monitoring
     end
 
     def attendance_percentage_for(records)
-      return nil if records.blank?
-
-      total = records.size
-      absences = records.count(&:absent?)
-
-      return nil if total.zero?
-
-      ((total - absences).to_f / total * 100).round(1)
+      Attendance::Frequency.percentage(records)
     end
 
     def attendance_alert_for(percentage)
-      return nil if percentage.blank?
+      return unless Attendance::Frequency.below_minimum?(percentage)
 
-      if percentage < 75
-        {
-          severity: :danger,
-          label: "Cuidado, frequência abaixo de 75%",
-          reason: "Frequência abaixo de 75%"
-        }
-      elsif percentage <= 80
-        {
-          severity: :warning,
-          label: "Atenção, frequência entre 75% e 80%",
-          reason: "Frequência entre 75% e 80%"
-        }
-      end
+      {
+        severity: :danger,
+        label: "Cuidado, frequência abaixo de 75%",
+        reason: "Frequência abaixo de 75%"
+      }
     end
 
     def late_alert_for(records)
@@ -295,11 +258,5 @@ module Monitoring
       }
     end
 
-    def month_dates
-      first_day = month.beginning_of_month
-      last_day = month.end_of_month
-
-      (first_day..last_day).select(&:on_weekday?)
-    end
   end
 end

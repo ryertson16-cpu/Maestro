@@ -38,7 +38,7 @@ module Council
 
       absences = records.count { |record| record.status == "absent" }
       lates = records.count { |record| record.status == "late" }
-      percentage = ((records.size - absences).to_f / records.size * 100).round(1)
+      percentage = Attendance::Frequency.percentage(records)
       line = "A frequência ficou em #{percentage}%, com #{absences} falta(s)."
       line += " Houve #{lates} registro(s) de atraso, que não contam como falta." if lates.positive?
       line
@@ -62,10 +62,11 @@ module Council
     end
 
     def activities_line
-      activities = @classroom.activities_for_bimester(@bimester).map(&:activity).compact
+      activities = Grades::BimesterScore.activities_for(@classroom, @bimester)
       pending = activities.count do |activity|
         activity.due_date.present? &&
           activity.due_date <= Date.current &&
+          activity.required_delivery_for?(@student) &&
           ActivitySubmission.find_by(professor: @professor, activity: activity, student: @student).blank?
       end
       return if pending.zero?

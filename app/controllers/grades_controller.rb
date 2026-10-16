@@ -152,21 +152,17 @@ class GradesController < ApplicationController
   end
 
   def load_activities
-    Activity
-      .joins(:lesson)
-      .where(
-        lessons: {
-          classroom_id: @classroom.id
-        },
-        bimester: @bimester
-      )
-      .includes(:activity_submissions, :lesson, :activity_recipients, adapted_versions: %i[activity_recipients activity_submissions])
-      .order(due_date: :asc)
+    Grades::BimesterScore.activities_for(@classroom, @bimester)
   end
 
   def build_student_rows
     @students.map do |student|
       recovery = @recovery_grades_by_student[student.id]
+      score = Grades::BimesterScore.new(
+        student: student,
+        activities: @activities,
+        recovery: recovery
+      )
 
       grades = @activities.filter_map do |activity|
         next unless activity.assigned_to?(student)
@@ -176,61 +172,21 @@ class GradesController < ApplicationController
           item.student_id == student.id
         end
 
-        original_score = submission&.score
-        recovery_score = recovery&.score
-
-        recovery_applied =
-          activity.title.to_s.match?(/\bprova\b/i) &&
-          NumericScore.recorded?(original_score) &&
-          NumericScore.recorded?(recovery_score) &&
-          recovery_score.to_d > original_score.to_d
-
-        effective_score =
-          if recovery_applied
-            recovery_score
-          else
-            original_score
-          end
-
         {
           activity: activity,
           submission: submission,
-          score: effective_score,
-          original_score: original_score,
-          recovery_applied: recovery_applied
+          score: submission&.score
         }
       end
-
-      valid_grades = grades.select do |grade|
-        NumericScore.recorded?(grade[:score]) &&
-          grade[:activity].counts_toward_average_for?(student)
-      end
-
-      weighted_total = valid_grades.sum do |grade|
-        grade[:score].to_d * grade[:activity].weight.to_d
-      end
-
-      total_weight = valid_grades.sum do |grade|
-        grade[:activity].weight.to_d
-      end
-
-      average =
-        if total_weight.zero?
-          nil
-        else
-          (weighted_total / total_weight).round(2)
-        end
-
-      final_score = NumericScore.round_final([average, recovery&.score&.to_d].compact.max)
 
       {
         student: student,
         grades: grades,
-        average: average,
+        average: score.average,
         recovery: recovery,
-        final_score: final_score,
+        final_score: score.final_score,
         situation: situation_for(
-          final_score,
+          score.final_score,
           @setting&.minimum_score || 6.0
         )
       }

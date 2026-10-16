@@ -29,41 +29,21 @@ class ClassroomsController < ApplicationController
                                 .joins(:student)
                                 .order("students.name")
 
+    @attendance_month = Date.current.beginning_of_month
+    month_records = AttendanceRecord
+                    .where(
+                      professor: current_professor,
+                      enrollment_id: all_enrollments.map(&:id),
+                      attendance_date: Attendance::Frequency.month_range(@attendance_month)
+                    )
+                    .group_by(&:enrollment_id)
+
     @attendance_stats = {}
 
     all_enrollments.each do |enrollment|
-      records = enrollment.attendance_records
-
-      total = records.size
-      absences = records.count(&:absent?)
-
-      percentage =
-        if total.zero?
-          nil
-        else
-          ((total - absences).to_f / total * 100).round(1)
-        end
-
-      situation =
-        if percentage.nil?
-          "without_records"
-        elsif percentage >= 75
-          "regular"
-        elsif percentage >= 50
-          "attention"
-        else
-          "low"
-        end
-
-      @attendance_stats[enrollment.id] = {
-        total: total,
-        present: records.count(&:present?),
-        absent: records.count(&:absent?),
-        justified: records.count(&:justified?),
-        late: records.count(&:late?),
-        percentage: percentage,
-        situation: situation
-      }
+      records = month_records[enrollment.id] || []
+      stats = Attendance::Frequency.snapshot(records)
+      @attendance_stats[enrollment.id] = stats
     end
 
     @enrollments = all_enrollments.select do |enrollment|
@@ -102,7 +82,7 @@ class ClassroomsController < ApplicationController
     end
 
     @students_low_frequency = @attendance_stats.values.count do |stats|
-      stats[:percentage].present? && stats[:percentage] < 75
+      Attendance::Frequency.below_minimum?(stats[:percentage])
     end
 
     @average_frequency =
@@ -116,13 +96,14 @@ class ClassroomsController < ApplicationController
       AttendanceRecord
         .where(
           professor: current_professor,
-          enrollment_id: all_enrollments.map(&:id)
+          enrollment_id: all_enrollments.map(&:id),
+          attendance_date: Attendance::Frequency.month_range(@attendance_month)
         )
         .select(:attendance_date)
         .distinct
         .count
 
-        @classroom_activities =
+    @classroom_activities =
       Activity
         .joins(:lesson)
         .where(

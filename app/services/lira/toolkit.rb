@@ -258,7 +258,7 @@ module Lira
 
       return { error: "Informe a turma ou o aluno." } if classroom_record.blank?
 
-      activities = classroom_record.activities_for_bimester(period).map(&:activity)
+      activities = Grades::BimesterScore.activities_for(classroom_record, period).to_a
       setting = classroom_record.bimester_setting_for(period)
       students = if student_record
                    [student_record]
@@ -502,36 +502,24 @@ module Lira
         bimester: bimester
       )
 
-      grades = activities.map do |activity|
+      grades = activities.filter_map do |activity|
+        next unless activity.assigned_to?(student)
+        next if activity.regular? && activity.replacing_version_for(student).present?
+
         submission = activity.activity_submissions.find { |item| item.student_id == student.id }
-        original = submission&.score
-        recovery_applied =
-          activity.recovery_eligible? &&
-          NumericScore.recorded?(original) &&
-          NumericScore.recorded?(recovery&.score) &&
-          recovery.score.to_d > original.to_d
-
-        score = recovery_applied ? recovery.score : original
-
         {
           activity: activity.title,
-          score: score,
-          recovery_applied: recovery_applied
+          score: submission&.score
         }
       end
 
-      valid = grades.select { |grade| NumericScore.recorded?(grade[:score]) }
-      weighted_total = valid.sum do |grade|
-        activity = activities.find { |item| item.title == grade[:activity] }
-        grade[:score].to_d * activity.weight.to_d
-      end
-      total_weight = valid.sum do |grade|
-        activity = activities.find { |item| item.title == grade[:activity] }
-        activity.weight.to_d
-      end
-
-      average = total_weight.zero? ? nil : (weighted_total / total_weight).round(2)
-      final_score = NumericScore.round_final([average, recovery&.score&.to_d].compact.max)
+      score = Grades::BimesterScore.new(
+        student: student,
+        activities: activities,
+        recovery: recovery
+      )
+      average = score.average
+      final_score = score.final_score
       situation =
         if NumericScore.recorded?(final_score)
           final_score >= (setting.minimum_score || 6).to_d ? :approved : :recovery

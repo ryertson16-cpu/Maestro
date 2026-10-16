@@ -6,14 +6,15 @@ module Monitoring
       school_days = weekdays_in(month)
       return if school_days.zero? || records.blank?
 
-      absences = records.count { |record| record.respond_to?(:absent?) ? record.absent? : record.status.to_s == "absent" }
+      absences = records.count { |record| Attendance::Frequency.absent?(record) }
       total = records.size
-      percentage = ((total - absences).to_f / total * 100).round(1)
+      percentage = Attendance::Frequency.percentage(records)
+      return if percentage.blank?
       allowed = (school_days * 0.25).floor
       remaining_absences = allowed - absences
       remaining_days = [school_days - total, 0].max
 
-      if percentage < 75
+      if Attendance::Frequency.below_minimum?(percentage)
         return
       end
 

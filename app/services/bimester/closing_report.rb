@@ -54,7 +54,7 @@ module Bimester
     end
 
     def activities
-      @activities ||= @classroom.activities_for_bimester(@bimester).map(&:activity).compact
+      @activities ||= Grades::BimesterScore.activities_for(@classroom, @bimester).to_a
     end
 
     def missing_grade_items
@@ -100,9 +100,8 @@ module Bimester
         records = records.where(attendance_date: range) if range
         next if records.empty?
 
-        absences = records.count { |record| record.status == "absent" }
-        percentage = ((records.size - absences).to_f / records.size * 100).round(1)
-        next unless percentage < 75
+        percentage = Attendance::Frequency.percentage(records)
+        next unless Attendance::Frequency.below_minimum?(percentage)
 
         Item.new(
           :attendance,
@@ -138,7 +137,8 @@ module Bimester
 
       students.filter_map do |student|
         missing = due.count do |activity|
-          ActivitySubmission.find_by(professor: @professor, activity: activity, student: student).blank?
+          activity.required_delivery_for?(student) &&
+            ActivitySubmission.find_by(professor: @professor, activity: activity, student: student).blank?
         end
         next unless missing.positive?
 
@@ -156,27 +156,25 @@ module Bimester
       NumericScore.recorded?(average_for(student))
     end
 
+    def score_calculator(student)
+      Grades::BimesterScore.new(
+        student: student,
+        activities: activities,
+        recovery: RecoveryGrade.find_by(
+          professor: @professor,
+          classroom: @classroom,
+          student: student,
+          bimester: @bimester
+        )
+      )
+    end
+
     def average_for(student)
-      recovery = RecoveryGrade.find_by(professor: @professor, classroom: @classroom, student: student, bimester: @bimester)
-      grades = activities.filter_map do |activity|
-        submission = activity.activity_submissions.find { |item| item.student_id == student.id }
-        score = submission&.score
-        next unless NumericScore.recorded?(score)
-
-        score.to_d * activity.weight.to_d
-      end
-      weight = activities.sum do |activity|
-        submission = activity.activity_submissions.find { |item| item.student_id == student.id }
-        NumericScore.recorded?(submission&.score) ? activity.weight.to_d : 0
-      end
-      return nil if weight.zero?
-
-      (grades.sum / weight).round(2)
+      score_calculator(student).average
     end
 
     def final_score_for(student)
-      recovery = RecoveryGrade.find_by(professor: @professor, classroom: @classroom, student: student, bimester: @bimester)
-      NumericScore.round_final([average_for(student), recovery&.score&.to_d].compact.max)
+      score_calculator(student).final_score
     end
   end
 end

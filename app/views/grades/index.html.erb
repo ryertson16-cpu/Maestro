@@ -212,16 +212,6 @@
                           grade[:score],
                           precision: 1
                         ) %>
-
-                    <% if grade[:recovery_applied] %>
-                      <small class="table-secondary-text">
-                        REC aplicada; nota original:
-                        <%= number_with_precision(
-                              grade[:original_score],
-                              precision: 1
-                            ) %>
-                      </small>
-                    <% end %>
                   <% else %>
                     <span class="muted-text">—</span>
                   <% end %>
