@@ -10,6 +10,7 @@ class LessonPlanTemplate < ApplicationRecord
     lesson.objective = objective if objective.present?
     lesson.content = content if content.present?
     lesson.methodology = methodology if methodology.present?
+    lesson.skills = skills if skills.present?
     lesson.course_id = course_id if course_id.present? && lesson.course_id.blank?
     lesson.lesson_plan_template = self
   end

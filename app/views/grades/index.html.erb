@@ -203,6 +203,7 @@
             <tr>
               <td>
                 <strong><%= row[:student].name %></strong>
+                <%= enrollment_caderno_tag(row[:enrollment]) %>
               </td>
 
               <% row[:grades].each do |grade| %>

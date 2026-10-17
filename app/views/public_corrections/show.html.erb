@@ -29,7 +29,12 @@
 
     <% @items.each do |item| %>
       <fieldset class="correction-item">
-        <legend><%= item.position %>. <%= item.prompt %></legend>
+        <legend>
+          <%= item.position %>. <%= item.prompt %>
+          <% if item.bncc_skill.present? %>
+            <small>BNCC <%= item.bncc_skill %></small>
+          <% end %>
+        </legend>
         <% if item.objective? %>
           <div class="correction-keys">
             <% item.choice_pairs.each do |letter, _text| %>

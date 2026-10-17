@@ -347,7 +347,8 @@
     <%= form_with(
           url: save_submissions_grade_levels_path,
           method: :post,
-          local: true
+          local: true,
+          html: { data: { offline_grades_form: true } }
         ) do %>
       <%= hidden_field_tag :classroom_id, @classroom.id %>
       <%= hidden_field_tag :activity_id, @activity.id %>
@@ -376,6 +377,7 @@
               <tr>
                 <td>
                   <%= link_to student.name, student_path(student) %>
+                  <%= enrollment_caderno_tag(row[:enrollment]) %>
                 </td>
                 <td>
                   <span class="activity-status-tag status-<%= row[:status] %>">

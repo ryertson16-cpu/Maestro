@@ -456,6 +456,7 @@ class GradeLevelsController < ApplicationController
     return if @activity.blank? || @classroom.blank?
 
     students = @classroom.students.order(:name).to_a
+    enrollments_by_student = Enrollment.where(classroom: @classroom).index_by(&:student_id)
     @replaced_students = []
 
     if @activity.adapted?
@@ -503,6 +504,7 @@ class GradeLevelsController < ApplicationController
 
       {
         student: student,
+        enrollment: enrollments_by_student[student.id],
         submission: submission,
         recovery_grade: @recovery_grades_by_student[student.id],
         status: status

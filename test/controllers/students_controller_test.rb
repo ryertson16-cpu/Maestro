@@ -50,4 +50,26 @@ class StudentsControllerTest < ActionDispatch::IntegrationTest
     assert_nil Student.find_by(id: @student.id)
     assert_equal 0, Enrollment.where(student_id: @student.id).count
   end
+
+  test "student profile accepts a pedagogical occurrence" do
+    get student_path(@student)
+    assert_response :success
+    assert_includes response.body, "Ocorrências pedagógicas"
+
+    assert_difference -> { @student.student_occurrences.count }, 1 do
+      post student_occurrences_path(@student), params: {
+        student_occurrence: {
+          occurred_on: Date.current,
+          kind: "exit",
+          body: "Saiu com a responsável.",
+          classroom_id: @classroom.id
+        }
+      }
+    end
+
+    assert_redirected_to student_path(@student)
+    occurrence = @student.student_occurrences.last
+    assert_equal "exit", occurrence.kind
+    assert_includes occurrence.whatsapp_url, "wa.me"
+  end
 end

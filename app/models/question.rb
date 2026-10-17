@@ -24,7 +24,7 @@ class Question < ApplicationRecord
     next all if query.blank?
 
     needle = "%#{query.to_s.strip}%"
-    where("prompt LIKE ? OR tag LIKE ?", needle, needle)
+    where("prompt LIKE ? OR tag LIKE ? OR bncc_skill LIKE ?", needle, needle, needle)
   }
 
   def objective?

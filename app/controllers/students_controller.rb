@@ -330,6 +330,15 @@ class StudentsController < ApplicationController
       )
       @trajectory_alert = Monitoring::Trajectory.call(records: month_records, month: month)
     end
+
+    @student_occurrences = @student.student_occurrences
+                                   .includes(:classroom)
+                                   .order(occurred_on: :desc, created_at: :desc)
+    @new_occurrence = @student.student_occurrences.new(
+      occurred_on: Date.current,
+      classroom: @current_classroom,
+      kind: "other"
+    )
   end
 
   def build_grade_history(activities)

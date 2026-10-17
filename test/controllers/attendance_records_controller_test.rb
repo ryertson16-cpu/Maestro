@@ -50,4 +50,29 @@ class AttendanceRecordsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Histórico da turma"
     refute_includes response.body, "Aulas deste dia"
   end
+
+  test "diary pdf download uses official letterhead payload" do
+    grade = @professor.grade_levels.create!(name: "2º ano")
+    classroom = @professor.classrooms.create!(
+      name: "2ª F",
+      school_year: 2026,
+      grade_level: grade,
+      active: true
+    )
+    @professor.lessons.create!(
+      classroom: classroom,
+      lesson_date: Date.new(2026, 10, 16),
+      theme: "Fotossíntese",
+      siage_time_slot: "1º tempo"
+    )
+
+    get diary_pdf_attendance_records_path(
+      classroom_id: classroom.id,
+      attendance_date: "2026-10-16"
+    )
+
+    assert_response :success
+    assert_equal "application/pdf", response.media_type
+    assert_match(/diario-2-f/, response.headers["Content-Disposition"])
+  end
 end

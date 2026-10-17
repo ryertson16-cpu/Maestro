@@ -45,6 +45,7 @@ module Maestro
         "Caderno neste computador: ativo.",
         "WhatsApp do professor: #{wa}.",
         "#{api}.",
+        "Cérebro da conversa: #{Lira.brain_label}.",
         "Avisos não lidos: #{@professor.automation_notices.unread.count}."
       ].join("\n")
     end

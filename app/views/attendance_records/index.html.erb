@@ -28,6 +28,14 @@
     <%= link_to "Ajuda SIAGE",
                 siage_help_path,
                 class: "button button-ghost button-small" %>
+    <% if @classroom.present? %>
+      <%= link_to "PDF do diário",
+                  diary_pdf_attendance_records_path(
+                    classroom_id: @classroom.id,
+                    attendance_date: @attendance_date
+                  ),
+                  class: "button button-ghost button-small" %>
+    <% end %>
   </nav>
 </div>
 

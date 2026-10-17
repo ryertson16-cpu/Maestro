@@ -1,7 +1,7 @@
 class LessonsController < ApplicationController
   before_action :authenticate_professor!
   before_action :set_lesson,
-                only: %i[show edit update destroy]
+                only: %i[show edit update destroy copy]
 
   def index
     @classrooms = current_professor.classrooms.order(:name)
@@ -77,6 +77,29 @@ class LessonsController < ApplicationController
   end
 
   def show
+    @classrooms = current_professor.classrooms.order(:name)
+  end
+
+  def copy
+    classroom = current_professor.classrooms.find(params[:classroom_id])
+    lesson_date = Date.parse(params[:lesson_date].to_s)
+    replica = Lessons::Copier.new(
+      professor: current_professor,
+      lesson: @lesson,
+      classroom: classroom,
+      lesson_date: lesson_date,
+      copy_activities: params[:copy_activities].to_s != "0"
+    ).call
+
+    redirect_to lesson_path(replica),
+                notice: "Aula copiada para #{classroom.name} em #{l(lesson_date)}."
+  rescue Date::Error
+    redirect_to lesson_path(@lesson), alert: "Informe uma data válida."
+  rescue ActiveRecord::RecordNotFound
+    redirect_to lesson_path(@lesson), alert: "Turma não encontrada."
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to lesson_path(@lesson),
+                alert: error.record.errors.full_messages.to_sentence
   end
 
   def edit
@@ -202,6 +225,15 @@ class LessonsController < ApplicationController
     lesson.course_id ||= entry.course_id
     lesson.siage_time_slot = entry.time_slot_label
     lesson.theme ||= "Aula de #{entry.course&.name || 'componente'}"
+    template = matching_plan_template(lesson.course_id)
+    template&.apply_to(lesson)
+  end
+
+  def matching_plan_template(course_id)
+    return if course_id.blank?
+
+    current_professor.lesson_plan_templates.where(course_id: course_id).order(updated_at: :desc).first ||
+      current_professor.lesson_plan_templates.where(course_id: nil).order(updated_at: :desc).first
   end
 
   def weekday_entries_for(lesson)
@@ -229,6 +261,7 @@ class LessonsController < ApplicationController
       :content,
       :objective,
       :methodology,
+      :skills,
       :siage_period,
       :siage_class_mode,
       :siage_class_type,

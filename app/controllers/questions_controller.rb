@@ -63,6 +63,7 @@ class QuestionsController < ApplicationController
       :correct_letter,
       :points,
       :tag,
+      :bncc_skill,
       :course_id,
       choice_texts: []
     )

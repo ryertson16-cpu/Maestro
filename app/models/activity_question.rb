@@ -36,7 +36,8 @@ class ActivityQuestion < ApplicationRecord
       kind: question.kind,
       choices: question.choices,
       correct_letter: question.correct_letter,
-      points: question.points
+      points: question.points,
+      bncc_skill: question.bncc_skill
     )
   end
 end

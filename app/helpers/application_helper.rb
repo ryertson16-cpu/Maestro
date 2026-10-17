@@ -390,6 +390,15 @@ module ApplicationHelper
     groups
   end
 
+  def enrollment_caderno_tag(enrollment)
+    return if enrollment.blank?
+
+    label = enrollment.caderno_tag
+    return if label.blank?
+
+    tag.span label, class: "caderno-tag"
+  end
+
   private
 
   def command_item(label, href, icon, hint, extra_search = "")

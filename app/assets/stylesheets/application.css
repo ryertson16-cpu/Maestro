@@ -8847,6 +8847,23 @@ html[data-theme="night"] .command-palette-item.is-active {
   text-align: center;
 }
 
+.offline-banner.is-ok {
+  background: var(--color-success-light, #e7f8f1);
+  color: var(--color-success, #159570);
+}
+
+.caderno-tag {
+  display: inline-flex;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff1e6;
+  color: #c45e12;
+  font-size: 0.72rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
 .status-badge.status-pending,
 .status-badge.status-exported,
 .status-badge.status-verified,

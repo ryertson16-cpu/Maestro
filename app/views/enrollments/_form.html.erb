@@ -43,11 +43,7 @@
     <div class="form-field">
       <%= form.label :status, "Status" %>
       <%= form.select :status,
-                      [
-                        ["Ativa", "active"],
-                        ["Encerrada", "finished"],
-                        ["Cancelada", "cancelled"]
-                      ],
+                      Enrollment::STATUSES.map { |value, label| [label, value] },
                       {},
                       required: true %>
     </div>

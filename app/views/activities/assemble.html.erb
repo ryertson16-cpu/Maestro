@@ -58,6 +58,9 @@
             <div class="activity-type-hint">
               <%= item.objective? ? "Objetiva · gabarito #{item.correct_letter}" : "Discursiva" %>
               · <%= format("%.1f", item.points).tr(".", ",") %> pt
+              <% if item.bncc_skill.present? %>
+                · BNCC <%= item.bncc_skill %>
+              <% end %>
             </div>
           </div>
           <div class="page-header-actions">
@@ -112,8 +115,10 @@
             <tr>
               <td>
                 <%= truncate(question.prompt, length: 160) %>
-                <% if question.tag.present? %>
-                  <div class="activity-type-hint"><%= question.tag %></div>
+                <% if question.tag.present? || question.bncc_skill.present? %>
+                  <div class="activity-type-hint">
+                    <%= [question.bncc_skill.presence, question.tag.presence].compact.join(" · ") %>
+                  </div>
                 <% end %>
               </td>
               <td><%= question.kind_label %></td>

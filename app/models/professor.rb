@@ -18,6 +18,7 @@ class Professor < ApplicationRecord
   has_many :grade_levels, dependent: :destroy
   has_many :classrooms, dependent: :destroy
   has_many :students, dependent: :destroy
+  has_many :student_occurrences, dependent: :destroy
   has_many :enrollments, dependent: :destroy
   has_many :attendance_records, dependent: :destroy
   has_many :school_courses, dependent: :destroy

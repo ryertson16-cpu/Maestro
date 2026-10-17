@@ -164,6 +164,7 @@
                   </span>
                   <strong><%= entry.classroom.name %></strong>
                   <p><%= entry.course&.name || "Componente curricular" %></p>
+                  <p class="timetable-day-empty">O plano da disciplina preenche objetivo e conteúdo.</p>
                   <%= link_to "Criar aula",
                               new_lesson_path(
                                 classroom_id: entry.classroom_id,

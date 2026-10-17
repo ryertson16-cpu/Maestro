@@ -1,0 +1,34 @@
+<%# locals: lesson:, classrooms: %>
+<section class="data-card lesson-form-card">
+  <div class="lesson-form-header">
+    <div>
+      <span class="section-eyebrow">Reuso</span>
+      <h2>Copiar aula</h2>
+      <p>Leva tema, plano e, se quiser, a atividade para outro dia ou turma. Notas e chamada ficam na origem.</p>
+    </div>
+  </div>
+
+  <%= form_with url: copy_lesson_path(lesson), method: :post, local: true, class: "form-grid" do %>
+    <div class="form-field">
+      <label for="copy_lesson_date">Nova data</label>
+      <%= date_field_tag :lesson_date, lesson.lesson_date, id: "copy_lesson_date", required: true %>
+    </div>
+    <div class="form-field">
+      <label for="copy_classroom_id">Turma</label>
+      <%= select_tag :classroom_id,
+                     options_from_collection_for_select(classrooms, :id, :name, lesson.classroom_id),
+                     id: "copy_classroom_id",
+                     required: true %>
+    </div>
+    <div class="form-field form-field-wide">
+      <label class="attendance-flag">
+        <%= hidden_field_tag :copy_activities, "0" %>
+        <%= check_box_tag :copy_activities, "1", true %>
+        Copiar também a atividade e o gabarito
+      </label>
+    </div>
+    <div class="form-field">
+      <%= submit_tag "Copiar aula", class: "button button-secondary" %>
+    </div>
+  <% end %>
+</section>

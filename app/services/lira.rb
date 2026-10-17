@@ -1,5 +1,6 @@
 module Lira
   NAME = "Maestro".freeze
+  BRAIN_PROVIDERS = %w[openai gemini].freeze
 
   module_function
 
@@ -33,8 +34,56 @@ module Lira
     ENV["LIRA_OPENAI_MODEL"].presence || "gpt-4o-mini"
   end
 
-  def llm_enabled?
+  def openai_configured?
     openai_api_key.present?
+  end
+
+  def gemini_api_key
+    ENV["LIRA_GEMINI_API_KEY"].presence || ENV["GEMINI_API_KEY"].presence
+  end
+
+  def gemini_url
+    ENV["LIRA_GEMINI_URL"].presence ||
+      "https://generativelanguage.googleapis.com/v1beta/models/#{gemini_model}:generateContent"
+  end
+
+  def gemini_model
+    ENV["LIRA_GEMINI_MODEL"].presence || "gemini-2.5-flash"
+  end
+
+  def gemini_configured?
+    gemini_api_key.present?
+  end
+
+  def brain_choice
+    ENV["LIRA_BRAIN"].to_s.strip.downcase.presence
+  end
+
+  def brain_provider
+    chosen = brain_choice
+    if BRAIN_PROVIDERS.include?(chosen)
+      return :gemini if chosen == "gemini" && gemini_configured?
+      return :openai if chosen == "openai" && openai_configured?
+
+      return nil
+    end
+
+    return :openai if openai_configured?
+    return :gemini if gemini_configured?
+
+    nil
+  end
+
+  def llm_enabled?
+    brain_provider.present?
+  end
+
+  def brain_label
+    case brain_provider
+    when :openai then "GPT (#{openai_model})"
+    when :gemini then "Gemini (#{gemini_model})"
+    else "local (comandos e palavras-chave)"
+    end
   end
 
   def whatsapp_token

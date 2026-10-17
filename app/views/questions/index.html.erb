@@ -10,7 +10,7 @@
 
 <section class="data-card">
   <%= form_with url: questions_path, method: :get, local: true, class: "question-bank-filters" do %>
-    <%= text_field_tag :q, params[:q], placeholder: "Buscar enunciado ou tag" %>
+    <%= text_field_tag :q, params[:q], placeholder: "Buscar enunciado, tag ou BNCC" %>
     <%= select_tag :kind,
                    options_for_select([["Todos os tipos", ""]] + Question::KINDS.map { |value, label| [label, value] }, params[:kind]) %>
     <%= select_tag :course_id,
@@ -36,8 +36,10 @@
             <tr>
               <td>
                 <strong><%= truncate(question.prompt, length: 140) %></strong>
-                <% if question.tag.present? %>
-                  <div class="activity-type-hint"><%= question.tag %></div>
+                <% if question.tag.present? || question.bncc_skill.present? %>
+                  <div class="activity-type-hint">
+                    <%= [question.bncc_skill.presence, question.tag.presence].compact.join(" · ") %>
+                  </div>
                 <% end %>
               </td>
               <td><%= question.kind_label %></td>

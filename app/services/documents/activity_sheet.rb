@@ -178,6 +178,11 @@ module Documents
     def draw_assembled_item(pdf, item, index)
       pdf.fill_color "20263D"
       pdf.text "#{index + 1}. #{item.prompt}", size: 10, leading: 3, inline_format: false
+      if item.bncc_skill.present?
+        pdf.fill_color "707891"
+        pdf.text "BNCC: #{item.bncc_skill}", size: 8
+        pdf.fill_color "20263D"
+      end
       pdf.move_down 6
 
       if item.objective?

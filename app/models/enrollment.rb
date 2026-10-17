@@ -1,4 +1,11 @@
 class Enrollment < ApplicationRecord
+  STATUSES = {
+    "active" => "Ativa",
+    "finished" => "Encerrada",
+    "cancelled" => "Cancelada",
+    "transferred" => "Remanejada"
+  }.freeze
+
   belongs_to :professor
   belongs_to :student
   belongs_to :classroom
@@ -9,7 +16,22 @@ class Enrollment < ApplicationRecord
            dependent: :destroy
 
   validates :enrolled_on, presence: true
-  validates :status, presence: true
+  validates :status, presence: true, inclusion: { in: STATUSES.keys }
+
+  def active_in_classroom?
+    status.to_s == "active"
+  end
+
+  def status_label
+    STATUSES.fetch(status.to_s, status)
+  end
+
+  def caderno_tag
+    return if active_in_classroom?
+    return "Remanejado" if status.to_s == "transferred"
+
+    "Inativo"
+  end
 
   validates :student_id,
             uniqueness: {

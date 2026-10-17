@@ -1,7 +1,7 @@
 class AttendanceRecordsController < ApplicationController
   before_action :authenticate_professor!
-  before_action :set_classroom, only: [:index, :save, :save_and_export]
-  before_action :set_attendance_date, only: [:index, :save, :save_and_export]
+  before_action :set_classroom, only: [:index, :save, :save_and_export, :diary_pdf]
+  before_action :set_attendance_date, only: [:index, :save, :save_and_export, :diary_pdf]
 
   def index
     @classrooms = current_professor.classrooms.order(:name)
@@ -12,6 +12,34 @@ class AttendanceRecordsController < ApplicationController
 
     load_diary
     @export_lesson = export_lesson_from_params
+  end
+
+  def diary_pdf
+    unless @classroom
+      redirect_to attendance_records_path, alert: "Selecione uma turma."
+      return
+    end
+
+    load_diary
+    lessons = @lessons.select(&:persisted?)
+    records_by_lesson = {}
+    lessons.each do |lesson|
+      records_by_lesson[lesson.id] = @attendance_by_lesson[diary_slot_key(lesson)] || {}
+    end
+
+    pdf = Documents::DayDiary.new(
+      professor: current_professor,
+      classroom: @classroom,
+      date: @attendance_date,
+      lessons: lessons,
+      enrollments: @all_enrollments,
+      records_by_lesson: records_by_lesson
+    ).render
+
+    send_data pdf,
+              filename: "diario-#{@classroom.name.parameterize}-#{@attendance_date.iso8601}.pdf",
+              type: "application/pdf",
+              disposition: "attachment"
   end
 
   def save
@@ -73,8 +101,7 @@ class AttendanceRecordsController < ApplicationController
     enrollment = Enrollment.find_by!(
       id: params[:enrollment_id],
       professor: current_professor,
-      classroom: classroom,
-      status: "active"
+      classroom: classroom
     )
 
     attendance_date = Date.parse(params[:attendance_date].to_s)
@@ -249,7 +276,7 @@ class AttendanceRecordsController < ApplicationController
       attrs = raw_attrs.permit(
         :id, :course_id, :theme, :content, :objective, :methodology,
         :siage_period, :siage_class_mode, :siage_class_type,
-        :siage_time_slot, :lesson_plan_template_id
+        :siage_time_slot, :lesson_plan_template_id, :skills
       )
       exporting_this = required && (
         params[:export_lesson_id].blank? ||
@@ -336,7 +363,8 @@ class AttendanceRecordsController < ApplicationController
       :siage_class_mode,
       :siage_class_type,
       :siage_time_slot,
-      :lesson_plan_template_id
+      :lesson_plan_template_id,
+      :skills
     )
   end
 

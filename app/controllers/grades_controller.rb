@@ -7,7 +7,7 @@ class GradesController < ApplicationController
     @settings = load_bimester_settings
     @setting = @settings[@bimester]
 
-    @students = @classroom.students.order(:name)
+    load_classroom_students
     @activities = load_activities
     @recovery_grades_by_student = load_recovery_grades
     @rows = build_student_rows
@@ -108,7 +108,7 @@ class GradesController < ApplicationController
       bimester: @bimester
     )
 
-    @students = @classroom.students.order(:name)
+    load_classroom_students
     @activities = load_activities
     @recovery_grades_by_student = load_recovery_grades
     @rows = build_student_rows
@@ -155,6 +155,12 @@ class GradesController < ApplicationController
     Grades::BimesterScore.activities_for(@classroom, @bimester)
   end
 
+  def load_classroom_students
+    @enrollments = @classroom.enrollments.includes(:student).joins(:student).order("students.name")
+    @students = @enrollments.map(&:student)
+    @enrollment_by_student_id = @enrollments.index_by(&:student_id)
+  end
+
   def build_student_rows
     @students.map do |student|
       recovery = @recovery_grades_by_student[student.id]
@@ -181,6 +187,7 @@ class GradesController < ApplicationController
 
       {
         student: student,
+        enrollment: @enrollment_by_student_id&.[](student.id),
         grades: grades,
         average: score.average,
         recovery: recovery,
@@ -295,7 +302,7 @@ class GradesController < ApplicationController
       .where(
         classroom: @classroom,
         bimester: @bimester,
-        student_id: @students.select(:id)
+        student_id: @students.map(&:id)
       )
       .index_by(&:student_id)
   end

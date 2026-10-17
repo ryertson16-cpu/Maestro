@@ -36,6 +36,21 @@ class QuestionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 3, question.choice_pairs.size
   end
 
+  test "stores bncc skill on the question bank" do
+    post questions_path, params: {
+      question: {
+        prompt: "Identifique a habilidade.",
+        kind: "discursive",
+        points: 2,
+        bncc_skill: "EF09CI03",
+        choice_texts: ["", "", "", "", ""]
+      }
+    }
+
+    assert_redirected_to questions_path
+    assert_equal "EF09CI03", @professor.questions.last.bncc_skill
+  end
+
   test "rejects objective question without alternatives" do
     assert_no_difference -> { Question.count } do
       post questions_path, params: {

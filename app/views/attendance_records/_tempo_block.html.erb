@@ -16,6 +16,9 @@
       <p>Chamada deste tempo.</p>
     </div>
     <% if lesson.persisted? %>
+      <%= link_to "Copiar aula",
+                  lesson_path(lesson),
+                  class: "button button-secondary button-small" %>
       <%= render "lessons/delete_button",
                  lesson: lesson,
                  return_to: "diary",
@@ -27,6 +30,7 @@
   <%= hidden_field_tag "#{prefix}[objective]", lesson.objective, id: field_id.call("objective") %>
   <%= hidden_field_tag "#{prefix}[content]", lesson.content, id: field_id.call("content") %>
   <%= hidden_field_tag "#{prefix}[methodology]", lesson.methodology, id: field_id.call("methodology") %>
+  <%= hidden_field_tag "#{prefix}[skills]", lesson.skills, id: field_id.call("skills") %>
   <%= hidden_field_tag "#{prefix}[siage_class_mode]",
                        lesson.siage_class_mode.presence || "Aula",
                        id: field_id.call("siage_class_mode") %>
@@ -168,6 +172,7 @@
               <tr data-attendance-row>
                 <td>
                   <strong><%= enrollment.student.name %></strong>
+                  <%= enrollment_caderno_tag(enrollment) %>
                 </td>
                 <td class="attendance-status-cell status-<%= status %>">
                   <%= hidden_field_tag(

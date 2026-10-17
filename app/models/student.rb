@@ -8,6 +8,7 @@ class Student < ApplicationRecord
   has_many :activity_recipients, dependent: :destroy
   has_many :activity_submissions, dependent: :delete_all
   has_many :council_notes, dependent: :delete_all
+  has_many :student_occurrences, dependent: :delete_all
   has_many :recovery_grades, dependent: :delete_all
 
   has_one_attached :photo
@@ -37,6 +38,7 @@ class Student < ApplicationRecord
       ActivitySubmission.where(student_id: id).delete_all
       ActivityRecipient.where(student_id: id).delete_all
       CouncilNote.where(student_id: id).delete_all
+      StudentOccurrence.where(student_id: id).delete_all
       RecoveryGrade.where(student_id: id).delete_all
 
       enrollment_ids = Enrollment.where(student_id: id).pluck(:id)

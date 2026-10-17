@@ -114,6 +114,98 @@
                 } %>
 </div>
 
+<section class="data-card" aria-label="Ocorrências pedagógicas">
+  <div class="section-heading">
+    <div>
+      <span class="section-eyebrow">Ficha</span>
+      <h2>Ocorrências pedagógicas</h2>
+      <p>Saída, saúde ou indisciplina. O recado usa o WhatsApp que você já usa no monitoramento. Não conta como falta.</p>
+    </div>
+  </div>
+
+  <%= form_with url: student_occurrences_path(@student),
+                method: :post,
+                local: true,
+                class: "form-grid" do %>
+    <div class="form-field">
+      <label for="occurrence_occurred_on">Data</label>
+      <%= date_field_tag "student_occurrence[occurred_on]",
+                         @new_occurrence.occurred_on,
+                         id: "occurrence_occurred_on",
+                         required: true %>
+    </div>
+    <div class="form-field">
+      <label for="occurrence_kind">Tipo</label>
+      <%= select_tag "student_occurrence[kind]",
+                     options_for_select(StudentOccurrence::KINDS.map { |value, label| [label, value] }, @new_occurrence.kind),
+                     id: "occurrence_kind",
+                     required: true %>
+    </div>
+    <% if @enrollments.any? %>
+      <div class="form-field">
+        <label for="occurrence_classroom_id">Turma</label>
+        <%= select_tag "student_occurrence[classroom_id]",
+                       options_from_collection_for_select(@enrollments.map(&:classroom).uniq, :id, :name, @new_occurrence.classroom_id),
+                       include_blank: "Sem turma",
+                       id: "occurrence_classroom_id" %>
+      </div>
+    <% end %>
+    <div class="form-field form-field-wide">
+      <label for="occurrence_body">Registro</label>
+      <%= text_area_tag "student_occurrence[body]",
+                        nil,
+                        id: "occurrence_body",
+                        rows: 3,
+                        required: true,
+                        placeholder: "O que aconteceu, em linguagem que a família possa ler." %>
+    </div>
+    <div class="form-field">
+      <%= submit_tag "Registrar ocorrência", class: "button button-primary" %>
+    </div>
+  <% end %>
+
+  <% if @student_occurrences.any? %>
+    <div class="table-wrapper" style="margin-top: 18px">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Tipo</th>
+            <th>Registro</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @student_occurrences.each do |occurrence| %>
+            <tr>
+              <td><%= l(occurrence.occurred_on) %></td>
+              <td><%= occurrence.kind_label %></td>
+              <td>
+                <%= simple_format(occurrence.body) %>
+                <% if occurrence.classroom.present? %>
+                  <div class="activity-type-hint"><%= occurrence.classroom.name %></div>
+                <% end %>
+              </td>
+              <td class="page-header-actions">
+                <%= link_to "Recado WhatsApp",
+                            occurrence.whatsapp_url,
+                            class: "button button-secondary button-small",
+                            target: "_blank",
+                            rel: "noopener" %>
+                <%= button_to "Excluir",
+                              student_occurrence_path(@student, occurrence),
+                              method: :delete,
+                              class: "button button-danger button-small",
+                              data: { turbo_confirm: "Remover esta ocorrência?" } %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+</section>
+
 <section class="attendance-summary classroom-show-summary" aria-label="Resumo de frequência">
   <article class="summary-card">
     <div class="summary-card-top">

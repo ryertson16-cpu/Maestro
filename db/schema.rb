@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_14_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_16_180000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -66,6 +66,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_180000) do
 
   create_table "activity_questions", force: :cascade do |t|
     t.integer "activity_id", null: false
+    t.string "bncc_skill"
     t.json "choices", default: [], null: false
     t.string "correct_letter"
     t.datetime "created_at", null: false
@@ -307,6 +308,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_180000) do
     t.string "siage_class_type"
     t.string "siage_period"
     t.string "siage_time_slot"
+    t.text "skills"
     t.string "theme", null: false
     t.datetime "updated_at", null: false
     t.index ["classroom_id", "lesson_date"], name: "index_lessons_on_classroom_id_and_lesson_date"
@@ -399,6 +401,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_180000) do
   end
 
   create_table "questions", force: :cascade do |t|
+    t.string "bncc_skill"
     t.json "choices", default: [], null: false
     t.string "correct_letter"
     t.integer "course_id"
@@ -648,6 +651,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_180000) do
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
+  create_table "student_occurrences", force: :cascade do |t|
+    t.text "body", null: false
+    t.integer "classroom_id"
+    t.datetime "created_at", null: false
+    t.string "kind", default: "other", null: false
+    t.date "occurred_on", null: false
+    t.integer "professor_id", null: false
+    t.integer "student_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["classroom_id"], name: "index_student_occurrences_on_classroom_id"
+    t.index ["professor_id"], name: "index_student_occurrences_on_professor_id"
+    t.index ["student_id", "occurred_on"], name: "index_student_occurrences_on_student_id_and_occurred_on"
+    t.index ["student_id"], name: "index_student_occurrences_on_student_id"
+  end
+
   create_table "students", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.integer "classroom_id"
@@ -759,6 +777,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_180000) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "student_occurrences", "classrooms"
+  add_foreign_key "student_occurrences", "professors"
+  add_foreign_key "student_occurrences", "students"
   add_foreign_key "students", "classrooms"
   add_foreign_key "students", "courses"
   add_foreign_key "students", "professors"

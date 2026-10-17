@@ -72,6 +72,9 @@ Rails.application.routes.draw do
     member do
       get :report, defaults: { format: :pdf }
     end
+    resources :occurrences,
+              controller: "student_occurrences",
+              only: %i[create destroy]
   end
 
   get "/activity_tracker",
@@ -108,12 +111,16 @@ Rails.application.routes.draw do
       post :save
       post :save_and_export
       post :save_cell
+      get :diary_pdf
     end
   end
 
   resources :lessons do
     collection do
       post :generate_from_timetable
+    end
+    member do
+      post :copy
     end
   end
 
