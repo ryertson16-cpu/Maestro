@@ -83,6 +83,16 @@ module Lira
         tool(
           "list_projects",
           "Lista os projetos pedagógicos do professor (turma, Professor Nota 10, Escola Nota 10). Não são notas do SIAGE."
+        ),
+        tool(
+          "activity_delivery_status",
+          "Lista os alunos de uma atividade com situação (entregue, entregue com atraso, em andamento, não entregou) e data de recebimento. Use quando o professor for escrever recado ou alerta de relatório para o grupo da turma.",
+          {
+            classroom: { type: "string", description: "Nome da turma" },
+            activity: { type: "string", description: "Título da atividade. Se vazio, usa a mais recente da turma." },
+            status: { type: "string", description: "Filtrar: entregue, atraso, em andamento, não entregou" }
+          },
+          %w[classroom]
         )
       ]
     end
@@ -112,6 +122,12 @@ module Lira
       when "recent_lessons"
         recent_lessons(classroom: args["classroom"], days: args["days"])
       when "list_projects" then list_projects
+      when "activity_delivery_status"
+        activity_delivery_status(
+          classroom: args["classroom"],
+          activity: args["activity"],
+          status: args["status"]
+        )
       else
         { error: "Ferramenta desconhecida." }
       end
@@ -416,6 +432,43 @@ module Lira
       { error: "Não encontrei esse aluno na sua conta." }
     end
 
+    def activity_delivery_status(classroom:, activity: nil, status: nil)
+      classroom_record = find_classroom(classroom)
+      return { error: "Não encontrei essa turma." } if classroom_record.blank?
+
+      record = find_activity(classroom_record, activity)
+      return { error: "Não encontrei essa atividade na #{classroom_record.name}." } if record.blank?
+
+      wanted = normalize_delivery_status(status)
+      rows = Documents::ActivityDeliveryReport.delivery_rows(
+        classroom: classroom_record,
+        activity: record
+      )
+      listed = wanted ? rows.select { |row| row[:status] == wanted } : rows
+
+      {
+        classroom: classroom_record.name,
+        activity: record.title,
+        due_date: record.due_date,
+        bimester: record.bimester,
+        status_filter: wanted,
+        counts: {
+          delivered: rows.count { |row| row[:status] == :delivered },
+          delivered_late: rows.count { |row| row[:status] == :delivered_late },
+          in_progress: rows.count { |row| row[:status] == :in_progress },
+          not_delivered: rows.count { |row| row[:status] == :not_delivered }
+        },
+        students: listed.map { |row|
+          {
+            name: row[:student].name,
+            status: row[:status].to_s,
+            status_label: Documents::ActivityDeliveryReport::STATUS_LABELS[row[:status]],
+            submitted_on: row[:submitted_on]
+          }
+        }
+      }
+    end
+
     def student_match_payload(students)
       students.map do |student|
         {
@@ -441,6 +494,32 @@ module Lira
           }
         }
       }
+    end
+
+    def find_activity(classroom, title)
+      activities = Activity
+                   .joins(:lesson)
+                   .where(lessons: { classroom_id: classroom.id, professor_id: @professor.id })
+                   .includes(:lesson, :activity_recipients, adapted_versions: :activity_recipients)
+                   .order("activities.due_date DESC", "activities.id DESC")
+      return activities.first if title.blank?
+
+      needle = Lessons::NameMatcher.normalize(title)
+      activities.find { |item|
+        Lessons::NameMatcher.normalize(item.title).include?(needle) ||
+          needle.include?(Lessons::NameMatcher.normalize(item.title))
+      } || activities.find { |item| Lessons::NameMatcher.similar?(item.title, title) }
+    end
+
+    def normalize_delivery_status(value)
+      text = Lessons::NameMatcher.normalize(value.to_s)
+      return if text.blank?
+      return :not_delivered if text.match?(/nao entreg|sem entrega|pendenc/)
+      return :delivered_late if text.match?(/atraso/)
+      return :in_progress if text.match?(/andament/)
+      return :delivered if text.match?(/entreg/)
+
+      %i[delivered delivered_late in_progress not_delivered].find { |item| item.to_s == text }
     end
 
     def classrooms

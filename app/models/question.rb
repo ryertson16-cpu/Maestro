@@ -9,6 +9,9 @@ class Question < ApplicationRecord
   belongs_to :professor
   belongs_to :course, optional: true
   has_many :activity_questions, dependent: :nullify
+  has_one_attached :image
+
+  validate :image_must_be_picture
 
   validates :prompt, presence: true
   validates :kind, presence: true, inclusion: { in: KINDS.keys }
@@ -59,6 +62,10 @@ class Question < ApplicationRecord
   end
 
   private
+
+  def image_must_be_picture
+    QuestionImage.accepts!(image, errors)
+  end
 
   def objective_choices_present
     return unless objective?

@@ -1,0 +1,18 @@
+<table class="enem-scale-table">
+  <thead>
+    <tr>
+      <th>Acertos</th>
+      <th>Nota</th>
+      <th>Leitura</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% Enem::ScoreScale::BANDS.each do |band| %>
+      <tr>
+        <td><%= band[:hits].begin %> a <%= band[:hits].end %></td>
+        <td><%= format("%.1f", band[:notes].begin).tr(".", ",") %> a <%= format("%.1f", band[:notes].end).tr(".", ",") %></td>
+        <td><%= band[:label] %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

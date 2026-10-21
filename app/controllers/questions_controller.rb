@@ -5,6 +5,7 @@ class QuestionsController < ApplicationController
   def index
     @questions = current_professor
                  .questions
+                 .with_attached_image
                  .includes(:course)
                  .search(params[:q])
                  .order(updated_at: :desc)
@@ -33,6 +34,7 @@ class QuestionsController < ApplicationController
   end
 
   def update
+    purge_question_image if remove_question_image?
     if @question.update(question_params)
       redirect_to questions_path, notice: "Questão atualizada."
     else
@@ -65,12 +67,22 @@ class QuestionsController < ApplicationController
       :tag,
       :bncc_skill,
       :course_id,
+      :image,
       choice_texts: []
     )
+    attrs.delete(:image) if attrs[:image].blank?
     texts = Array(attrs.delete(:choice_texts))
     attrs[:choices] = Question.normalize_choices(Question::LETTERS, texts)
     attrs[:course_id] = current_professor.courses.where(id: attrs[:course_id]).pick(:id)
     attrs[:correct_letter] = nil if attrs[:kind].to_s == "discursive"
     attrs
+  end
+
+  def remove_question_image?
+    ActiveModel::Type::Boolean.new.cast(params.dig(:question, :remove_image))
+  end
+
+  def purge_question_image
+    @question.image.purge_later if @question.image.attached?
   end
 end

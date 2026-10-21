@@ -4,7 +4,7 @@ class PublicCorrectionsController < ApplicationController
   layout "correction"
 
   def show
-    @items = @activity.activity_questions
+    @items = @activity.activity_questions.with_attached_image
     @classroom = @activity.lesson.classroom
     @students = @classroom.students.order(:name)
     @student = @students.find_by(id: params[:student_id]) if params[:student_id].present?

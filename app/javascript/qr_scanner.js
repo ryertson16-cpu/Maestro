@@ -89,5 +89,16 @@ async function startScanner(root) {
 
 document.addEventListener("turbo:load", () => {
   const root = document.querySelector("[data-qr-scanner]")
-  if (root) startScanner(root)
+  if (!root) return
+
+  const phone = window.matchMedia("(pointer: coarse)").matches
+  if (!phone) {
+    const status = root.querySelector("[data-qr-status]")
+    if (status) {
+      status.textContent = "No computador, use o QR desta tela. A Câmera fica no celular."
+    }
+    return
+  }
+
+  startScanner(root)
 })

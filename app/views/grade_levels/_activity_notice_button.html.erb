@@ -1,0 +1,8 @@
+<% css_class = local_assigns.fetch(:css_class, "button button-secondary button-small") %>
+<%= link_to "Aviso do grupo",
+            activity_notice_grade_levels_path(
+              classroom_id: classroom.id,
+              activity_id: activity.id,
+              status: "não entregou"
+            ),
+            class: css_class %>

@@ -58,6 +58,10 @@
           <% end %>
 
           <div class="classroom-hub-actions">
+            <%= link_to "Relatório",
+                        report_classroom_path(classroom),
+                        class: "button button-secondary button-small" %>
+
             <%= link_to "Diário",
                         attendance_records_path(classroom_id: classroom.id),
                         class: "button button-secondary button-small" %>

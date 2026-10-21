@@ -1,0 +1,38 @@
+<% content_for :title, "#{@sheet.student.name} | #{@simulado.title}" %>
+
+<div class="page-header">
+  <div>
+    <h1><%= @sheet.student.name %></h1>
+    <p>
+      <%= @sheet.hits.to_i %> acertos → nota sugerida
+      <strong><%= @sheet.score.present? ? format("%.1f", @sheet.score).tr(".", ",") : "—" %></strong>.
+      Fonte da sugestão: <%= @sheet.suggestion_source.presence || "manual" %>.
+      <% if @sheet.confirmed? %>Já lançada no caderno.<% else %>Ainda não lançada.<% end %>
+    </p>
+  </div>
+  <%= link_to "Voltar ao simulado", enem_simulado_path(@simulado), class: "button button-secondary" %>
+</div>
+
+<section class="data-card">
+  <div class="lesson-actions">
+    <%= button_to "Sugerir com a Lira",
+                  suggest_enem_simulado_sheet_path(@simulado, @sheet),
+                  method: :post,
+                  class: "button button-secondary",
+                  data: { skip_confirm: true, turbo: false } %>
+  </div>
+
+  <%= form_with url: enem_simulado_sheet_path(@simulado, @sheet),
+                method: :patch,
+                local: true,
+                data: { skip_confirm: true } do %>
+    <%= render "enem_simulados/letter_grid",
+               name: "answers",
+               letters: @sheet.normalized_answers,
+               compare: @simulado.normalized_key %>
+    <div class="lesson-actions">
+      <%= submit_tag "Recalcular sem lançar", class: "button button-secondary" %>
+      <%= submit_tag "Lançar nota no caderno", class: "button button-primary" %>
+    </div>
+  <% end %>
+</section>

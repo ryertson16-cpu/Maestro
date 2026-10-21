@@ -1,7 +1,12 @@
 module Activities
   class OnlineFormImporter
+    CANONICAL_TITLE = "Atividade online"
+    ONLINE_FORM_TITLES = [
+      CANONICAL_TITLE,
+      "Questionário online"
+    ].freeze
+
     def self.existing_activity(professor:, classroom:, title:, lesson_date:)
-      wanted = Lessons::NameMatcher.normalize(title)
       date = lesson_date.to_date
       scope = Activity
               .joins(:lesson)
@@ -15,12 +20,26 @@ module Activities
               .order("activities.id desc")
 
       scope.find { |activity|
-        Lessons::NameMatcher.normalize(activity.title) == wanted &&
+        same_title?(activity.title, title) &&
           activity.lesson.lesson_date == date
       } || scope.find { |activity|
-        Lessons::NameMatcher.normalize(activity.title) == wanted &&
+        same_title?(activity.title, title) &&
           activity.due_date == date
       }
+    end
+
+    def self.same_title?(left, right)
+      a = Lessons::NameMatcher.normalize(left)
+      b = Lessons::NameMatcher.normalize(right)
+      return false if a.blank? || b.blank?
+      return true if a == b
+
+      online_form_title?(a) && online_form_title?(b)
+    end
+
+    def self.online_form_title?(value)
+      n = Lessons::NameMatcher.normalize(value)
+      ONLINE_FORM_TITLES.any? { |title| Lessons::NameMatcher.normalize(title) == n }
     end
 
     def initialize(professor:)

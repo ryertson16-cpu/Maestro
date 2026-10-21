@@ -43,6 +43,7 @@ module Lira
       greeting: "Estou aqui com o caderno.",
       status: "Segue o status do Maestro neste computador.",
       notices: "Seguem os avisos.",
+      whatsapp: "Segue a mensagem para colar no grupo.",
       siage: "Segue o que encontrei no SIAGE.",
       ask: "Preciso de um detalhe para consultar o caderno.",
       unknown: "Diga a turma ou o aluno que eu consulto o caderno.",
@@ -68,6 +69,7 @@ module Lira
       return :today if normalized.match?(/\A(hoje|briefing|resumo)\z/)
       return :status if normalized.match?(/\Astatus\z/)
       return :notices if normalized.match?(/\Aavisos?\z/)
+      return :whatsapp if text.match?(/whatsapp|mensagem|comunicado|recado|colar no grupo|grupo da turma|grupo dos alunos/i)
       return :greeting if normalized.match?(/\A(oi|ola|bom dia|boa tarde|boa noite|e ai|hey|lira|maestro)\b/)
       return :monitoring if text.match?(/monitor|alerta|pendenc|risco|cuidado|aten(c|ç)ao/i)
       return :projects if text.match?(/projeto|nota\s*10|portf[oó]lio/i)
@@ -111,6 +113,7 @@ module Lira
         #{icon(:ok)} *status* — se o Maestro neste PC está ativo
         #{icon(:alert)} *avisos* — últimos recados da automação
         #{icon(:ask)} *ajuda* — esta lista
+        #{icon(:activity)} mensagem para o grupo — recado de WhatsApp para copiar (não envio)
 
         Lembrete: “me lembra da reunião amanhã às 19h”. Avisa no sino com o caderno aberto.
 
@@ -163,6 +166,16 @@ module Lira
 
         ## WhatsApp e /lira
         O mesmo texto nos dois canais. Negrito só em comandos (*hoje*). Não use HTML.
+
+        ## Recado para o grupo dos alunos
+        Quando o professor pedir mensagem, comunicado, alerta ou texto para colar no WhatsApp da turma:
+        1. Consulte o caderno com as ferramentas (atividade, situação de entrega, notas, frequência). Não invente aluno.
+        2. Fale primeiro com o professor, na abertura obrigatória.
+        3. Depois escreva um bloco pronto para colar, começando exatamente com: 📋 *Mensagem para colar no grupo*
+        4. No bloco: tom de professor no grupo, emojis, frases curtas, *negrito* do WhatsApp. Sem HTML.
+        5. Se pedirem alerta de quem está em certa situação no relatório (não entregou, atraso etc.), liste só esses nomes, com os dados da ferramenta.
+        6. Nunca envie a mensagem. Não use a API do WhatsApp. O professor copia e cola.
+        7. Sem CPF, telefone, nota individual detalhada demais no grupo, salvo se o professor pedir explicitamente o nome naquela situação.
       PROMPT
     end
 

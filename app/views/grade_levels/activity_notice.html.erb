@@ -1,0 +1,76 @@
+<% content_for :title, "Aviso do grupo | Maestro" %>
+
+<%
+  notice_query = ->(status) {
+    {
+      classroom_id: @classroom.id,
+      activity_id: @activity.id,
+      status: status
+    }
+  }
+%>
+
+<div class="page-header page-header-with-action">
+  <div>
+    <span class="section-eyebrow"><%= @classroom.name %></span>
+    <h1>Aviso do grupo</h1>
+    <p>
+      Texto para colar no WhatsApp da turma, com a situação atual de
+      <%= @activity.title %>. A Lira não envia a mensagem.
+    </p>
+  </div>
+
+  <div class="lesson-actions">
+    <%= link_to "Voltar à atividade",
+                grade_levels_path(classroom_id: @classroom.id, activity_id: @activity.id),
+                class: "button button-secondary" %>
+    <%= link_to "Relatório da atividade",
+                activity_report_grade_levels_path(
+                  classroom_id: @classroom.id,
+                  activity_id: @activity.id
+                ),
+                class: "button button-ghost",
+                target: "_blank",
+                rel: "noopener" %>
+  </div>
+</div>
+
+<section class="data-card activity-notice-card">
+  <div class="monitoring-chip-row" role="navigation" aria-label="Situação do aviso">
+    <%= link_to "Sem entrega",
+                activity_notice_grade_levels_path(notice_query.call("não entregou")),
+                class: ["monitoring-filter-chip", ("is-active" if @status == "não entregou")].compact.join(" ") %>
+    <%= link_to "Com atraso",
+                activity_notice_grade_levels_path(notice_query.call("atraso")),
+                class: ["monitoring-filter-chip", ("is-active" if @status == "atraso")].compact.join(" ") %>
+    <%= link_to "Resumo da turma",
+                activity_notice_grade_levels_path(notice_query.call("resumo")),
+                class: ["monitoring-filter-chip", ("is-active" if @status.blank?)].compact.join(" ") %>
+  </div>
+
+  <% if @facts[:error].present? %>
+    <p class="muted-text"><%= @facts[:error] %></p>
+  <% else %>
+    <% counts = @facts[:counts] || {} %>
+    <p class="classroom-pending-help">
+      <%= counts[:not_delivered].to_i %> sem entrega
+      <span class="hero-separator">•</span>
+      <%= counts[:delivered_late].to_i %> com atraso
+      <span class="hero-separator">•</span>
+      <%= counts[:delivered].to_i %> entregues
+      <span class="hero-separator">•</span>
+      <%= counts[:in_progress].to_i %> em andamento
+    </p>
+
+    <div class="activity-notice-draft" data-lira-copy-root>
+      <label for="activity-notice-body">Mensagem para colar no grupo</label>
+      <textarea id="activity-notice-body"
+                rows="16"
+                data-lira-copy-body><%= @message %></textarea>
+      <div class="activity-notice-actions">
+        <button type="button" class="button button-primary" data-lira-copy>Copiar aviso</button>
+        <p class="muted-text">Pode editar o texto antes de copiar. Cole no grupo da turma.</p>
+      </div>
+    </div>
+  <% end %>
+</section>

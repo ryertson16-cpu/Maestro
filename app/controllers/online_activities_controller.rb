@@ -71,7 +71,7 @@ class OnlineActivitiesController < ApplicationController
       return
     end
 
-    title = params[:title].presence || "Questionário online"
+    title = params[:title].presence || Activities::OnlineFormImporter::CANONICAL_TITLE
     lesson_date = Date.parse(params[:lesson_date].to_s)
 
     created = Activities::OnlineFormImporter.new(professor: current_professor).import!(

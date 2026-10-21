@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_16_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_20_200000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -252,6 +252,53 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_180000) do
     t.datetime "updated_at", null: false
     t.index ["knowledge_area"], name: "index_courses_on_knowledge_area"
     t.index ["professor_id"], name: "index_courses_on_professor_id"
+  end
+
+  create_table "enem_pending_cards", force: :cascade do |t|
+    t.json "answers", default: []
+    t.datetime "created_at", null: false
+    t.integer "enem_simulado_id", null: false
+    t.string "filename", null: false
+    t.string "suggested_name"
+    t.datetime "updated_at", null: false
+    t.index ["enem_simulado_id"], name: "index_enem_pending_cards_on_enem_simulado_id"
+  end
+
+  create_table "enem_simulado_sheets", force: :cascade do |t|
+    t.json "answers", default: [], null: false
+    t.integer "classroom_id"
+    t.integer "cn_hits"
+    t.boolean "confirmed", default: false, null: false
+    t.datetime "created_at", null: false
+    t.integer "enem_simulado_id", null: false
+    t.integer "hits"
+    t.integer "mt_hits"
+    t.decimal "score", precision: 3, scale: 1
+    t.integer "student_id", null: false
+    t.string "suggestion_source"
+    t.datetime "updated_at", null: false
+    t.index ["classroom_id"], name: "index_enem_simulado_sheets_on_classroom_id"
+    t.index ["enem_simulado_id", "student_id"], name: "index_enem_simulado_sheets_on_enem_simulado_id_and_student_id", unique: true
+    t.index ["enem_simulado_id"], name: "index_enem_simulado_sheets_on_enem_simulado_id"
+    t.index ["student_id"], name: "index_enem_simulado_sheets_on_student_id"
+  end
+
+  create_table "enem_simulados", force: :cascade do |t|
+    t.integer "activity_id"
+    t.date "applied_on", null: false
+    t.integer "bimester", null: false
+    t.integer "classroom_id", null: false
+    t.datetime "created_at", null: false
+    t.boolean "key_confirmed", default: false, null: false
+    t.string "key_source"
+    t.json "official_key", default: [], null: false
+    t.integer "professor_id", null: false
+    t.integer "question_count", default: 90, null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["activity_id"], name: "index_enem_simulados_on_activity_id"
+    t.index ["classroom_id"], name: "index_enem_simulados_on_classroom_id"
+    t.index ["professor_id"], name: "index_enem_simulados_on_professor_id"
   end
 
   create_table "enrollments", force: :cascade do |t|
@@ -742,6 +789,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_180000) do
   add_foreign_key "course_disciplines", "courses"
   add_foreign_key "course_disciplines", "school_courses"
   add_foreign_key "courses", "professors"
+  add_foreign_key "enem_pending_cards", "enem_simulados"
+  add_foreign_key "enem_simulado_sheets", "classrooms"
+  add_foreign_key "enem_simulado_sheets", "enem_simulados"
+  add_foreign_key "enem_simulado_sheets", "students"
+  add_foreign_key "enem_simulados", "activities"
+  add_foreign_key "enem_simulados", "classrooms"
+  add_foreign_key "enem_simulados", "professors"
   add_foreign_key "enrollments", "classrooms"
   add_foreign_key "enrollments", "professors"
   add_foreign_key "enrollments", "students"

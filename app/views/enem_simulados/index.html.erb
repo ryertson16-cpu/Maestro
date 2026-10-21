@@ -1,0 +1,48 @@
+<% content_for :title, "Simulado ENEM | Maestro" %>
+
+<div class="page-header">
+  <div>
+    <h1>Simulado ENEM</h1>
+    <p>Prova da turma no caderno: gabarito oficial, cartões dos alunos e nota por faixa de acertos.</p>
+  </div>
+  <%= link_to "Novo simulado", new_enem_simulado_path, class: "button button-primary" %>
+</div>
+
+<% if @simulados.empty? %>
+  <section class="data-card">
+    <p>Nenhum simulado ainda. Suba o gabarito oficial de 90 itens (CN + Matemática).</p>
+  </section>
+<% else %>
+  <section class="data-card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Título</th>
+          <th>Turma</th>
+          <th>Data</th>
+          <th>Gabarito</th>
+          <th>Cartões</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @simulados.each do |simulado| %>
+          <tr>
+            <td><%= link_to simulado.title, enem_simulado_path(simulado) %></td>
+            <td><%= simulado.classroom.name %></td>
+            <td><%= l(simulado.applied_on) %></td>
+            <td><%= simulado.key_confirmed? ? "Confirmado" : "Conferir" %></td>
+            <td><%= simulado.sheets.count %></td>
+            <td>
+              <%= link_to "Relatório",
+                          report_enem_simulado_path(simulado),
+                          class: "button button-secondary button-small",
+                          target: "_blank",
+                          rel: "noopener" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% end %>

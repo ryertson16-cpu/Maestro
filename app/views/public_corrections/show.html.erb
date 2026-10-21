@@ -35,6 +35,7 @@
             <small>BNCC <%= item.bncc_skill %></small>
           <% end %>
         </legend>
+        <%= render "questions/figure", image: item.image %>
         <% if item.objective? %>
           <div class="correction-keys">
             <% item.choice_pairs.each do |letter, _text| %>
@@ -69,7 +70,11 @@
 <% else %>
   <section class="correction-card">
     <h2>Quem é o aluno?</h2>
-    <p>Depois do QR do gabarito, escolha o aluno ou leia o QR da folha dele.</p>
+    <p>Toque no nome ou, neste celular, aponte a câmera para o QR da folha dele.</p>
+    <div class="qr-scanner-card" data-qr-scanner>
+      <video data-qr-video playsinline autoplay muted></video>
+      <p class="activity-type-hint" data-qr-status>Aguardando a câmera deste celular…</p>
+    </div>
     <input type="search"
            class="correction-search"
            data-student-filter

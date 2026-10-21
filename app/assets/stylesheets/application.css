@@ -6106,6 +6106,30 @@ button.monitoring-filter-chip:hover {
   font-size: 0.82rem;
 }
 
+.activity-notice-card {
+  display: grid;
+  gap: 16px;
+}
+
+.activity-notice-draft {
+  display: grid;
+  gap: 8px;
+}
+
+.activity-notice-draft textarea {
+  width: 100%;
+  min-height: 280px;
+  font: inherit;
+  line-height: 1.45;
+}
+
+.activity-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
 @media (max-width: 1050px) {
   .grades-summary-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -8783,6 +8807,10 @@ html[data-theme="night"] .command-palette-item.is-active {
   background: var(--color-surface-muted);
 }
 
+.lira-copy {
+  margin-top: 8px;
+}
+
 .lira-composer {
   display: grid;
   gap: 12px;
@@ -10675,6 +10703,19 @@ html[data-theme="night"] .vitrine-picks-grid article {
   min-width: 160px;
 }
 
+.question-figure {
+  margin: 10px 0 12px;
+  max-width: 420px;
+}
+
+.question-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  background: #fff;
+}
+
 .question-choices {
   margin-top: 18px;
 }
@@ -10748,8 +10789,19 @@ html[data-theme="night"] .vitrine-picks-grid article {
   object-fit: cover;
 }
 
+@media (pointer: fine) {
+  [data-qr-scanner] video {
+    display: none;
+  }
+}
+
 .gabarito-qr {
   max-width: 240px;
+}
+
+.gabarito-qr.is-desk {
+  max-width: 280px;
+  margin: 16px 0;
 }
 
 .gabarito-qr svg {
@@ -10890,4 +10942,61 @@ html[data-theme="night"] .vitrine-picks-grid article {
   line-height: 1.1;
   margin: 8px 0 16px;
   color: #5b4bdb;
+}
+
+.enem-scale-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.enem-scale-table th,
+.enem-scale-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.enem-key-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+}
+
+.enem-key-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--color-surface-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.enem-key-cell small {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.enem-key-cell select {
+  width: 100%;
+}
+
+.enem-key-cell.is-match {
+  background: var(--color-success-light);
+}
+
+.enem-key-cell.is-miss {
+  background: #fdecea;
+}
+
+.enem-sheet-toolbar {
+  margin: 16px 0 8px;
+}
+
+.enem-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }

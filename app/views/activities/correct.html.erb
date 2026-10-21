@@ -29,6 +29,7 @@
         <% @items.each do |item| %>
           <li>
             <p><strong><%= item.position %>. <%= item.prompt %></strong></p>
+            <%= render "questions/figure", image: item.image %>
             <% if item.objective? %>
               <div class="correction-bubbles">
                 <% item.choice_pairs.each do |letter, text| %>

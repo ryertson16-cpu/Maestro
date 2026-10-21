@@ -12,6 +12,7 @@ module Activities
       )
       record.activity = @activity
       record.save!
+      record.copy_image_from(question)
       record
     end
 

@@ -1,3 +1,5 @@
+require "base64"
+require "fileutils"
 require "json"
 require "net/http"
 require "uri"
@@ -12,6 +14,32 @@ module Lira
           *history,
           { role: "user", content: user }
         ]
+      end
+
+      def analyze_file(path:, prompt:, system:)
+        image = Enem::PdfPreview.jpeg(path)
+        unless image
+          Rails.logger.warn("[Lira] GPT visão: não consegui transformar o PDF em imagem (pdftoppm/magick).")
+          return
+        end
+
+        data = Base64.strict_encode64(File.binread(image))
+        @tools = nil
+        @timeout = 90
+        @messages = [
+          { role: "system", content: system },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              { type: "image_url", image_url: { url: "data:image/jpeg;base64,#{data}" } }
+            ]
+          }
+        ]
+        turn = complete
+        turn && turn[:kind].to_s == "text" ? turn[:content] : nil
+      ensure
+        FileUtils.remove_entry(File.dirname(image), force: true) if image && File.exist?(File.dirname(image))
       end
 
       def complete
@@ -76,18 +104,19 @@ module Lira
         uri = URI.parse(Lira.openai_url)
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = uri.scheme == "https"
-        http.read_timeout = 30
+        http.read_timeout = @timeout || 30
         http.open_timeout = 10
 
         request = Net::HTTP::Post.new(uri)
         request["Authorization"] = "Bearer #{Lira.openai_api_key}"
         request["Content-Type"] = "application/json"
-        request.body = {
+        body = {
           model: Lira.openai_model,
           messages: @messages,
-          tools: @tools,
           temperature: 0.3
-        }.to_json
+        }
+        body[:tools] = @tools if @tools.present?
+        request.body = body.to_json
 
         response = http.request(request)
         unless response.is_a?(Net::HTTPSuccess)

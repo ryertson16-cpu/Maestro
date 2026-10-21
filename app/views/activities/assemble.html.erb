@@ -55,6 +55,7 @@
         <li>
           <div class="assembled-question-body">
             <strong><%= item.prompt %></strong>
+            <%= render "questions/figure", image: item.image %>
             <div class="activity-type-hint">
               <%= item.objective? ? "Objetiva · gabarito #{item.correct_letter}" : "Discursiva" %>
               · <%= format("%.1f", item.points).tr(".", ",") %> pt
@@ -115,6 +116,9 @@
             <tr>
               <td>
                 <%= truncate(question.prompt, length: 160) %>
+                <% if question.image.attached? %>
+                  <div class="activity-type-hint">Com figura</div>
+                <% end %>
                 <% if question.tag.present? || question.bncc_skill.present? %>
                   <div class="activity-type-hint">
                     <%= [question.bncc_skill.presence, question.tag.presence].compact.join(" · ") %>

@@ -29,17 +29,36 @@ module Lessons
     end
 
     def match_student(name, students)
-      ranked = Array(students).filter_map do |student|
+      students = Array(students)
+      ranked = students.filter_map do |student|
         score = student_name_score(name, student.name)
         next if score <= 0
 
         [student, score]
+      end
+
+      if ranked.empty?
+        hits = first_name_hits(name, students)
+        ranked = hits.map { |student| [student, 40] } if hits.one?
       end
       return if ranked.empty?
 
       best = ranked.map(&:last).max
       winners = ranked.select { |(_student, score)| score == best }
       winners.one? ? winners.first.first : nil
+    end
+
+    def first_name_hits(name, students)
+      query = significant_name_tokens(name)
+      return [] unless query.one?
+
+      first = query.first
+      return [] if first.length < 3
+
+      Array(students).select do |student|
+        tokens = significant_name_tokens(student.name)
+        tokens.first.present? && name_token_match?(first, tokens.first)
+      end
     end
 
     def student_name_score(left, right)
@@ -50,14 +69,34 @@ module Lessons
       return 95 if a.sort == b.sort
 
       shorter, longer = a.size <= b.size ? [a, b] : [b, a]
-      return 0 if shorter.size < 2
-      return 0 unless tokens_covered?(shorter, longer)
+      if shorter.size >= 2 && tokens_covered?(shorter, longer)
+        return 50 + (shorter.size * 10) - ((longer.size - shorter.size) * 2)
+      end
 
-      50 + (shorter.size * 10) - ((longer.size - shorter.size) * 2)
+      run = consecutive_token_run(a, b)
+      return 0 if run < 2
+
+      30 + (run * 10)
     end
 
     def significant_name_tokens(value)
       normalize(value).split.reject { |token| NAME_PARTICLES.include?(token) }
+    end
+
+    def consecutive_token_run(left, right)
+      best = 0
+      left.each_index do |i|
+        right.each_index do |j|
+          length = 0
+          while left[i + length] &&
+                right[j + length] &&
+                name_token_match?(left[i + length], right[j + length])
+            length += 1
+          end
+          best = length if length > best
+        end
+      end
+      best
     end
 
     def tokens_covered?(needles, haystack)

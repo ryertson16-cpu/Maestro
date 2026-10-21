@@ -64,6 +64,39 @@ class GradeLevelsController < ApplicationController
     end
   end
 
+  def activity_report
+    classroom = current_professor.classrooms.find(params[:classroom_id])
+    activity = find_activity_for_classroom(classroom)
+    pdf = Documents::ActivityDeliveryReport.new(
+      professor: current_professor,
+      classroom: classroom,
+      activity: activity
+    ).render
+
+    send_data pdf,
+              filename: "relatorio-atividade-#{activity.title.to_s.parameterize}-#{classroom.name.to_s.parameterize}.pdf",
+              type: "application/pdf",
+              disposition: "attachment"
+  rescue ActiveRecord::RecordNotFound
+    redirect_to grade_levels_path,
+                alert: "Turma ou atividade nao encontrada."
+  end
+
+  def activity_notice
+    @classroom = current_professor.classrooms.find(params[:classroom_id])
+    @activity = find_activity_for_classroom(@classroom)
+    @status = notice_status
+    @facts = Lira::Toolkit.new(current_professor).activity_delivery_status(
+      classroom: @classroom.name,
+      activity: @activity.title,
+      status: @status
+    )
+    @message = Lira::GroupMessage.delivery_text(@facts) if @facts[:error].blank?
+  rescue ActiveRecord::RecordNotFound
+    redirect_to grade_levels_path,
+                alert: "Turma ou atividade nao encontrada."
+  end
+
   def exam_result
     classroom =
       current_professor.classrooms.find(params[:classroom_id])
@@ -434,7 +467,7 @@ class GradeLevelsController < ApplicationController
                    professor_id: current_professor.id
                  }
                )
-               .includes(:adapted_versions, :activity_recipients)
+               .includes(:activity_recipients, adapted_versions: :activity_recipients)
                .find_by(id: params[:activity_id])
 
     raise ActiveRecord::RecordNotFound if activity.blank?
@@ -511,6 +544,17 @@ class GradeLevelsController < ApplicationController
       }
     end.sort_by do |row|
       [status_rank.fetch(row[:status], 9), row[:student].name.to_s]
+    end
+  end
+
+  def notice_status
+    case Lessons::NameMatcher.normalize(params[:status].to_s)
+    when "resumo", "todos"
+      nil
+    when "atraso"
+      "atraso"
+    else
+      "não entregou"
     end
   end
 

@@ -44,6 +44,8 @@ class Activity < ApplicationRecord
            -> { order(:position) },
            dependent: :destroy
 
+  has_one :enem_simulado, dependent: :nullify
+
   before_validation :ensure_correction_token, on: :create
 
   validates :title,
@@ -142,6 +144,28 @@ class Activity < ApplicationRecord
 
   def assembled?
     activity_questions.any?
+  end
+
+  def discard_with_generated_data!
+    lesson_record = lesson
+    generated = generated_vehicle_lesson?
+
+    self.class.transaction do
+      adapted_versions.find_each(&:destroy!)
+      destroy!
+      leftover = lesson_record.activities.reload
+      if leftover.none?
+        if generated
+          lesson_record.destroy!
+        else
+          lesson_record.update!(has_activity: false)
+        end
+      end
+    end
+  end
+
+  def generated_vehicle_lesson?
+    instructions.to_s.match?(/importada do question[aá]rio online|simulado enem/i)
   end
 
   def ensure_correction_token!

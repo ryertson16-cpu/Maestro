@@ -4,6 +4,7 @@ class Lesson < ApplicationRecord
     "Atividade avaliativa",
     "Prática experimental",
     "Prova",
+    "Simulado ENEM",
     "Estudo dirigido",
     "Trabalho em grupo",
     "Relatório",

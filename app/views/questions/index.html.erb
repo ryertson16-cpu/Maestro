@@ -36,6 +36,9 @@
             <tr>
               <td>
                 <strong><%= truncate(question.prompt, length: 140) %></strong>
+                <% if question.image.attached? %>
+                  <div class="activity-type-hint">Com figura</div>
+                <% end %>
                 <% if question.tag.present? || question.bncc_skill.present? %>
                   <div class="activity-type-hint">
                     <%= [question.bncc_skill.presence, question.tag.presence].compact.join(" · ") %>

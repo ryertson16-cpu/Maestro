@@ -59,6 +59,8 @@ Rails.application.routes.draw do
     collection do
       post :save_submissions
       get :exam_result
+      get :activity_report, defaults: { format: :pdf }
+      get :activity_notice
     end
   end
 
@@ -66,7 +68,37 @@ Rails.application.routes.draw do
     post :preview, on: :collection
   end
 
-  resources :classrooms
+  resources :enem_simulados, path: "simulado-enem" do
+    member do
+      patch :update_key
+      post :create_sheet
+      post :import_sheets
+      get :report, defaults: { format: :pdf }
+    end
+
+    resources :sheets,
+              controller: "enem_simulado_sheets",
+              only: %i[show update destroy] do
+      member do
+        post :suggest
+        post :launch
+      end
+    end
+
+    resources :pending_cards,
+              controller: "enem_pending_cards",
+              only: :destroy do
+      member do
+        post :assign
+      end
+    end
+  end
+
+  resources :classrooms do
+    member do
+      get :report, defaults: { format: :pdf }
+    end
+  end
 
   resources :students do
     member do
@@ -142,7 +174,7 @@ Rails.application.routes.draw do
        to: "public_corrections#grade",
        as: :gabarito_grade
 
-  resources :activities, only: %i[create update] do
+  resources :activities, only: %i[create update destroy] do
     resources :activity_questions, only: %i[create destroy] do
       member do
         patch :move

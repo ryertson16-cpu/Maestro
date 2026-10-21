@@ -142,6 +142,51 @@ class Activities::OnlineFormImporterTest < ActiveSupport::TestCase
     assert_equal 10.0, other[:score]
   end
 
+  test "treats Atividade online and Questionário online as the same activity" do
+    date = Date.new(2026, 10, 19)
+    first = Activities::OnlineFormImporter.new(professor: @professor).import!(
+      title: "Questionário online",
+      lesson_date: date,
+      course_id: nil,
+      items: [
+        { classroom_id: @classroom_m.id, student_id: @maria.id, score: 8.5, submitted_at: date }
+      ]
+    )
+    activity = first.first[:activity]
+
+    second = Activities::OnlineFormImporter.new(professor: @professor).import!(
+      title: "Atividade online",
+      lesson_date: date,
+      course_id: nil,
+      items: [
+        { classroom_id: @classroom_m.id, student_id: @other.id, score: 7.0, submitted_at: date }
+      ]
+    )
+
+    assert_equal activity.id, second.first[:activity].id
+    assert_equal 1, Activity.joins(:lesson).where(
+      lessons: { classroom_id: @classroom_m.id }
+    ).where("activities.title IN (?)", ["Questionário online", "Atividade online"]).count
+    assert_equal 7.0, ActivitySubmission.find_by!(activity: activity, student: @other).score
+
+    rows = [
+      Activities::OnlineFormParser::Row.new(
+        name: "Maria Silva",
+        classroom_label: "3ª M",
+        raw_score: 2.0,
+        submitted_at: date.to_time,
+        answers: ["A"]
+      )
+    ]
+    preview = Activities::OnlineFormPreview.new(
+      professor: @professor,
+      rows: rows,
+      title: "Atividade online",
+      lesson_date: date
+    )
+    assert preview.items.first[:already_scored]
+  end
+
   test "fills an existing classroom activity and matches abbreviated student names" do
     date = Date.new(2026, 10, 8)
     livramento = @professor.students.create!(name: "MARIA LIVRAMENTO SILVA C. DOS S.")

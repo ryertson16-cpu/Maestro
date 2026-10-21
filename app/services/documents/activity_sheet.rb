@@ -12,6 +12,7 @@ module Documents
       @student_url = student_url
       @letterhead = Letterhead.new(professor)
       @qr = QrMark.new(correction_url)
+      @image_tempfiles = []
     end
 
     def render
@@ -44,6 +45,12 @@ module Documents
     ensure
       @letterhead.cleanup
       @qr.cleanup
+      Array(@image_tempfiles).each do |file|
+        file.close
+        file.unlink
+      rescue StandardError
+        nil
+      end
     end
 
     private
@@ -183,6 +190,7 @@ module Documents
         pdf.text "BNCC: #{item.bncc_skill}", size: 8
         pdf.fill_color "20263D"
       end
+      draw_item_image(pdf, item)
       pdf.move_down 6
 
       if item.objective?
@@ -195,6 +203,32 @@ module Documents
         draw_answer_rule(pdf)
         pdf.move_down 8
       end
+    end
+
+    def draw_item_image(pdf, item)
+      file = question_image_file(item.image)
+      return unless file
+
+      pdf.start_new_page if pdf.cursor < 170
+      pdf.move_down 6
+      pdf.image file.path, fit: [pdf.bounds.width * 0.72, 170]
+      pdf.move_down 8
+    rescue StandardError
+      nil
+    end
+
+    def question_image_file(attachment)
+      return unless attachment&.attached?
+
+      ext = attachment.content_type.to_s.include?("png") ? ".png" : ".jpg"
+      tempfile = Tempfile.new(["maestro-question", ext])
+      tempfile.binmode
+      tempfile.write(attachment.blob.download)
+      tempfile.flush
+      @image_tempfiles << tempfile
+      tempfile
+    rescue StandardError
+      nil
     end
 
     def draw_answer_sheet(pdf)

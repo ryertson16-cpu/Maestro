@@ -1,6 +1,9 @@
 class ActivityQuestion < ApplicationRecord
   belongs_to :activity
   belongs_to :question, optional: true
+  has_one_attached :image
+
+  validate :image_must_be_picture
 
   validates :prompt, presence: true
   validates :kind, presence: true, inclusion: { in: Question::KINDS.keys }
@@ -39,5 +42,22 @@ class ActivityQuestion < ApplicationRecord
       points: question.points,
       bncc_skill: question.bncc_skill
     )
+  end
+
+  def copy_image_from(source)
+    attachment = source.respond_to?(:image) ? source.image : source
+    return unless attachment&.attached?
+
+    image.attach(
+      io: StringIO.new(attachment.download),
+      filename: attachment.filename.to_s,
+      content_type: attachment.content_type
+    )
+  end
+
+  private
+
+  def image_must_be_picture
+    QuestionImage.accepts!(image, errors)
   end
 end

@@ -41,6 +41,7 @@ module Lessons
       return unless regular
 
       copied = duplicate_activity(regular, replica, date_delta)
+      copy_question_images!(regular, copied)
       return unless same_classroom?
 
       regular.adapted_versions.each do |adapted|
@@ -49,6 +50,17 @@ module Lessons
           copy.activity_recipients.build(student_id: recipient.student_id)
         end
         copy.save!
+        copy_question_images!(adapted, copy)
+      end
+    end
+
+    def copy_question_images!(source, copy)
+      from_items = source.activity_questions.order(:position).to_a
+      to_items = copy.activity_questions.order(:position).to_a
+      from_items.zip(to_items).each do |from, to|
+        next if from.blank? || to.blank?
+
+        to.copy_image_from(from)
       end
     end
 

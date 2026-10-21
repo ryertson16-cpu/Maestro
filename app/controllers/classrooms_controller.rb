@@ -1,6 +1,6 @@
 class ClassroomsController < ApplicationController
   before_action :authenticate_professor!
-  before_action :set_classroom, only: %i[show edit update destroy]
+  before_action :set_classroom, only: %i[show edit update destroy report]
 
   def index
     @classrooms = current_professor
@@ -12,6 +12,25 @@ class ClassroomsController < ApplicationController
                                 .where(professor: current_professor, status: "active")
                                 .group(:classroom_id)
                                 .count
+  end
+
+  def report
+    enrollments = @classroom.enrollments
+                            .where(status: "active")
+                            .includes(:student)
+                            .joins(:student)
+                            .order("students.name")
+
+    pdf = Documents::ClassroomRoster.new(
+      professor: current_professor,
+      classroom: @classroom,
+      enrollments: enrollments
+    ).render
+
+    send_data pdf,
+              filename: "relacao-alunos-#{@classroom.name.to_s.parameterize}.pdf",
+              type: "application/pdf",
+              disposition: "attachment"
   end
 
   def show

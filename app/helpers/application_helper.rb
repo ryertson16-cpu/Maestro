@@ -95,7 +95,7 @@ module ApplicationHelper
     when "profiles", "settings", "schools"
       nil
     when "grade_levels"
-      if action_name.in?(%w[index exam_result save_submissions])
+      if action_name.in?(%w[index exam_result save_submissions activity_report activity_notice])
         :atividades
       else
         :turmas
@@ -146,8 +146,9 @@ module ApplicationHelper
         href: maestro_nav_path(:grade_levels_path, classroom),
         items: [
           { label: "Banco de questões", href: questions_path, hint: "Questões próprias para montar a atividade" },
-          { label: "Corrigir por QR", href: corrections_path, hint: "Câmera no gabarito e lançar a nota" },
-          { label: "Atividade online", href: new_online_activity_path, hint: "Planilha do Forms: aula, nota e presença" }
+          { label: "Corrigir por QR", href: corrections_path, hint: "QR no computador, câmera no celular" },
+          { label: "Atividade online", href: new_online_activity_path, hint: "Planilha do Forms: aula, nota e presença" },
+          { label: "Simulado ENEM", href: enem_simulados_path, hint: "Gabarito oficial, cartões e escala de acertos" }
         ]
       },
       {
@@ -310,7 +311,7 @@ module ApplicationHelper
           command_item("Atividades", maestro_nav_path(:grade_levels_path), :activities, "Entregas e notas", "nota lista exercicio"),
           command_item("Banco de questões", questions_path, :clipboard, "Montar provas com o banco próprio", "questao objetiva discursiva banco"),
           command_item("Atividade online", new_online_activity_path, :activities, "Planilha do Google Forms", "forms planilha questionario online nota presenca"),
-          command_item("Corrigir por QR", corrections_path, :check, "Câmera no QR da atividade", "qrcode correcao gabarito prova"),
+          command_item("Corrigir por QR", corrections_path, :check, "QR no PC, correção no celular", "qrcode correcao gabarito prova celular"),
           command_item("Projetos", projects_path, :projects, "Professor e Escola Nota 10", "projeto"),
           command_item("Monitoramento", monitoring_path, :monitoring, "Alertas e conselho", "alerta pendencia"),
           command_item("Disciplinas", courses_path, :courses, "Componentes e níveis", "disciplina curso"),

@@ -1,0 +1,63 @@
+<% content_for :title, "Simulado ENEM | Maestro" %>
+
+<div class="page-header">
+  <div>
+    <h1>Simulado ENEM</h1>
+    <p>
+      90 questões de Ciências da Natureza e Matemática. Envie o gabarito oficial em PDF.
+      A Lira pode sugerir as letras; a nota só entra no caderno quando você confirmar.
+    </p>
+  </div>
+</div>
+
+<section class="data-card">
+  <%= form_with url: enem_simulados_path,
+                method: :post,
+                local: true,
+                multipart: true,
+                data: { skip_confirm: true, turbo: false } do %>
+    <div class="form-grid">
+      <div class="form-field form-field-wide">
+        <%= label_tag :official_pdf, "Gabarito oficial (PDF)" %>
+        <%= file_field_tag :official_pdf, accept: "application/pdf,.pdf", required: true %>
+      </div>
+
+      <div class="form-field">
+        <%= label_tag :classroom_id, "Turma" %>
+        <%= select_tag :classroom_id,
+                       options_from_collection_for_select(@classrooms, :id, :name, params[:classroom_id].presence || @classroom&.id),
+                       include_blank: "Escolha a turma" %>
+      </div>
+
+      <div class="form-field form-field-wide">
+        <%= label_tag :title, "Título" %>
+        <%= text_field_tag :title, @title, placeholder: "Simulado ENEM — CN e Matemática" %>
+      </div>
+
+      <div class="form-field">
+        <%= label_tag :applied_on, "Data" %>
+        <%= date_field_tag :applied_on, @applied_on %>
+      </div>
+
+      <div class="form-field">
+        <%= label_tag :bimester, "Bimestre" %>
+        <%= select_tag :bimester,
+                       options_for_select(Activity::BIMESTERS.map { |value, label| [label, value] }, @bimester.to_i) %>
+      </div>
+    </div>
+
+    <div class="lesson-actions">
+      <%= submit_tag "Ler gabarito", class: "button button-primary" %>
+      <%= link_to "Cancelar", enem_simulados_path, class: "button button-secondary" %>
+    </div>
+  <% end %>
+</section>
+
+<section class="data-card enem-scale-card">
+  <h2>Escala v1 — 90 itens CN + MT</h2>
+  <p>
+    Não usamos o TRI do INEP. Cada faixa de acertos vira uma faixa de nota 0–10 do caderno.
+    45 acertos (metade) já valem média 6,0. A faixa 5,0 não existe de propósito.
+  </p>
+  <%= render "enem_simulados/scale" %>
+</section>

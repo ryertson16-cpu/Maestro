@@ -44,4 +44,34 @@ class Lessons::NameMatcherTest < ActiveSupport::TestCase
 
     assert_equal ana_costa, Lessons::NameMatcher.match_student("Ana Costa", [ana_costa, ana_laura])
   end
+
+  test "matches when two or three consecutive names agree despite a later spelling miss" do
+    clementino = Student.new(name: "MARIA ANDRIELLY PAULINO CLEMENTINO")
+    oliviera = Student.new(name: "MIRELLA VITÓRIA FELIX DE OLIVIERA")
+    other_maria = Student.new(name: "MARIA VITÓRIA DOS SANTOS GONÇALVES")
+    students = [clementino, oliviera, other_maria]
+
+    assert_equal clementino, Lessons::NameMatcher.match_student(
+      "Maria Andrielly Paulino Clemetino",
+      students
+    )
+    assert_equal oliviera, Lessons::NameMatcher.match_student(
+      "Mirella Vitória Félix de Oliveira",
+      students
+    )
+  end
+
+  test "matches a unique first name in the classroom" do
+    wendja = Student.new(name: "WENDJA VITÓRIA FERREIRA DOS SANTOS")
+    iris = Student.new(name: "IRIS SOARES PEREIRA DA SILVA")
+
+    assert_equal wendja, Lessons::NameMatcher.match_student("Wendja", [wendja, iris])
+  end
+
+  test "does not match a first name shared by two students" do
+    ana_costa = Student.new(name: "Ana Beatriz Costa")
+    ana_laura = Student.new(name: "Ana Laura Dantas")
+
+    assert_nil Lessons::NameMatcher.match_student("Ana", [ana_costa, ana_laura])
+  end
 end

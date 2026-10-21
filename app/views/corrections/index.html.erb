@@ -2,15 +2,99 @@
 
 <div class="page-header">
   <h1>Corrigir por QR Code</h1>
-  <p>No celular, abra o app Câmera e leia o QR do gabarito. Também pode usar a câmera abaixo se este aparelho já estiver no Maestro.</p>
+  <p>
+    Este computador só mostra o código. Abra o app <strong>Câmera</strong> do celular
+    (não o Maestro) e aponte para o QR. A correção abre no telefone, sem login,
+    e a nota cai na atividade, nas médias e no monitoramento.
+  </p>
 </div>
 
-<section class="data-card qr-scanner-card" data-qr-scanner>
-  <video data-qr-video playsinline autoplay muted></video>
-  <p class="activity-type-hint" data-qr-status>Pedindo câmera…</p>
+<% if @classrooms.blank? %>
+  <section class="empty-state">
+    <strong>Nenhuma turma no caderno.</strong>
+    <p>Cadastre uma turma e monte a atividade para gerar o QR.</p>
+  </section>
+<% else %>
+  <section class="data-card">
+    <%= form_with url: corrections_path, method: :get, local: true, class: "question-bank-filters" do %>
+      <%= select_tag :classroom_id,
+                     options_from_collection_for_select(@classrooms, :id, :name, @classroom&.id),
+                     required: true %>
+      <% if @activities.any? %>
+        <%= select_tag :activity_id,
+                       options_for_select(
+                         @activities.map { |activity| ["#{activity.title} · #{activity.bimester_label}", activity.id] },
+                         @activity&.id
+                       ) %>
+      <% end %>
+      <%= submit_tag "Mostrar QR", class: "button button-secondary" %>
+    <% end %>
+  </section>
 
-  <%= form_with url: corrections_path, method: :get, local: true, class: "question-bank-filters" do %>
-    <%= text_field_tag :t, @token, placeholder: "Ou cole o token do QR", autocomplete: "off" %>
-    <%= submit_tag "Abrir atividade", class: "button button-primary" %>
+  <% if @activity.blank? %>
+    <section class="empty-state">
+      <strong>Não há atividade nesta turma.</strong>
+      <p>Monte a prova no banco de questões para gerar o gabarito com QR.</p>
+      <%= link_to "Banco de questões", questions_path, class: "button button-primary" %>
+    </section>
+  <% elsif !@activity.assembled? %>
+    <section class="empty-state">
+      <strong><%= @activity.title %> ainda não tem questões.</strong>
+      <p>Inclua as questões na montagem. Sem gabarito, o celular não tem o que corrigir.</p>
+      <%= link_to "Montar atividade", assemble_activity_path(@activity), class: "button button-primary" %>
+    </section>
+  <% else %>
+    <section class="data-card">
+      <div class="section-heading">
+        <div>
+          <span class="section-eyebrow">Celular</span>
+          <h2><%= @activity.title %></h2>
+          <p>
+            <%= @classroom.name %>
+            · <%= @activity.activity_type %>
+            · <%= @activity.bimester_label %>
+          </p>
+        </div>
+      </div>
+
+      <% if localhost_correction_host? %>
+        <p class="activity-type-hint">
+          O celular não abre localhost. Use o IP deste computador na rede Wi-Fi, por exemplo
+          <code><%= lan_reachable_host %></code>.
+        </p>
+      <% else %>
+        <p class="activity-type-hint">
+          Celular e computador na mesma Wi-Fi. A Câmera do telefone lê este QR e abre o gabarito.
+        </p>
+      <% end %>
+
+      <%= form_with url: corrections_path, method: :get, local: true, class: "question-bank-filters" do %>
+        <%= hidden_field_tag :classroom_id, @classroom.id %>
+        <%= hidden_field_tag :activity_id, @activity.id %>
+        <%= text_field_tag :correction_host,
+                           correction_host,
+                           placeholder: "http://192.168.0.10:3000" %>
+        <%= submit_tag "Atualizar endereço do QR", class: "button button-secondary" %>
+      <% end %>
+
+      <div class="gabarito-qr is-desk">
+        <%= raw RQRCode::QRCode.new(@correction_url).as_svg(module_size: 6, viewbox: true) %>
+        <p><code><%= @correction_url %></code></p>
+      </div>
+
+      <div class="page-header-actions" style="margin-top: 16px">
+        <%= link_to "Já estou no celular — abrir gabarito",
+                    @correction_url,
+                    class: "button button-primary",
+                    target: "_blank",
+                    rel: "noopener" %>
+        <%= link_to "Folha com QR (PDF)",
+                    sheet_activity_path(@activity),
+                    class: "button button-secondary" %>
+        <%= link_to "Montar questões",
+                    assemble_activity_path(@activity),
+                    class: "button button-ghost" %>
+      </div>
+    </section>
   <% end %>
-</section>
+<% end %>

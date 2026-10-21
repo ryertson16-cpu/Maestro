@@ -33,6 +33,7 @@ class ApplicationHelperNavTest < ActionView::TestCase
     assert_includes labels, "Banco de questões"
     assert_includes labels, "Corrigir por QR"
     assert_includes labels, "Atividade online"
+    assert_includes labels, "Simulado ENEM"
     refute_includes labels, "Matrículas"
     refute_includes labels, "Disciplinas"
     refute_includes labels, "Médias e fechamento"

@@ -1,4 +1,6 @@
 class ActivitiesController < ApplicationController
+  include CorrectionHost
+
   before_action :authenticate_professor!
   before_action :set_activity, except: :create
 
@@ -20,16 +22,13 @@ class ActivitiesController < ApplicationController
 
   def assemble
     @activity.ensure_correction_token!
-    if params[:correction_host].present?
-      session[:correction_host] = params[:correction_host].to_s.strip
-                                    .sub(%r{/g/.*\z}, "")
-                                    .sub(%r{/\z}, "")
-    end
+    store_correction_host
     @correction_url = gabarito_public_url(@activity)
-    @items = @activity.activity_questions.includes(:question)
+    @items = @activity.activity_questions.with_attached_image.includes(:question)
     @courses = current_professor.courses.order(:name)
     @bank = current_professor
             .questions
+            .with_attached_image
             .includes(:course)
             .search(params[:q])
             .order(updated_at: :desc)
@@ -50,7 +49,7 @@ class ActivitiesController < ApplicationController
       return
     end
 
-    @items = @activity.activity_questions
+    @items = @activity.activity_questions.with_attached_image
     @classroom = current_professor.classrooms.find(@activity.lesson.classroom_id)
     @students = @classroom.students.order(:name)
     @student = @students.find_by(id: params[:student_id])
@@ -146,6 +145,17 @@ class ActivitiesController < ApplicationController
     end
   end
 
+  def destroy
+    classroom_id = @classroom.id
+    @activity.discard_with_generated_data!
+
+    redirect_to grade_levels_path(
+      classroom_id: classroom_id,
+      bimester: params[:bimester].presence || params[:bimester_filter].presence,
+      kind: params[:kind]
+    ), notice: "Atividade excluída. Notas, entregas e questões ligadas a ela também foram removidas."
+  end
+
   private
 
   def set_activity
@@ -165,7 +175,6 @@ class ActivitiesController < ApplicationController
   rescue ActiveRecord::RecordNotFound
     redirect_to grade_levels_path,
                 alert: "Atividade não encontrada ou sem permissão de acesso."
-    throw :abort
   end
 
   def find_parent_activity
@@ -229,18 +238,6 @@ class ActivitiesController < ApplicationController
       :parent_activity_id,
       student_ids: []
     )
-  end
-
-  def correction_host
-    session[:correction_host].presence || request.base_url
-  end
-
-  def gabarito_public_url(activity)
-    "#{correction_host}/g/#{activity.correction_token}"
-  end
-
-  def gabarito_student_url(activity, student)
-    "#{correction_host}/g/#{activity.correction_token}/a/#{student.id}"
   end
 
   def sheet_filename

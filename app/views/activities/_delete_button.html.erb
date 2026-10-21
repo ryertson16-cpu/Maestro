@@ -1,0 +1,13 @@
+<% css_class = local_assigns.fetch(:css_class, "button button-danger button-small") %>
+<%= link_to "Excluir atividade",
+            activity_path(
+              activity,
+              classroom_id: classroom.id,
+              bimester: local_assigns[:bimester],
+              kind: local_assigns[:kind]
+            ),
+            class: css_class,
+            data: {
+              turbo_method: :delete,
+              confirm_message: "Excluir esta atividade também apaga notas, entregas e questões ligadas a ela. Deseja continuar?"
+            } %>

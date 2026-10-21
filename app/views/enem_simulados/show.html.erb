@@ -1,0 +1,190 @@
+<% content_for :title, "#{@simulado.title} | Maestro" %>
+
+<div class="page-header">
+  <div>
+    <h1><%= @simulado.title %></h1>
+    <p>
+      Turma de referência: <%= @simulado.classroom.name %> · <%= l(@simulado.applied_on) %> ·
+      <%= Activity::BIMESTERS[@simulado.bimester] %>.
+      A Lira sugere; você confere. A nota só entra na importação, na atividade da turma de cada aluno.
+    </p>
+  </div>
+  <div class="lesson-actions">
+    <%= link_to "Relatório",
+                report_enem_simulado_path(@simulado),
+                class: "button button-primary",
+                target: "_blank",
+                rel: "noopener" %>
+    <%= link_to "Todos os simulados", enem_simulados_path, class: "button button-secondary" %>
+  </div>
+</div>
+
+<section class="data-card">
+  <h2>Gabarito oficial — 90 letras</h2>
+  <p>
+    Fonte: <%= @simulado.key_source.presence || "manual" %>.
+    <% if @simulado.key_confirmed? %>Confirmado.<% else %>Ainda não confirmado.<% end %>
+  </p>
+
+  <%= form_with url: update_key_enem_simulado_path(@simulado),
+                method: :patch,
+                local: true,
+                data: { skip_confirm: true } do %>
+    <%= render "enem_simulados/letter_grid",
+               name: "key",
+               letters: @simulado.normalized_key,
+               compare: nil %>
+    <div class="lesson-actions">
+      <%= submit_tag @simulado.key_confirmed? ? "Atualizar gabarito" : "Confirmar gabarito",
+                     class: "button button-primary" %>
+    </div>
+  <% end %>
+</section>
+
+<section class="data-card enem-scale-card">
+  <h2>Escala de acertos → nota</h2>
+  <p>A nota 0–10 usa o total de 90 itens (CN + MT). As colunas CN e Matemática são o detalhe da prova.</p>
+  <%= render "enem_simulados/scale" %>
+</section>
+
+<% if @simulado.key_confirmed? %>
+  <section class="data-card">
+    <h2>Cartões dos alunos</h2>
+    <%= form_with url: create_sheet_enem_simulado_path(@simulado),
+                  method: :post,
+                  local: true,
+                  multipart: true,
+                  data: { skip_confirm: true, turbo: false } do %>
+      <div class="form-grid">
+        <div class="form-field form-field-wide">
+          <%= label_tag :card_pdfs, "PDFs dos cartões" %>
+          <%= file_field_tag "card_pdfs[]",
+                             accept: "application/pdf,.pdf",
+                             multiple: true,
+                             required: true,
+                             id: "card_pdfs" %>
+          <p class="activity-type-hint">
+            Pode enviar vários de uma vez. Todos os PDFs entram na hora. Em seguida a Lira lê
+            o nome manuscrito e as bolhas (2º dia, questões 91 a 180). Atualize a página se a lista ainda estiver incompleta.
+          </p>
+        </div>
+        <div class="form-field">
+          <%= label_tag :student_id, "Aluno (um PDF só, se o arquivo não tiver o nome)" %>
+          <%= select_tag :student_id,
+                         options_for_select(@student_options, params[:student_id]),
+                         include_blank: "Opcional" %>
+        </div>
+      </div>
+      <div class="lesson-actions">
+        <%= submit_tag "Ler cartões", class: "button button-primary" %>
+      </div>
+    <% end %>
+
+    <% if @pending_cards.any? %>
+      <h3>PDFs para ligar ao aluno</h3>
+      <p class="activity-type-hint">O arquivo foi guardado. Se a Lira leu um nome, confira e ligue ao aluno da lista.</p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Arquivo</th>
+            <th>Aluno</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @pending_cards.each do |pending| %>
+            <tr>
+              <td>
+                <%= pending.filename %>
+                <% if pending.name_hint.present? %>
+                  <div class="activity-type-hint">Nome lido: <%= pending.name_hint %></div>
+                <% end %>
+              </td>
+              <td>
+                <%= form_with url: assign_enem_simulado_pending_card_path(@simulado, pending),
+                              method: :post,
+                              local: true,
+                              data: { skip_confirm: true } do %>
+                  <div class="enem-row-actions">
+                    <%= select_tag :student_id,
+                                   options_for_select(@student_options),
+                                   include_blank: "Escolha o aluno",
+                                   required: true %>
+                    <%= submit_tag "Ligar cartão", class: "button button-primary button-small" %>
+                  </div>
+                <% end %>
+              </td>
+              <td>
+                <%= button_to "Apagar",
+                              enem_simulado_pending_card_path(@simulado, pending),
+                              method: :delete,
+                              class: "button button-danger button-small",
+                              data: { skip_confirm: true } %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+
+    <% if @sheets.any? %>
+      <div class="lesson-actions enem-sheet-toolbar">
+        <%= link_to "Relatório dos resultados",
+                    report_enem_simulado_path(@simulado),
+                    class: "button button-secondary",
+                    target: "_blank",
+                    rel: "noopener" %>
+        <%= button_to "Importar informações em massa",
+                      import_sheets_enem_simulado_path(@simulado),
+                      method: :post,
+                      class: "button button-primary",
+                      data: { skip_confirm: true } %>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Aluno</th>
+            <th>Turma</th>
+            <th>Acertos CN</th>
+            <th>Acertos matemática</th>
+            <th>Acertos totais</th>
+            <th>Nota sugerida</th>
+            <th>Situação</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @sheets.each do |sheet| %>
+            <tr>
+              <td><%= link_to sheet.student.name, enem_simulado_sheet_path(@simulado, sheet) %></td>
+              <td><%= sheet.classroom_label %></td>
+              <td><%= sheet.cn_hits %></td>
+              <td><%= sheet.mt_hits %></td>
+              <td><%= sheet.hits %></td>
+              <td><%= sheet.score.present? ? format("%.1f", sheet.score).tr(".", ",") : "—" %></td>
+              <td><%= sheet.confirmed? ? "Importada" : "Conferir" %></td>
+              <td>
+                <div class="enem-row-actions">
+                  <%= link_to "Conferir",
+                              enem_simulado_sheet_path(@simulado, sheet),
+                              class: "button button-secondary button-small" %>
+                  <%= button_to "Importar",
+                                launch_enem_simulado_sheet_path(@simulado, sheet),
+                                method: :post,
+                                class: "button button-primary button-small",
+                                data: { skip_confirm: true } %>
+                  <%= button_to "Apagar",
+                                enem_simulado_sheet_path(@simulado, sheet),
+                                method: :delete,
+                                class: "button button-danger button-small",
+                                data: { skip_confirm: true } %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+  </section>
+<% end %>

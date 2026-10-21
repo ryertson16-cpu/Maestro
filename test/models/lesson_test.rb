@@ -13,5 +13,6 @@ class LessonTest < ActiveSupport::TestCase
     assert_includes Lesson::ACTIVITY_TYPES, "Atividade avaliativa"
     assert_includes Lesson::ACTIVITY_TYPES, "Lista de exercícios"
     assert_includes Lesson::ACTIVITY_TYPES, "Prova"
+    assert_includes Lesson::ACTIVITY_TYPES, "Simulado ENEM"
   end
 end

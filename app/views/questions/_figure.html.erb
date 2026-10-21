@@ -1,0 +1,6 @@
+<%# locals: image:, alt: "Figura da questão" %>
+<% if image&.attached? %>
+  <figure class="question-figure">
+    <%= image_tag image, alt: local_assigns.fetch(:alt, "Figura da questão") %>
+  </figure>
+<% end %>

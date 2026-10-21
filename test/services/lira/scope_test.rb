@@ -32,6 +32,13 @@ class Lira::ScopeTest < ActiveSupport::TestCase
     assert_includes prompt, Lira::Scope.icon(:late)
     assert_includes prompt, Lira::Scope.icon(:siage)
     assert_includes prompt, Lira::Scope.icon(:project)
+    assert_match(/Mensagem para colar no grupo/, prompt)
+    assert_match(/Nunca envie a mensagem/i, prompt)
+  end
+
+  test "help and topic cover group WhatsApp drafts" do
+    assert_match(/mensagem para o grupo/i, Lira::Scope.help_text)
+    assert_equal :whatsapp, Lira::Scope.topic_for("mensagem para colar no grupo da 3ª O")
   end
 
   test "attendance format marks late as distinct from absence" do

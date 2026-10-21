@@ -25,6 +25,10 @@ module Lira
 
       student = student_matches.one? ? student_matches.first : nil
 
+      if group_message?(message)
+        return Lira::GroupMessage.reply(@toolkit, message)
+      end
+
       result =
         if monitoring?(message)
           @toolkit.monitoring_alerts(classroom: classroom&.name)
@@ -69,6 +73,10 @@ module Lira
 
     def greeting?(text)
       Lessons::NameMatcher.normalize(text).match?(/\A(oi|ola|bom dia|boa tarde|boa noite|e ai|hey|lira|maestro)\b/)
+    end
+
+    def group_message?(text)
+      text.match?(/whatsapp|mensagem|comunicado|recado|colar no grupo|grupo da turma|grupo dos alunos/i)
     end
 
     def monitoring?(text)

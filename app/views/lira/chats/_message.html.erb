@@ -4,5 +4,14 @@
   <% else %>
     <strong>Você</strong>
   <% end %>
-  <%= simple_format(message.body) %>
+  <div data-lira-copy-body>
+    <%= simple_format(message.body) %>
+  </div>
+  <% if message.assistant? %>
+    <button type="button"
+            class="button button-ghost button-small lira-copy"
+            data-lira-copy>
+      Copiar
+    </button>
+  <% end %>
 </article>

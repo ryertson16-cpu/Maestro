@@ -34,7 +34,7 @@ module Activities
     end
 
     def suggested_title
-      "Questionário online"
+      Activities::OnlineFormImporter::CANONICAL_TITLE
     end
 
     private
@@ -82,7 +82,8 @@ module Activities
       return "Correspondência única pelo nome" if student
 
       scored = students.count { |item| Lessons::NameMatcher.student_name_score(item.name, name) >= 50 }
-      return "Nome repetido na turma: escolha o aluno" if scored > 1
+      first_names = Lessons::NameMatcher.first_name_hits(name, students)
+      return "Nome repetido na turma: escolha o aluno" if scored > 1 || first_names.size > 1
 
       "Aluno não localizado: escolha manualmente"
     end

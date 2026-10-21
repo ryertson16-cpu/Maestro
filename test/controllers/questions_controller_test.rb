@@ -1,4 +1,5 @@
 require "test_helper"
+require "base64"
 
 class QuestionsControllerTest < ActionDispatch::IntegrationTest
   include Devise::Test::IntegrationHelpers
@@ -49,6 +50,29 @@ class QuestionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to questions_path
     assert_equal "EF09CI03", @professor.questions.last.bncc_skill
+  end
+
+  test "attaches an image to the question" do
+    png = Base64.decode64("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==")
+    file = Tempfile.new(["questao", ".png"])
+    file.binmode
+    file.write(png)
+    file.rewind
+
+    post questions_path, params: {
+      question: {
+        prompt: "Observe a figura.",
+        kind: "discursive",
+        points: 2,
+        choice_texts: ["", "", "", "", ""],
+        image: Rack::Test::UploadedFile.new(file.path, "image/png", true)
+      }
+    }
+
+    assert_redirected_to questions_path
+    assert @professor.questions.last.image.attached?
+  ensure
+    file.close!
   end
 
   test "rejects objective question without alternatives" do

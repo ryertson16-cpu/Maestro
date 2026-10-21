@@ -31,6 +31,7 @@ class Professor < ApplicationRecord
            through: :lessons,
            source: :activities
   has_many :questions, dependent: :destroy
+  has_many :enem_simulados, dependent: :destroy
 
   has_many :agent_conversations, dependent: :destroy
   has_many :siage_shipments, dependent: :destroy

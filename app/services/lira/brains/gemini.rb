@@ -1,3 +1,4 @@
+require "base64"
 require "json"
 require "net/http"
 require "uri"
@@ -19,6 +20,29 @@ module Lira
         @tools = gemini_tools(tools)
         @contents = history_contents(history)
         @contents << { role: "user", parts: [{ text: user.to_s }] }
+      end
+
+      def analyze_file(path:, prompt:, system:)
+        mime = File.extname(path).downcase == ".pdf" ? "application/pdf" : Marcel::MimeType.for(Pathname.new(path), name: File.basename(path))
+        @system = system
+        @tools = []
+        @timeout = 90
+        @contents = [
+          {
+            role: "user",
+            parts: [
+              { text: prompt },
+              {
+                inline_data: {
+                  mime_type: mime,
+                  data: Base64.strict_encode64(File.binread(path))
+                }
+              }
+            ]
+          }
+        ]
+        turn = complete
+        turn && turn[:kind].to_s == "text" ? turn[:content] : nil
       end
 
       def complete
@@ -142,18 +166,19 @@ module Lira
         uri = URI.parse(Lira.gemini_url)
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = uri.scheme == "https"
-        http.read_timeout = 30
+        http.read_timeout = @timeout || 30
         http.open_timeout = 10
 
         request = Net::HTTP::Post.new(uri)
         request["x-goog-api-key"] = Lira.gemini_api_key
         request["Content-Type"] = "application/json"
-        request.body = {
+        body = {
           systemInstruction: { parts: [{ text: @system }] },
           contents: @contents,
-          tools: @tools,
           generationConfig: { temperature: 0.3 }
-        }.to_json
+        }
+        body[:tools] = @tools if @tools.present?
+        request.body = body.to_json
 
         response = http.request(request)
         unless response.is_a?(Net::HTTPSuccess)

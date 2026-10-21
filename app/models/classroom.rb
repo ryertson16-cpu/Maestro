@@ -38,6 +38,7 @@ class Classroom < ApplicationRecord
   has_many :council_notes, dependent: :destroy
   has_many :siage_shipments, dependent: :destroy
   has_many :project_classrooms, dependent: :destroy
+  has_many :enem_simulados, dependent: :destroy
   has_many :projects, through: :project_classrooms
 
   has_many :bimester_settings,

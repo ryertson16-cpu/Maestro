@@ -7,6 +7,24 @@ module Lira
       @adapter = adapter || self.class.adapter
     end
 
+    def extract_text(prompt, system:)
+      return if @adapter.blank?
+
+      @adapter.prepare(
+        system: system,
+        history: [],
+        user: prompt,
+        tools: []
+      )
+      turn = @adapter.complete
+      return unless turn && turn[:kind].to_s == "text"
+
+      turn[:content].to_s.strip.presence
+    rescue StandardError => error
+      Rails.logger.warn("[Lira] extração: #{error.class} #{error.message}")
+      nil
+    end
+
     def reply(text, history: [])
       return if @adapter.blank?
 

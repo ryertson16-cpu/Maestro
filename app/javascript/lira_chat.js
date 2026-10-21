@@ -42,6 +42,14 @@ document.addEventListener("click", function (event) {
     return;
   }
 
+  const copy = event.target.closest("[data-lira-copy]");
+
+  if (copy) {
+    event.preventDefault();
+    copyLiraMessage(copy);
+    return;
+  }
+
   const mic = event.target.closest("[data-lira-mic]");
 
   if (!mic) {
@@ -51,6 +59,31 @@ document.addEventListener("click", function (event) {
   event.preventDefault();
   startLiraDictation(mic);
 });
+
+function copyLiraMessage(button) {
+  const root = button.closest("[data-lira-copy-root]") || button.closest(".lira-bubble");
+  const body = root?.querySelector("[data-lira-copy-body]");
+
+  if (!body || !navigator.clipboard) {
+    return;
+  }
+
+  let text = (body.value || body.innerText || "").trim();
+  const marker = "Mensagem para colar no grupo";
+  const at = text.indexOf(marker);
+
+  if (at >= 0) {
+    text = text.slice(at).replace(/Eu não envio no WhatsApp[\s\S]*$/u, "").trim();
+  }
+
+  navigator.clipboard.writeText(text).then(function () {
+    const previous = button.textContent;
+    button.textContent = "Copiado";
+    window.setTimeout(function () {
+      button.textContent = previous;
+    }, 1800);
+  });
+}
 
 document.addEventListener("keydown", function (event) {
   if (event.key !== "Enter" || event.shiftKey) {

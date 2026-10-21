@@ -1,0 +1,16 @@
+<div class="enem-key-grid">
+  <% Enem::ScoreScale::QUESTION_COUNT.times do |index| %>
+    <% position = index + 1 %>
+    <% selected = letters[index] %>
+    <% expected = compare && compare[index] %>
+    <label class="enem-key-cell <%= "is-match" if expected.present? && selected == expected %> <%= "is-miss" if expected.present? && selected.present? && selected != expected %>">
+      <span>
+        <%= position %>
+        <small><%= Enem::ScoreScale::CN_RANGE.cover?(index) ? "CN" : "MT" %></small>
+      </span>
+      <%= select_tag "#{name}[#{position}]",
+                     options_for_select([""] + Question::LETTERS, selected),
+                     "aria-label": "Questão #{position}" %>
+    </label>
+  <% end %>
+</div>
