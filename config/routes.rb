@@ -412,6 +412,11 @@ Rails.application.routes.draw do
 
   get "/baixar", to: "marketing#download", as: :download_maestro
 
+  get "/gestao", to: "platform/desk#show", as: :platform_desk
+  patch "/gestao/:professor_id",
+        to: "platform/desk#update",
+        as: :platform_desk_account
+
   get "/assinatura", to: "billing/accounts#show", as: :assinatura
   post "/assinatura", to: "billing/accounts#create"
 

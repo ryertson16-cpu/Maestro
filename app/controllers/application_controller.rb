@@ -14,7 +14,7 @@ class ApplicationController < ActionController::Base
   before_action :tick_due_reminders
   before_action :require_maestro_subscription
 
-  helper_method :automation_unread_count, :automation_header_notices
+  helper_method :automation_unread_count, :automation_header_notices, :platform_operator?
 
   private
 
@@ -54,11 +54,16 @@ class ApplicationController < ActionController::Base
     @automation_tables_ready = ActiveRecord::Base.connection.data_source_exists?("automation_notices")
   end
 
+  def platform_operator?
+    professor_signed_in? && current_professor.platform_operator?
+  end
+
   def require_maestro_subscription
     return unless professor_signed_in?
     return if devise_controller?
     return if controller_path == "billing/accounts"
     return if controller_path == "marketing"
+    return if controller_path == "platform/desk"
     return if current_professor.maestro_full_access?
 
     redirect_to assinatura_path,

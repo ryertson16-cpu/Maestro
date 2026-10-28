@@ -86,6 +86,15 @@
               <span>Maestro</span>
             </button>
 
+            <% if platform_operator? %>
+              <%= link_to platform_desk_path,
+                          class: "header-lira#{' is-active' if controller_path == 'platform/desk'}",
+                          title: "Gestão do Maestro" do %>
+                <%= maestro_icon :check, size: :sm %>
+                <span>Gestão</span>
+              <% end %>
+            <% end %>
+
             <%= render "application/automation_bell" %>
 
             <%= link_to settings_path,

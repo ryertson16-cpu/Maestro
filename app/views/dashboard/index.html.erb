@@ -163,5 +163,13 @@
       <h2>Maestro</h2>
       <p>Aulas, chamada, SIAGE e alertas. Sem OpenAI/Gemini, só comandos locais.</p>
     <% end %>
+
+    <% if platform_operator? %>
+      <%= link_to platform_desk_path, class: "dashboard-launch-tile" do %>
+        <%= maestro_icon :check %>
+        <h2>Gestão</h2>
+        <p>Venda, testes e acesso dos professores que adquiriram o Maestro.</p>
+      <% end %>
+    <% end %>
   </div>
 </section>

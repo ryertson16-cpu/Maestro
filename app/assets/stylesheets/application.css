@@ -11060,3 +11060,14 @@ html.correction-html body.correction-body,
   flex-wrap: wrap;
   gap: 6px;
 }
+
+.desk-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.desk-row-actions form {
+  margin: 0;
+}

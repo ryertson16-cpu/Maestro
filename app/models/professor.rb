@@ -107,7 +107,11 @@ class Professor < ApplicationRecord
   end
 
   def maestro_full_access?
-    Billing::Access.allowed?(self)
+    platform_operator? || Billing::Access.allowed?(self)
+  end
+
+  def platform_operator?
+    platform_admin? || Billing::Operator.owns?(email)
   end
 
   def initials

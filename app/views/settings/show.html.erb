@@ -61,9 +61,16 @@
           <% end %>
         </p>
       </div>
-      <%= link_to "Gerenciar",
-                  assinatura_path,
-                  class: "button button-primary" %>
+      <div class="desk-row-actions">
+        <%= link_to "Gerenciar",
+                    assinatura_path,
+                    class: "button button-primary" %>
+        <% if platform_operator? %>
+          <%= link_to "Gestão",
+                      platform_desk_path,
+                      class: "button button-secondary" %>
+        <% end %>
+      </div>
     </div>
   </article>
 

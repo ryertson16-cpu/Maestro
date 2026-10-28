@@ -1,0 +1,217 @@
+<% content_for :title, "Gestão | Maestro" %>
+
+<div class="page-header">
+  <div>
+    <span class="section-eyebrow">Plataforma</span>
+    <h1>Gestão do Maestro</h1>
+    <p>
+      Venda, teste e acesso dos professores que usam a ferramenta.
+      <% if @billing_on %>
+        A cobrança do caderno está <strong>ligada</strong>.
+      <% else %>
+        A cobrança do caderno está <strong>desligada</strong> neste servidor — todo mundo entra, e esta mesa registra o plano na mão.
+      <% end %>
+      <% if @asaas_on %>
+        PIX Asaas configurado.
+      <% else %>
+        PIX Asaas ainda não está ligado; libere ou encerre o plano aqui.
+      <% end %>
+    </p>
+  </div>
+</div>
+
+<section class="attendance-summary" aria-label="Resumo das contas">
+  <article class="summary-card">
+    <span class="summary-label">Professores</span>
+    <strong><%= @summary[:professors] %></strong>
+  </article>
+  <article class="summary-card summary-present">
+    <span class="summary-label">Caderno pleno</span>
+    <strong><%= @summary[:full_access] %></strong>
+  </article>
+  <article class="summary-card summary-justified">
+    <span class="summary-label">Teste</span>
+    <strong><%= @summary[:trialing] %></strong>
+  </article>
+  <article class="summary-card summary-green">
+    <span class="summary-label">Mensal</span>
+    <strong><%= @summary[:active] %></strong>
+  </article>
+  <article class="summary-card">
+    <span class="summary-label">Cortesia</span>
+    <strong><%= @summary[:complimentary] %></strong>
+  </article>
+  <article class="summary-card summary-late">
+    <span class="summary-label">Atrasado</span>
+    <strong><%= @summary[:past_due] %></strong>
+  </article>
+  <article class="summary-card summary-absent">
+    <span class="summary-label">Encerrado</span>
+    <strong><%= @summary[:canceled] %></strong>
+  </article>
+  <article class="summary-card summary-blue">
+    <span class="summary-label">Novos (7 dias)</span>
+    <strong><%= @summary[:new_week] %></strong>
+  </article>
+  <article class="summary-card">
+    <span class="summary-label">Estimativa mensal</span>
+    <strong>R$ <%= number_with_precision(@summary[:monthly_estimate], precision: 2) %></strong>
+  </article>
+</section>
+
+<section class="attendance-filter diary-context">
+  <h2>Filtrar contas</h2>
+  <%= form_with url: platform_desk_path, method: :get, local: true do |form| %>
+    <div>
+      <%= form.label :q, "Nome, e-mail ou escola" %>
+      <%= form.search_field :q, value: @query, placeholder: "Buscar professor" %>
+    </div>
+    <div>
+      <%= form.label :status, "Situação" %>
+      <%= form.select :status,
+                      [
+                        ["Todas", ""],
+                        ["Período de teste", "trialing"],
+                        ["Mensal", "active"],
+                        ["Cortesia", "complimentary"],
+                        ["Pagamento atrasado", "past_due"],
+                        ["Encerrada", "canceled"]
+                      ],
+                      { selected: @status } %>
+    </div>
+    <div>
+      <%= form.submit "Abrir" %>
+    </div>
+  <% end %>
+</section>
+
+<section class="data-card">
+  <div class="section-heading">
+    <div>
+      <span class="section-eyebrow">Contas</span>
+      <h2>Professores</h2>
+      <p>Cortesia libera o caderno sem PIX. Mensal marca pagamento recebido. Encerrar bloqueia quando a cobrança estiver ligada.</p>
+    </div>
+  </div>
+
+  <% if @accounts.any? %>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Professor</th>
+            <th>Escola</th>
+            <th>Uso</th>
+            <th>Plano</th>
+            <th>Até</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @accounts.each do |professor| %>
+            <% subscription = professor.subscription %>
+            <tr>
+              <td>
+                <strong><%= professor.name.presence || professor.email %></strong>
+                <div class="table-secondary-text"><%= professor.email %></div>
+                <% if professor.platform_operator? %>
+                  <span class="status-badge status-verified">Gestor</span>
+                <% end %>
+              </td>
+              <td><%= professor.school&.name.presence || "—" %></td>
+              <td>
+                <%= professor.classrooms.size %> turmas
+                · <%= professor.students.size %> alunos
+              </td>
+              <td>
+                <% if subscription %>
+                  <span class="status-badge status-<%= desk_status_badge(subscription.status) %>">
+                    <%= subscription.label %>
+                  </span>
+                  <% if professor.maestro_full_access? %>
+                    <div class="table-secondary-text">caderno pleno</div>
+                  <% else %>
+                    <div class="table-secondary-text">caderno bloqueado</div>
+                  <% end %>
+                <% else %>
+                  —
+                <% end %>
+              </td>
+              <td>
+                <% if subscription&.current_period_end.present? %>
+                  <%= l(subscription.current_period_end, format: :short) %>
+                <% else %>
+                  —
+                <% end %>
+              </td>
+              <td>
+                <div class="desk-row-actions">
+                  <%= button_to "Cortesia",
+                                platform_desk_account_path(professor, status: @status, q: @query, intent: "complimentary"),
+                                method: :patch,
+                                class: "button button-secondary button-small" %>
+                  <%= button_to "Teste",
+                                platform_desk_account_path(professor, status: @status, q: @query, intent: "trial"),
+                                method: :patch,
+                                class: "button button-secondary button-small" %>
+                  <%= button_to "Mensal",
+                                platform_desk_account_path(professor, status: @status, q: @query, intent: "activate"),
+                                method: :patch,
+                                class: "button button-primary button-small" %>
+                  <%= button_to "Atrasado",
+                                platform_desk_account_path(professor, status: @status, q: @query, intent: "past_due"),
+                                method: :patch,
+                                class: "button button-secondary button-small" %>
+                  <%= button_to "Encerrar",
+                                platform_desk_account_path(professor, status: @status, q: @query, intent: "cancel"),
+                                method: :patch,
+                                class: "button button-ghost button-small" %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <section class="empty-state">
+      <strong>Nenhuma conta neste filtro.</strong>
+      <p>Quando um professor se cadastrar, a conta aparece aqui no período de teste.</p>
+    </section>
+  <% end %>
+</section>
+
+<section class="data-card">
+  <div class="section-heading">
+    <div>
+      <span class="section-eyebrow">Histórico</span>
+      <h2>Últimos movimentos</h2>
+      <p>PIX do Asaas e alterações feitas nesta mesa.</p>
+    </div>
+  </div>
+
+  <% if @recent_events.any? %>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Quando</th>
+            <th>Tipo</th>
+            <th>Professor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @recent_events.each do |event| %>
+            <tr>
+              <td><%= l(event.created_at, format: :short) %></td>
+              <td><%= event.event_type %></td>
+              <td><%= event.professor&.email || "—" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="table-secondary-text">Ainda não há eventos de cobrança.</p>
+  <% end %>
+</section>

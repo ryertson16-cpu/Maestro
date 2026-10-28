@@ -73,6 +73,16 @@ module ApplicationHelper
               alt: "Maestro"
   end
 
+  def desk_status_badge(status)
+    case status.to_s
+    when "active", "complimentary" then "verified"
+    when "trialing" then "pending"
+    when "past_due" then "failed"
+    when "canceled" then "already_registered"
+    else "pending"
+    end
+  end
+
   def maestro_nav_link(label, path, section)
     classes = ["nav-link"]
     classes << "is-active" if maestro_nav_section == section
@@ -92,7 +102,7 @@ module ApplicationHelper
       :atividades
     when "monitoring", "council_notes"
       :monitoramento
-    when "profiles", "settings", "schools"
+    when "profiles", "settings", "schools", "desk"
       nil
     when "grade_levels"
       if action_name.in?(%w[index exam_result save_submissions activity_report activity_notice])
@@ -374,6 +384,7 @@ module ApplicationHelper
       items: [
         command_item("Configurações", settings_path, :sliders, "Conta e preferências", "perfil conta"),
         command_item("Assinatura", assinatura_path, :check, "Mensalidade do Maestro", "plano pix pagar assinatura"),
+        *(platform_operator? ? [command_item("Gestão", platform_desk_path, :check, "Venda e contas dos professores", "gestao venda assinatura admin plataforma")] : []),
         command_item("Automações", settings_path(anchor: "automacoes"), :bell, "Avisos neste PC", "agente chamada siage backup"),
         command_item("Perfil", edit_profile_path, :people, "Nome, foto, CPF, senha SIAGE e WhatsApp", "foto whatsapp cpf senha siage"),
         command_item("Escola", edit_school_path, :pin, "Nome, GRE e brasão", "brasao gre regional timbrado"),
