@@ -13,12 +13,14 @@ module Activities
       record.activity = @activity
       record.save!
       record.copy_image_from(question)
+      reset_exam_assignments!
       record
     end
 
     def remove(item)
       item.destroy!
       resequence!
+      reset_exam_assignments!
     end
 
     def move(item, direction)
@@ -38,12 +40,17 @@ module Activities
         item.update!(position: other_position)
         swap_with.update!(position: item_position)
       end
+      reset_exam_assignments!
     end
 
     private
 
     def items
       @activity.activity_questions.order(:position)
+    end
+
+    def reset_exam_assignments!
+      @activity.exam_assignments.delete_all
     end
 
     def next_position

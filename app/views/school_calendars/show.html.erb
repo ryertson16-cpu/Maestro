@@ -7,7 +7,7 @@
   <div>
     <span class="section-eyebrow">Escola</span>
     <h1>Calendário letivo</h1>
-    <p>Clique no dia para marcá-lo. Grade e PDF da turma ficam abaixo do ano.</p>
+    <p>Clique no dia atrasado. Abaixo do ano entram todas as suas aulas daquele dia — de todas as turmas, não só uma.</p>
   </div>
 
   <nav class="diary-header-links" aria-label="Atalhos do calendário">
@@ -29,13 +29,12 @@
 
     <% if @classrooms.any? %>
       <div>
-        <%= form.label :classroom_id, "Turma" %>
+        <%= form.label :classroom_id, "Turma (opcional)" %>
         <%= form.collection_select :classroom_id,
                                   @classrooms,
                                   :id,
                                   :name,
-                                  { selected: @classroom&.id },
-                                  { required: true } %>
+                                  { include_blank: "Todas as turmas da grade", selected: @classroom&.id } %>
       </div>
     <% end %>
 
@@ -198,8 +197,98 @@
   </details>
 </section>
 
+<section class="data-card" data-turma-block>
+  <div class="section-heading">
+    <div>
+      <span class="section-eyebrow">Aulas atrasadas</span>
+      <h2>Minhas aulas em <span data-calendar-selected-label><%= l(@selected_day) %></span></h2>
+      <p class="classroom-pending-help">
+        Procura
+        <strong><%= current_professor.timetable_search_names.to_sentence %></strong>
+        <% if current_professor.timetable_discipline_names.any? %>
+          e <strong><%= current_professor.timetable_discipline_names.to_sentence %></strong>
+        <% end %>
+        na grade. Um clique cria todas as turmas deste dia.
+      </p>
+    </div>
+  </div>
+
+  <% if @day_entries.any? %>
+    <div class="timetable-day-slots">
+      <% @day_entries.each do |entry| %>
+        <div class="timetable-slot">
+          <span class="timetable-slot-time"><%= entry.time_slot_label %></span>
+          <strong><%= entry.classroom.name %></strong>
+          <p><%= entry.course&.name || "Componente curricular" %></p>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="classroom-pending-help">
+      Ainda não há tempos seus neste dia da semana. Anexe o PDF do horário da escola abaixo ou gere a grade em
+      <%= link_to "Meu horário", timetable_path %>.
+    </p>
+  <% end %>
+
+  <%= form_with url: generate_school_calendar_lessons_path,
+                method: :post,
+                local: true,
+                html: { id: "generate-calendar-lessons", class: "form-grid year-generate-form" } do %>
+    <%= hidden_field_tag :lesson_date, selected_iso, data: { calendar_date: true } %>
+    <%= hidden_field_tag :classroom_id, @classroom&.id %>
+    <p>
+      Criar as aulas da sua grade no dia
+      <strong data-calendar-selected-label><%= l(@selected_day) %></strong>.
+    </p>
+    <button type="button" class="button button-primary" data-generate-open>
+      Criar minhas aulas deste dia
+    </button>
+  <% end %>
+</section>
+
+<section class="data-card timetable-import-card" data-calendar-pdf>
+  <div class="section-heading">
+    <div>
+      <span class="section-eyebrow">Horário da escola</span>
+      <h2>Anexar PDF da semana</h2>
+      <p class="classroom-pending-help">
+        O quadro completo da escola. O Maestro acha só o seu nome e a sua disciplina
+        e, no botão acima, cria todas as aulas do dia pintado.
+      </p>
+    </div>
+  </div>
+
+  <div class="form-grid">
+    <div class="form-field">
+      <%= label_tag :pdf_course_id, "Disciplina (se o caderno tiver mais de uma)" %>
+      <%= select_tag :pdf_course_id,
+                     options_from_collection_for_select(@courses, :id, :name),
+                     include_blank: "Usar as disciplinas do caderno",
+                     id: "calendar_pdf_course_id" %>
+    </div>
+  </div>
+
+  <div class="timetable-import-actions">
+    <label class="button button-secondary timetable-file-label">
+      Anexar PDF do horário da escola
+      <%= file_field_tag :timetable,
+                         accept: "application/pdf",
+                         data: { calendar_pdf_file: true } %>
+    </label>
+    <button type="button"
+            class="button button-secondary"
+            data-calendar-pdf-open
+            data-timetable-url="<%= school_calendar_timetable_lesson_path %>"
+            hidden>
+      Importar PDF
+    </button>
+  </div>
+  <p class="timetable-file-name" data-calendar-pdf-filename>Nenhum arquivo anexado.</p>
+  <p class="timetable-status" data-calendar-pdf-status hidden></p>
+</section>
+
 <% if @classroom %>
-  <section class="data-card" data-turma-block>
+  <section class="data-card">
     <div class="section-heading">
       <div>
         <span class="section-eyebrow">Turma</span>
@@ -269,65 +358,24 @@
       </div>
     <% else %>
       <p class="classroom-pending-help">
-        Ainda não há linhas nesta grade. Use Adicionar na grade ou o PDF do horário da escola, abaixo.
+        Ainda não há linhas nesta grade. Use Adicionar na grade ou o PDF do horário da escola, acima.
       </p>
     <% end %>
 
     <%= form_with url: generate_school_calendar_lessons_path,
                   method: :post,
                   local: true,
-                  html: { id: "generate-calendar-lessons", class: "form-grid year-generate-form" } do %>
+                  html: { class: "form-grid year-generate-form" } do %>
       <%= hidden_field_tag :classroom_id, @classroom.id %>
       <%= hidden_field_tag :lesson_date, selected_iso, data: { calendar_date: true } %>
+      <%= hidden_field_tag :only_classroom, "true" %>
       <%= hidden_field_tag :period, 1, data: { generate_period: true } %>
       <%= hidden_field_tag :course_id, nil, data: { generate_course: true } %>
-      <p>
-        Gerar as aulas desta grade no dia
-        <strong data-calendar-selected-label><%= l(@selected_day) %></strong>.
-      </p>
-      <button type="button" class="button button-secondary" data-generate-open>
-        Gerar aulas desta grade neste dia
-      </button>
+      <%= submit_tag "Gerar só a #{@classroom.name} neste dia",
+                     class: "button button-secondary",
+                     data: { confirm_message: "Criar só as aulas da #{@classroom.name} em #{l(@selected_day)}?" } %>
     <% end %>
   </section>
-
-  <details class="data-card timetable-import-card calendar-secondary" data-calendar-pdf>
-    <summary>
-      <span class="section-eyebrow">Horário da escola</span>
-      <strong>Gerar aula pelo PDF</strong>
-    </summary>
-    <p class="classroom-pending-help">
-      Anexe o PDF do horário da escola, confira o dia pintado e confirme.
-      Diferente da grade acima: aqui a aula entra no diário no Sim.
-    </p>
-
-    <div class="form-grid">
-      <div class="form-field">
-        <%= label_tag :pdf_course_id, "Disciplina (se o PDF tiver mais de uma)" %>
-        <%= select_tag :pdf_course_id,
-                       options_from_collection_for_select(@courses, :id, :name),
-                       include_blank: "Detectar no PDF",
-                       id: "calendar_pdf_course_id" %>
-      </div>
-    </div>
-
-    <div class="timetable-import-actions">
-      <label class="button button-secondary timetable-file-label">
-        Anexar PDF do horário da escola
-        <%= file_field_tag :timetable,
-                           accept: "application/pdf",
-                           data: { calendar_pdf_file: true } %>
-      </label>
-      <button type="button"
-              class="button button-primary"
-              data-calendar-pdf-open
-              data-timetable-url="<%= school_calendar_timetable_lesson_path %>">
-        Gerar aula pelo horário da escola
-      </button>
-    </div>
-    <p class="timetable-file-name" data-calendar-pdf-filename>Nenhum arquivo anexado.</p>
-    <p class="timetable-status" data-calendar-pdf-status hidden></p>
-  </details>
 <% elsif @classrooms.blank? %>
   <section class="empty-state">
     <strong>Nenhuma turma no caderno.</strong>
@@ -336,10 +384,9 @@
   </section>
 <% end %>
 
-<% if @classroom %>
 <dialog class="calendar-confirm" data-generate-confirm>
   <div class="calendar-confirm-body">
-    <h2>Confirmar aulas da grade</h2>
+    <h2>Confirmar aulas deste dia</h2>
     <p data-generate-confirm-copy><%= SchoolCalendar::LessonPrompt.confirm_phrase(date: @selected_day, time_slots: @selected_slots) %></p>
     <div class="calendar-confirm-actions">
       <button type="button" class="button button-secondary" data-generate-cancel>Não</button>
@@ -347,11 +394,10 @@
     </div>
   </div>
 </dialog>
-<% end %>
 
 <dialog class="calendar-confirm" data-calendar-confirm>
   <form method="dialog" class="calendar-confirm-body">
-    <h2>Confirmar aula pelo horário da escola</h2>
+    <h2>Confirmar aulas pelo horário da escola</h2>
     <p data-calendar-confirm-copy></p>
     <div class="calendar-confirm-preview" data-calendar-confirm-month></div>
     <div class="calendar-confirm-actions">

@@ -83,7 +83,8 @@ function confirmPhrase(timeSlots) {
   const slotText = slots.length ? slots.join(" e ") : "sem tempo na grade"
   const number = day?.dataset.bimester
   const bimester = number ? `${number}º bimestre` : "bimestre não definido"
-  return `Deseja criar a aula ${weekday}, ${formatDate(selectedIso())}, ${slotText}, ${bimester}?`
+  const verb = slots.length === 1 ? "a aula" : "as aulas"
+  return `Deseja criar ${verb} ${weekday}, ${formatDate(selectedIso())}, ${slotText}, ${bimester}?`
 }
 
 function selectDay(button) {
@@ -118,7 +119,7 @@ function monthArticle(number) {
 }
 
 function pdfConfirmCopy() {
-  return `${confirmPhrase(["tempo do horário"])} Clique noutro dia neste calendário para mudar a data. O dia pintado é o que entra no diário.`
+  return `${confirmPhrase(selectedSlots())} Clique noutro dia neste calendário para mudar a data. Entram todas as suas turmas deste dia, não só uma.`
 }
 
 function refreshPdfConfirmCopy() {
@@ -216,9 +217,14 @@ document.addEventListener("click", async (event) => {
       toast("error", "Este dia não é letivo.")
       return
     }
+    const pdfFile = document.querySelector("[data-calendar-pdf-file]")?.files[0]
+    if (pdfFile) {
+      document.querySelector("[data-calendar-pdf-open]")?.click()
+      return
+    }
     const slots = selectedSlots()
     if (!slots.length) {
-      toast("error", "Informe o tempo da aula no campo Tempo.")
+      toast("error", "Não há tempos seus neste dia. Anexe o PDF do horário da escola.")
       return
     }
     copyGradeIntoGenerateForm()
@@ -269,15 +275,13 @@ document.addEventListener("click", async (event) => {
 
   const openButton = document.querySelector("[data-calendar-pdf-open]")
   const fileInput = document.querySelector("[data-calendar-pdf-file]")
-  const classroomId = document.querySelector("[name='classroom_id']")?.value
   const lessonDate = selectedIso()
   const file = fileInput?.files[0]
-  if (!file || !classroomId || !lessonDate || !openButton) return
+  if (!file || !lessonDate || !openButton) return
 
   const token = document.querySelector('meta[name="csrf-token"]')?.content
   const payload = new FormData()
   payload.append("timetable", file)
-  payload.append("classroom_id", classroomId)
   payload.append("lesson_date", lessonDate)
   const courseId = document.getElementById("calendar_pdf_course_id")?.value
   if (courseId) payload.append("course_id", courseId)
@@ -300,10 +304,13 @@ document.addEventListener("click", async (event) => {
 
     document.querySelector("[data-calendar-confirm]")?.close()
     toast(data.warning ? "attention" : "success", [data.message, data.warning].filter(Boolean).join(" "), {
-      href: data.diary_url,
-      action: "Abrir diário",
+      href: data.diary_url || "/lessons",
+      action: "Ver aulas",
       duration: 0
     })
+    if (data.diary_url) {
+      window.setTimeout(() => window.location.assign(data.diary_url), 400)
+    }
   } catch (_error) {
     toast("error", "Falha ao enviar o PDF.")
   } finally {

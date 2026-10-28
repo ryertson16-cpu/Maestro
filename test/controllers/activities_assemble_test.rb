@@ -66,6 +66,22 @@ class ActivitiesAssembleTest < ActionDispatch::IntegrationTest
     assert_equal "A", item.correct_letter
   end
 
+  test "pdf accepts superscript minus in objective choices" do
+    @question.update!(
+      prompt: "Qual é o valor de 10⁻²?",
+      choices: [
+        { "letter" => "A", "text" => "0,01" },
+        { "letter" => "B", "text" => "10⁻²" }
+      ]
+    )
+    Activities::Composer.new(@activity).add(@question.reload)
+
+    get sheet_activity_path(@activity, format: :pdf)
+
+    assert_response :success
+    assert_match "application/pdf", response.media_type
+  end
+
   test "pdf includes assembled question and correction qr payload" do
     Activities::Composer.new(@activity).add(@question)
 
@@ -84,10 +100,20 @@ class ActivitiesAssembleTest < ActionDispatch::IntegrationTest
       answers: { item.id.to_s => "A" }
     }
 
-    assert_redirected_to correct_activity_path(@activity, t: @activity.reload.correction_token, student_id: @student.id)
+    assert_redirected_to assemble_activity_path(@activity)
     submission = ActivitySubmission.find_by(activity: @activity, student: @student)
     assert_equal 10.0, submission.score
     assert_equal "A", submission.answers[item.id.to_s]
+  end
+
+  test "assemble qr page does not print the gabarito address" do
+    get assemble_activity_path(@activity)
+    token = @activity.reload.correction_token
+
+    assert_response :success
+    refute_includes response.body, "/g/#{token}"
+    refute_match %r{trycloudflare|192\.168\.}, response.body
+    assert_includes response.body, "abrir-gabarito"
   end
 
   test "opens correction from scanned token" do

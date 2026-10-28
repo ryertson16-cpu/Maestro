@@ -1,5 +1,3 @@
-<%= link_to "Gerar atividade com timbrado",
-            sheet_activity_path(activity, format: :pdf),
-            class: local_assigns[:css_class].presence || "button button-secondary",
-            target: "_blank",
-            rel: "noopener" %>
+<%= render "activities/sheet_buttons",
+           activity: activity,
+           css_class: local_assigns[:css_class] %>

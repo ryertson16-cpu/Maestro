@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_27_180000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -62,6 +62,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_200000) do
     t.index ["parent_activity_id"], name: "index_activities_on_parent_activity_id"
     t.check_constraint "bimester BETWEEN 1 AND 4", name: "activities_bimester_between_one_and_four"
     t.check_constraint "weight > 0", name: "activities_weight_greater_than_zero"
+  end
+
+  create_table "activity_exam_assignments", force: :cascade do |t|
+    t.integer "activity_id", null: false
+    t.json "choice_maps", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.json "item_order", default: [], null: false
+    t.integer "slot", null: false
+    t.integer "student_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["activity_id", "student_id"], name: "index_exam_assignments_on_activity_and_student", unique: true
+    t.index ["activity_id"], name: "index_activity_exam_assignments_on_activity_id"
+    t.index ["student_id"], name: "index_activity_exam_assignments_on_student_id"
+    t.check_constraint "slot >= 1", name: "activity_exam_assignments_slot_positive"
+  end
+
+  create_table "activity_pending_cards", force: :cascade do |t|
+    t.integer "activity_id", null: false
+    t.json "answers", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.string "filename", null: false
+    t.integer "filled_count", default: 0, null: false
+    t.integer "student_id"
+    t.string "suggested_name"
+    t.datetime "updated_at", null: false
+    t.index ["activity_id"], name: "index_activity_pending_cards_on_activity_id"
+    t.index ["student_id"], name: "index_activity_pending_cards_on_student_id"
   end
 
   create_table "activity_questions", force: :cascade do |t|
@@ -764,6 +791,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_200000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "activities", "activities", column: "parent_activity_id"
   add_foreign_key "activities", "lessons"
+  add_foreign_key "activity_exam_assignments", "activities"
+  add_foreign_key "activity_exam_assignments", "students"
+  add_foreign_key "activity_pending_cards", "activities"
+  add_foreign_key "activity_pending_cards", "students"
   add_foreign_key "activity_questions", "activities"
   add_foreign_key "activity_questions", "questions"
   add_foreign_key "activity_recipients", "activities"

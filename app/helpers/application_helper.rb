@@ -121,7 +121,7 @@ module ApplicationHelper
         icon: :diary,
         href: maestro_nav_path(:attendance_records_path, classroom),
         items: [
-          { label: "Calendário", href: maestro_nav_path(:school_calendar_path, classroom), hint: "Dias letivos e gerar aula" },
+          { label: "Calendário", href: school_calendar_path, hint: "Dias letivos e aulas atrasadas de todas as turmas" },
           { label: "Meu horário", href: timetable_path, hint: "Grade da semana a partir do PDF da escola" },
           { label: "Aulas", href: maestro_nav_path(:lessons_path, classroom), hint: "Aulas já registradas" },
           { label: "Planos", href: lesson_plan_templates_path, hint: "Modelos de plano de aula" },
@@ -146,7 +146,7 @@ module ApplicationHelper
         href: maestro_nav_path(:grade_levels_path, classroom),
         items: [
           { label: "Banco de questões", href: questions_path, hint: "Questões próprias para montar a atividade" },
-          { label: "Corrigir por QR", href: corrections_path, hint: "QR no computador, câmera no celular" },
+          { label: "Prova", href: corrections_path, hint: "Montar, folha, QR e correção na mesma ficha" },
           { label: "Atividade online", href: new_online_activity_path, hint: "Planilha do Forms: aula, nota e presença" },
           { label: "Simulado ENEM", href: enem_simulados_path, hint: "Gabarito oficial, cartões e escala de acertos" }
         ]
@@ -311,10 +311,10 @@ module ApplicationHelper
           command_item("Atividades", maestro_nav_path(:grade_levels_path), :activities, "Entregas e notas", "nota lista exercicio"),
           command_item("Banco de questões", questions_path, :clipboard, "Montar provas com o banco próprio", "questao objetiva discursiva banco"),
           command_item("Atividade online", new_online_activity_path, :activities, "Planilha do Google Forms", "forms planilha questionario online nota presenca"),
-          command_item("Corrigir por QR", corrections_path, :check, "QR no PC, correção no celular", "qrcode correcao gabarito prova celular"),
+          command_item("Prova", corrections_path, :check, "Montar, folha, QR e correção", "qrcode correcao gabarito prova celular"),
           command_item("Projetos", projects_path, :projects, "Professor e Escola Nota 10", "projeto"),
           command_item("Monitoramento", monitoring_path, :monitoring, "Alertas e conselho", "alerta pendencia"),
-          command_item("Disciplinas", courses_path, :courses, "Componentes e níveis", "disciplina curso"),
+          command_item("Disciplinas", courses_path, :courses, "Disciplinas, cursos e níveis de ensino", "disciplina curso nivel"),
           {
             label: "Maestro",
             hint: "Lembrete rápido, sem abrir o chat",
@@ -323,7 +323,7 @@ module ApplicationHelper
             icon: :assistant,
             search: "maestro lembrete conversar assistente lira ia"
           },
-          command_item("Conversar", lira_path, :assistant, "Conversa completa", "assistente whatsapp ia lira maestro conversar historico"),
+          command_item("Maestro", lira_path, :assistant, "Conversa completa com o caderno", "assistente whatsapp ia lira maestro conversar historico"),
           command_item("Avisos", automation_notices_path, :bell, "Automações do caderno", "automacao sino alerta chamada")
         ]
       }

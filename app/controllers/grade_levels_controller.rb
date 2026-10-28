@@ -33,7 +33,7 @@ class GradeLevelsController < ApplicationController
                    .new(grade_level_params)
 
     if @grade_level.save
-      redirect_to grade_levels_path,
+      redirect_to courses_path,
                   notice: "Nível de ensino criado com sucesso."
     else
       render :new,
@@ -46,7 +46,7 @@ class GradeLevelsController < ApplicationController
 
   def update
     if @grade_level.update(grade_level_params)
-      redirect_to grade_levels_path,
+      redirect_to courses_path,
                   notice: "Nível de ensino atualizado com sucesso."
     else
       render :edit,
@@ -56,10 +56,10 @@ class GradeLevelsController < ApplicationController
 
   def destroy
     if @grade_level.destroy
-      redirect_to grade_levels_path,
+      redirect_to courses_path,
                   notice: "Nível de ensino removido com sucesso."
     else
-      redirect_to grade_levels_path,
+      redirect_to courses_path,
                   alert: @grade_level.errors.full_messages.to_sentence
     end
   end

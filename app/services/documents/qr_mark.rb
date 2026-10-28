@@ -8,12 +8,13 @@ module Documents
       @tempfiles = []
     end
 
-    def draw(pdf, size: 64, url: @url)
+    def draw(pdf, size: 64, url: @url, at: nil)
       @url = url.to_s
       file = png_file
       return unless file
 
-      pdf.image file.path, at: [pdf.bounds.width - size, pdf.cursor], fit: [size, size]
+      position = at || [pdf.bounds.width - size, pdf.cursor]
+      pdf.image file.path, at: position, fit: [size, size]
     end
 
     def cleanup

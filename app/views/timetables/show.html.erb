@@ -24,9 +24,12 @@
         <span class="section-eyebrow">Primeiro passo</span>
         <h2>Gerar grade a partir do PDF</h2>
         <p>
-          Anexe o quadro geral da escola. O Maestro procura
-          <strong><%= current_professor.greeting_name %></strong>
-          e monta só a sua semana, de segunda a sexta.
+          Anexe o quadro geral da escola. O Maestro procura o nome
+          <strong><%= current_professor.timetable_search_names.to_sentence %></strong>
+          <% if current_professor.timetable_discipline_names.any? %>
+            e a disciplina <strong><%= current_professor.timetable_discipline_names.to_sentence %></strong>
+          <% end %>
+          no PDF — o mesmo nome do cadastro e da saudação em Configurações.
         </p>
       </div>
     </div>
@@ -148,6 +151,21 @@
                 Sem aula
               <% end %>
             </span>
+            <% if day_entries.any? %>
+              <%= button_to "Criar minhas aulas deste dia",
+                            generate_timetable_day_path,
+                            method: :post,
+                            params: {
+                              lesson_date: day,
+                              week: @week_start,
+                              scope: @scope,
+                              classroom_id: @classroom&.id
+                            },
+                            class: "button button-secondary button-small",
+                            data: {
+                              confirm_message: "Criar as #{day_entries.size} aula(s) de #{l(day)}#{@classroom ? " da #{@classroom.name}" : " em todas as turmas da grade"}? As que já existirem são mantidas."
+                            } %>
+            <% end %>
           </header>
 
           <% if day_entries.any? %>

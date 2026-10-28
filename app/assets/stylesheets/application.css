@@ -7311,6 +7311,7 @@ html[data-theme="night"] .monitoring-status-late {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 16px;
 }
@@ -10782,7 +10783,7 @@ html[data-theme="night"] .vitrine-picks-grid article {
 .qr-scanner-card video {
   display: block;
   width: min(100%, 420px);
-  max-height: 280px;
+  max-height: 360px;
   background: #111;
   border-radius: 12px;
   margin-bottom: 12px;
@@ -10818,10 +10819,18 @@ html[data-theme="night"] .vitrine-picks-grid article {
   font-size: 0.8rem;
 }
 
+html.correction-html,
+html.correction-html body.correction-body,
 .correction-body {
   margin: 0;
   min-height: 100dvh;
-  background: #f3f5fb;
+  background: #f3f5fb !important;
+  color: #20263d !important;
+  color-scheme: light;
+}
+
+.qr-scanner-card video[hidden] {
+  display: none !important;
 }
 
 .correction-shell {
@@ -10865,13 +10874,22 @@ html[data-theme="night"] .vitrine-picks-grid article {
 }
 
 .correction-student {
-  display: block;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
   padding: 16px;
   border-radius: 14px;
   background: #fff;
   color: inherit;
   text-decoration: none;
   font-weight: 600;
+}
+
+.correction-student small {
+  color: #5b4bdb;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .correction-search {
@@ -10930,6 +10948,48 @@ html[data-theme="night"] .vitrine-picks-grid article {
 .button-block {
   width: 100%;
   justify-content: center;
+}
+
+.correction-scan-banner {
+  margin: 10px 0 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.correction-scan-banner.is-wait {
+  background: #eef1fb;
+  color: #20263d;
+}
+
+.correction-scan-banner.is-ok {
+  background: #e7f8ee;
+  color: #0f5132;
+}
+
+.correction-scan-banner.is-warn {
+  background: #fff4e5;
+  color: #7a4b00;
+}
+
+.correction-flash {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 0.95rem;
+}
+
+.correction-flash.is-ok {
+  background: #e7f8ee;
+  color: #0f5132;
+}
+
+.correction-flash.is-warn {
+  background: #fff4e5;
+  color: #7a4b00;
 }
 
 .correction-score {

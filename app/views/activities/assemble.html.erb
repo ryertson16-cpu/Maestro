@@ -1,8 +1,8 @@
-<% content_for :title, "Montar atividade | Maestro" %>
+<% content_for :title, "Prova | Maestro" %>
 
 <div class="page-header page-header-with-action">
   <div>
-    <h1>Montar atividade</h1>
+    <h1>Prova</h1>
     <p>
       <%= @activity.title %>
       —
@@ -13,9 +13,9 @@
     </p>
   </div>
   <div class="page-header-actions">
-    <%= render "activities/sheet_button", activity: @activity %>
+    <%= render "activities/sheet_buttons", activity: @activity %>
     <%= link_to "Corrigir no celular",
-                @correction_url,
+                open_gabarito_activity_path(@activity),
                 class: "button button-primary",
                 target: "_blank",
                 rel: "noopener" %>
@@ -25,28 +25,58 @@
 <section class="data-card">
   <h2>QR do gabarito</h2>
   <p class="activity-type-hint">
-    Abra a câmera do celular (não precisa estar logado) e aponte para este código
-    ou para o QR impresso no PDF. O endereço precisa ser o que o celular alcança
-    — o IP da rede, não localhost.
+    Uma ficha: montar as questões, gerar a folha e corrigir. O endereço fica só no QR.
+    No celular, a Câmera avisa se o gabarito foi lido ou corrigido.
   </p>
-  <%= form_with url: assemble_activity_path(@activity), method: :get, local: true, class: "question-bank-filters" do %>
-    <%= text_field_tag :correction_host,
-                       @correction_url.to_s.sub(%r{/g/.*\z}, ""),
-                       placeholder: "http://192.168.0.10:3000" %>
-    <%= submit_tag "Atualizar QR", class: "button button-secondary" %>
+  <% unless @lira_ready %>
+    <p class="correction-flash is-warn">
+      O Maestro está sem OpenAI/Gemini neste caderno. O QR abre a correção no celular,
+      mas as bolhas você marca na tela. Para ler o cartão sozinho, ligue a chave em .env.
+    </p>
   <% end %>
+  <% if phone_unreachable_correction_host? %>
+    <p class="activity-type-hint">
+      Recarregue esta página para o Maestro renovar o QR do celular.
+    </p>
+  <% end %>
+  <p>
+    <%= link_to "Atualizar QR",
+                assemble_activity_path(@activity),
+                class: "button button-secondary" %>
+  </p>
   <% if @correction_url.present? %>
     <div class="gabarito-qr">
       <%= raw RQRCode::QRCode.new(@correction_url).as_svg(module_size: 4, viewbox: true) %>
-      <p><code><%= @correction_url %></code></p>
     </div>
+  <% end %>
+</section>
+
+<section class="data-card">
+  <h2>Montar prova</h2>
+  <p class="activity-type-hint">
+    Informe o assunto e a quantidade. O Maestro puxa do seu banco e, se faltar,
+    escreve objetivas A–E. Depois você revisa, retira e reordena.
+    <% unless @lira_ready %>
+      Sem OpenAI/Gemini, só entra o que já está no banco.
+    <% end %>
+  </p>
+  <%= form_with url: build_exam_activity_path(@activity), method: :post, local: true, class: "question-bank-filters" do %>
+    <%= text_field_tag :topic, params[:topic], placeholder: "Assunto, ex.: função do 2º grau", required: true %>
+    <%= number_field_tag :quantity, params[:quantity].presence || 10, min: 1, max: 40, step: 1 %>
+    <%= select_tag :course_id,
+                   options_from_collection_for_select(@courses, :id, :name, params[:course_id].presence || @activity.lesson.course_id),
+                   include_blank: "Disciplina da turma" %>
+    <%= select_tag :mix,
+                   options_for_select([["Só objetivas", "objective"], ["Banco misto (o Maestro só objetiva)", "mixed"]], params[:mix]) %>
+    <%= text_field_tag :difficulty, params[:difficulty], placeholder: "Nível, ex.: 3ª série" %>
+    <%= submit_tag "Montar", class: "button button-primary" %>
   <% end %>
 </section>
 
 <section class="data-card">
   <h2>Questões desta atividade</h2>
   <p class="activity-type-hint">
-    O PDF usa o timbrado da escola, o QR do gabarito e um QR por aluno na folha de respostas.
+    O PDF traz as questões e, à parte, o cartão-resposta com QR grande e bolhas vazias.
   </p>
 
   <% if @items.any? %>
@@ -87,6 +117,33 @@
     <p>Ainda não há questões. Escolha no banco abaixo.</p>
   <% end %>
 </section>
+
+<% if @exam_assignments.present? %>
+  <section class="data-card">
+    <h2>Folhas da turma</h2>
+    <p class="activity-type-hint">
+      A folha do aluno não traz o grupo. O QR e esta lista dizem ao professor qual embaralhamento cada um recebeu.
+    </p>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Aluno</th>
+            <th>Folha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @exam_assignments.sort_by { |row| row.student.name.to_s }.each do |row| %>
+            <tr>
+              <td><%= row.student.name %></td>
+              <td><%= row.slot %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+<% end %>
 
 <section class="data-card">
   <h2>Banco próprio</h2>
@@ -141,3 +198,8 @@
     <p>Não há questões disponíveis neste filtro.</p>
   <% end %>
 </section>
+
+<%= render "activities/card_intake",
+           activity: @activity,
+           pending_cards: @pending_cards,
+           students: @students %>

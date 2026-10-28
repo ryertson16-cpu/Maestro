@@ -70,6 +70,38 @@ class Siage::SpreadsheetBuilderTest < ActiveSupport::TestCase
     assert payload[:grades].first[:units].all? { |unit| unit[:score].nil? }
   end
 
+  test "grades spreadsheet has student unit columns without rec global" do
+    student = @professor.students.create!(name: "Ana")
+    Enrollment.create!(
+      professor: @professor,
+      classroom: @classroom,
+      student: student,
+      enrolled_on: Date.new(2026, 2, 2),
+      status: "active"
+    )
+    payload = Siage::PayloadBuilder.for_grades(
+      professor: @professor,
+      classroom: @classroom,
+      bimester: 4,
+      origin: "http://127.0.0.1:3000"
+    )
+    payload[:grades].first[:units] = [
+      { number: 1, score: 7.5, recovery: nil },
+      { number: 2, score: 8.0, recovery: 9.0 },
+      { number: 3, score: nil, recovery: nil }
+    ]
+    csv = Siage::GradeSpreadsheet.csv(payload)
+    rows = CSV.parse(csv.delete_prefix("\uFEFF"), col_sep: "\t", headers: true)
+    row = rows.first
+
+    assert_equal "Aluno", rows.headers[0]
+    assert_equal "Ana", row["Aluno"]
+    assert_equal "7,5", row["1ª unidade"]
+    assert_equal "9,0", row["Rec 2"]
+    assert_equal "2ª F", row["Turma"]
+    refute_includes rows.headers, "REC GLOBAL"
+  end
+
   test "one spreadsheet can include lessons from different classrooms" do
     grade = @professor.grade_levels.first
     other = @professor.classrooms.create!(

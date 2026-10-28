@@ -17,13 +17,13 @@ module Lira
       end
 
       def analyze_file(path:, prompt:, system:)
-        image = Enem::PdfPreview.jpeg(path)
-        unless image
-          Rails.logger.warn("[Lira] GPT visão: não consegui transformar o PDF em imagem (pdftoppm/magick).")
+        prepared = Enem::PdfPreview.vision_image(path)
+        unless prepared
+          Rails.logger.warn("[Lira] GPT visão: não consegui transformar o arquivo em imagem (pdftoppm/magick).")
           return
         end
 
-        data = Base64.strict_encode64(File.binread(image))
+        data = Base64.strict_encode64(File.binread(prepared[:path]))
         @tools = nil
         @timeout = 90
         @messages = [
@@ -32,14 +32,14 @@ module Lira
             role: "user",
             content: [
               { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: "data:image/jpeg;base64,#{data}" } }
+              { type: "image_url", image_url: { url: "data:#{prepared[:mime]};base64,#{data}" } }
             ]
           }
         ]
         turn = complete
         turn && turn[:kind].to_s == "text" ? turn[:content] : nil
       ensure
-        FileUtils.remove_entry(File.dirname(image), force: true) if image && File.exist?(File.dirname(image))
+        FileUtils.remove_entry(prepared[:dir], force: true) if prepared && prepared[:dir]
       end
 
       def complete

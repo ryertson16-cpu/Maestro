@@ -22,7 +22,10 @@ class CorrectionsController < ApplicationController
     @activity = @activities.find_by(id: params[:activity_id]) ||
                 @activities.find(&:assembled?) ||
                 @activities.first
-    @correction_url = gabarito_public_url(@activity) if @activity
+    if params[:activity_id].present? && @activity
+      redirect_to assemble_activity_path(@activity)
+      return
+    end
   end
 
   private

@@ -16,6 +16,20 @@ module Siage
       new(professor, classroom: classroom, export_all_lessons: true).payload
     end
 
+    def self.unit_activities_for(activities)
+      Array(activities)
+        .reject { |activity| activity.adapted? || project?(activity) }
+        .first(3)
+    end
+
+    def self.project?(activity)
+      activity.activity_type.to_s == "Projeto"
+    end
+
+    def self.unit_titles_for(activities)
+      unit_activities_for(activities).map(&:title)
+    end
+
     def initialize(professor, classroom:, date: nil, lesson: nil, bimester: nil, export_all_lessons: false, origin: nil, payload_kind: nil)
       @professor = professor
       @classroom = classroom
@@ -194,22 +208,15 @@ module Siage
     end
 
     def unit_activities
-      @unit_activities ||= scored_bimester_activities.first(3)
+      @unit_activities ||= self.class.unit_activities_for(scored_bimester_activities)
     end
 
     def scored_bimester_activities
       @scored_bimester_activities ||= bimester_activities
-        .reject { |activity| activity.adapted? }
-        .reject { |activity| desfile_civico?(activity) }
+        .reject { |activity| activity.adapted? || self.class.project?(activity) }
         .select do |activity|
           activity.activity_submissions.any? { |submission| NumericScore.recorded?(submission.score) }
         end
-    end
-
-    def desfile_civico?(activity)
-      I18n.transliterate(activity.title.to_s)
-          .downcase
-          .include?("desfile civico")
     end
 
     def bimester_activities
@@ -256,7 +263,7 @@ module Siage
         messages << "Unidades do SIAGE neste arquivo: 1ª #{titles[0]}, 2ª #{titles[1] || '—'}, 3ª #{titles[2] || '—'}."
       end
 
-      skipped = scored_bimester_activities.drop(3)
+      skipped = scored_bimester_activities - unit_activities
       if skipped.any?
         messages << "O SIAGE só tem 3 unidades. Não foram enviadas: #{skipped.map(&:title).join(', ')}."
       end

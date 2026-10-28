@@ -8,8 +8,10 @@
 
 <% if @just_graded && @student && @score.present? %>
   <section class="correction-score" aria-live="polite">
+    <p class="correction-kicker">Gabarito corrigido</p>
     <p>Nota de <%= @student.name %></p>
     <strong><%= format("%.1f", @score).tr(".", ",") %></strong>
+    <p>A nota já está no caderno.</p>
     <%= link_to "Corrigir próximo aluno",
                 gabarito_path(@activity.correction_token),
                 class: "button button-primary button-block" %>
@@ -18,8 +20,39 @@
   <section class="correction-card">
     <p class="correction-kicker">Aluno</p>
     <h2><%= @student.name %></h2>
+    <% if @assignment %>
+      <p class="activity-type-hint">Folha <%= @assignment.slot %> · só o professor vê este grupo</p>
+    <% end %>
     <%= link_to "Trocar aluno", gabarito_path(@activity.correction_token), class: "correction-switch" %>
   </section>
+
+  <% if @lira_ready %>
+    <section class="correction-card">
+      <p class="correction-kicker">Correção automática</p>
+      <h2>Apontar para o cartão</h2>
+      <p>
+        A câmera lê o QR e as bolhas na hora e manda as respostas ao Maestro.
+        Nada é gravado na galeria. Folha <%= @assignment&.slot || "—" %>.
+      </p>
+      <div class="qr-scanner-card"
+           data-qr-scanner
+           data-qr-grade
+           data-scan-url="<%= gabarito_scan_path(@activity.correction_token) %>"
+           data-student-id="<%= @student.id %>">
+        <button type="button" class="button button-primary button-block" data-qr-start>
+          Abrir câmera e ler cartão
+        </button>
+        <video data-qr-video playsinline muted hidden></video>
+        <p class="correction-scan-banner is-wait" data-qr-status role="status">
+          Toque para apontar o cartão.
+        </p>
+      </div>
+    </section>
+  <% end %>
+
+  <% if @photo_review %>
+    <p class="correction-flash is-warn">Confira as letras lidas abaixo e toque em Lançar nota.</p>
+  <% end %>
 
   <%= form_with url: gabarito_grade_path(@activity.correction_token),
                 method: :post,
@@ -27,10 +60,11 @@
                 class: "correction-form" do %>
     <%= hidden_field_tag :student_id, @student.id %>
 
-    <% @items.each do |item| %>
+    <% Array(@presented).each do |row| %>
+      <% item = row.item %>
       <fieldset class="correction-item">
         <legend>
-          <%= item.position %>. <%= item.prompt %>
+          <%= row.number %>. <%= item.prompt %>
           <% if item.bncc_skill.present? %>
             <small>BNCC <%= item.bncc_skill %></small>
           <% end %>
@@ -38,7 +72,7 @@
         <%= render "questions/figure", image: item.image %>
         <% if item.objective? %>
           <div class="correction-keys">
-            <% item.choice_pairs.each do |letter, _text| %>
+            <% row.pairs.each do |letter, _text| %>
               <label class="correction-key">
                 <%= radio_button_tag "answers[#{item.id}]",
                                      letter,
@@ -70,10 +104,32 @@
 <% else %>
   <section class="correction-card">
     <h2>Quem é o aluno?</h2>
-    <p>Toque no nome ou, neste celular, aponte a câmera para o QR da folha dele.</p>
-    <div class="qr-scanner-card" data-qr-scanner>
-      <video data-qr-video playsinline autoplay muted></video>
-      <p class="activity-type-hint" data-qr-status>Aguardando a câmera deste celular…</p>
+    <p>
+      <% if @lira_ready %>
+        Aponte a câmera para o cartão pintado: o Maestro identifica o aluno,
+        lê as bolhas e lança a nota, sem salvar foto na galeria.
+      <% else %>
+        O QR escolhe o aluno. Sem OpenAI/Gemini, as bolhas você marca na tela seguinte.
+      <% end %>
+    </p>
+    <div class="qr-scanner-card"
+         data-qr-scanner
+         <% if @lira_ready %>
+           data-qr-grade
+           data-scan-url="<%= gabarito_scan_path(@activity.correction_token) %>"
+         <% end %>>
+      <button type="button" class="button button-secondary button-block" data-qr-start>
+        <%= @lira_ready ? "Abrir câmera e ler cartão" : "Ler QR da folha do aluno" %>
+      </button>
+      <video data-qr-video playsinline muted hidden></video>
+      <p class="correction-scan-banner is-wait" data-qr-status role="status">
+        Toque no botão e aponte para o QR do aluno.
+      </p>
+      <input type="url"
+             class="correction-search"
+             data-qr-paste
+             placeholder="Se o QR não abrir, cole o link aqui"
+             autocomplete="off">
     </div>
     <input type="search"
            class="correction-search"
@@ -84,10 +140,14 @@
 
   <nav class="correction-students">
     <% @students.each do |student| %>
-      <%= link_to student.name,
-                  gabarito_aluno_path(@activity.correction_token, student),
+      <%= link_to gabarito_aluno_path(@activity.correction_token, student),
                   class: "correction-student",
-                  data: { student_name: student.name } %>
+                  data: { student_name: student.name } do %>
+        <%= student.name %>
+        <% if (row = @assignments_by_student&.[](student.id)) %>
+          <small>folha <%= row.slot %></small>
+        <% end %>
+      <% end %>
     <% end %>
   </nav>
 <% end %>

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SIAGE Presença Automática",
-  "version": "4.8.1",
+  "version": "4.8.3",
   "description": "Registra frequência e notas no SIAGE a partir dos arquivos do Maestro.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [

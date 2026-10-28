@@ -25,14 +25,18 @@
     <%= form_with url: grade_activity_path(@activity), method: :post, local: true do %>
       <%= hidden_field_tag :student_id, @student.id %>
 
+      <% if @assignment %>
+        <p class="activity-type-hint">Folha <%= @assignment.slot %> · só o professor vê este grupo</p>
+      <% end %>
       <ol class="correction-items">
-        <% @items.each do |item| %>
+        <% Array(@presented).each do |row| %>
+          <% item = row.item %>
           <li>
-            <p><strong><%= item.position %>. <%= item.prompt %></strong></p>
+            <p><strong><%= row.number %>. <%= item.prompt %></strong></p>
             <%= render "questions/figure", image: item.image %>
             <% if item.objective? %>
               <div class="correction-bubbles">
-                <% item.choice_pairs.each do |letter, text| %>
+                <% row.pairs.each do |letter, text| %>
                   <label class="correction-bubble">
                     <%= radio_button_tag "answers[#{item.id}]",
                                          letter,

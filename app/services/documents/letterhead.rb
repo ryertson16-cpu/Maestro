@@ -8,6 +8,7 @@ module Documents
     end
 
     def draw(pdf, title:, subtitle: nil, variant: :standard)
+      Documents::PdfFont.apply(pdf)
       if variant.to_sym == :official
         draw_official(pdf, title: title, subtitle: subtitle)
       else

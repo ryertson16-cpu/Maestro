@@ -64,6 +64,26 @@ class TimetablesController < ApplicationController
     redirect_to timetable_path(timetable_filter_params), notice: parts.join(" ")
   end
 
+  def generate_day
+    lesson_date = Date.parse(params[:lesson_date].to_s)
+    result = Lessons::DayLessonsFromTimetable.new(
+      professor: current_professor,
+      lesson_date: lesson_date,
+      upload: params[:timetable],
+      classroom: classroom_scope? ? current_professor.classrooms.find_by(id: params[:classroom_id]) : nil
+    ).call
+
+    if result[:ok]
+      redirect_to timetable_path(week: lesson_date, scope: params[:scope], classroom_id: params[:classroom_id]),
+                  notice: result[:message]
+    else
+      redirect_to timetable_path(week: lesson_date, scope: params[:scope], classroom_id: params[:classroom_id]),
+                  alert: result[:error]
+    end
+  rescue Date::Error
+    redirect_to timetable_path, alert: "Data inválida."
+  end
+
   def slots
     date = Date.parse(params[:date].to_s)
     entries = current_professor.timetable_entries

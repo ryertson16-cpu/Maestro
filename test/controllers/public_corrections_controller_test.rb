@@ -57,10 +57,15 @@ class PublicCorrectionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "phone camera can open gabarito without login" do
-    get gabarito_path(@activity.correction_token)
+    get gabarito_path(@activity.correction_token),
+        headers: { "User-Agent" => "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1" }
 
     assert_response :success
     assert_match "João", response.body
+    assert_match "Ler QR da folha do aluno", response.body
+    refute_includes response.body, 'capture="environment"'
+    refute_match(/variante/i, response.body)
+    refute_match "Aguardando a câmera deste celular", response.body
   end
 
   test "student qr opens that pupil and posts the grade" do
@@ -75,9 +80,40 @@ class PublicCorrectionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to gabarito_aluno_path(@activity.correction_token, @student, ok: 1)
     follow_redirect!
+    assert_match "Gabarito corrigido", response.body
     assert_match "10,0", response.body
     submission = ActivitySubmission.find_by(activity: @activity, student: @student)
     assert_equal 10.0, submission.score
+  end
+
+  test "phone photo of the student card launches the grade" do
+    file = Tempfile.new(["card", ".jpg"])
+    file.binmode
+    file.write("fake-photo")
+    file.close
+
+    fake = Activities::AnswerCardVision::Result.new(
+      name: nil,
+      answers: { "1" => "A" },
+      source: "lira"
+    )
+    lira = Lira.method(:llm_enabled?)
+    scan = Activities::AnswerCardVision.method(:scan)
+    Lira.define_singleton_method(:llm_enabled?) { true }
+    Activities::AnswerCardVision.define_singleton_method(:scan) { |*| fake }
+
+    post gabarito_scan_path(@activity.correction_token), params: {
+      student_id: @student.id,
+      card: Rack::Test::UploadedFile.new(file.path, "image/jpeg")
+    }
+
+    assert_redirected_to gabarito_aluno_path(@activity.correction_token, @student, ok: 1)
+    submission = ActivitySubmission.find_by!(activity: @activity, student: @student)
+    assert_equal 10.0, submission.score
+  ensure
+    Lira.define_singleton_method(:llm_enabled?, lira) if lira
+    Activities::AnswerCardVision.define_singleton_method(:scan, scan) if scan
+    file&.unlink
   end
 
   test "unknown token is not found" do

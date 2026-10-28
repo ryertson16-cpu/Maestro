@@ -68,6 +68,15 @@ class Lessons::NameMatcherTest < ActiveSupport::TestCase
     assert_equal wendja, Lessons::NameMatcher.match_student("Wendja", [wendja, iris])
   end
 
+  test "matches the professor token as a whole word only" do
+    professor = Professor.new(name: "Ryertson Nogueira da Silva", preferred_name: "Ryertson")
+
+    assert Lessons::NameMatcher.professor_in_text?("Ryertson Química", professor)
+    refute Lessons::NameMatcher.professor_in_text?("Rian Física", professor)
+    refute Lessons::NameMatcher.professor_in_text?("Igor Física", professor)
+    refute Lessons::NameMatcher.professor_in_text?("Joalisson Matemática", professor)
+  end
+
   test "does not match a first name shared by two students" do
     ana_costa = Student.new(name: "Ana Beatriz Costa")
     ana_laura = Student.new(name: "Ana Laura Dantas")

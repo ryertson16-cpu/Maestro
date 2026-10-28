@@ -1,3 +1,11 @@
+# Novidades: versão 4.8.3 (27/10/2026)
+
+- Notas: recusa o CSV de aula (`siage-aula-…`, colunas Data/Tempos) e pede o JSON ou a planilha das 3 unidades.
+
+# Novidades: versão 4.8.2 (27/10/2026)
+
+- Notas: aceita o **JSON** e a **planilha** (CSV/Excel) das 3 unidades. REC GLOBAL e média do período continuam com o SIAGE.
+
 # Novidades: versão 4.8.1 (14/10/2026)
 
 - Troca de turma: depois da primeira aula, volta à **listagem** e espera a tabela carregar. Não procura a próxima turma na tela da anterior. Se não achar, tenta 3 vezes em vez de marcar o grupo inteiro (ex.: 10 aulas da P) como erro.

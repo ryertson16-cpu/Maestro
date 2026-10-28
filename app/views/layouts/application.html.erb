@@ -83,7 +83,7 @@
                     data-maestro-quick-open
                     title="Falar com o Maestro">
               <%= maestro_assistant_mark(size: :xs) %>
-              <span>Conversar</span>
+              <span>Maestro</span>
             </button>
 
             <%= render "application/automation_bell" %>
@@ -149,7 +149,7 @@
       <% end %>
       <span>
         <% if professor_signed_in? %>
-          <%= link_to "Conversar", lira_path, class: "footer-link" %>
+          <%= link_to "Maestro", lira_path, class: "footer-link" %>
           ·
           <%= link_to "Configurações", settings_path, class: "footer-link" %>
           ·

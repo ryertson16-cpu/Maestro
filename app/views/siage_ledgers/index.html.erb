@@ -158,13 +158,17 @@
       <span class="section-eyebrow">Notas</span>
       <h2>Notas no SIAGE</h2>
       <p class="classroom-pending-help">
-        <strong>Parcial</strong> ainda pode ser alterada no portal.
-        <strong>Lançado</strong> o SIAGE trava. <strong>Abrir SIAGE</strong> leva as notas à aba Registro de Avaliações; o JSON em Notas e médias continua disponível.
+        O JSON das notas nasce aqui: até 3 unidades por turma e bimestre,
+        na ordem do prazo. Qualquer tipo de atividade com nota lançada entra,
+        menos <strong>Projeto</strong>. O SIAGE só tem 3 campos.
+        <strong>JSON</strong> ou <strong>Planilha</strong> vão para a extensão. <strong>Abrir SIAGE</strong> leva o mesmo payload à aba Registro de Avaliações.
+        <strong>Parcial</strong> ainda altera no portal. <strong>Lançado</strong> o SIAGE trava.
       </p>
     </div>
   </div>
 
   <ul class="ledger-legend">
+    <li><span class="status-badge status-pending">Pendente</span> JSON ainda não baixado</li>
     <li><span class="status-badge status-partial">Parcial</span> ainda altera no portal</li>
     <li><span class="status-badge status-launched">Lançado</span> travado no SIAGE</li>
     <li><span class="status-badge status-failed">Falhou</span> precisa reenviar</li>
@@ -177,6 +181,7 @@
           <tr>
             <th>Turma</th>
             <th>Bimestre</th>
+            <th>Unidades no JSON</th>
             <th>Situação</th>
             <th></th>
           </tr>
@@ -187,6 +192,13 @@
               <td><%= row.classroom.name %></td>
               <td><%= row.bimester %>º</td>
               <td>
+                <% if row.unit_titles.any? %>
+                  <%= row.unit_titles.each_with_index.map { |title, index| "#{index + 1}ª #{title}" }.join(" · ") %>
+                <% else %>
+                  —
+                <% end %>
+              </td>
+              <td>
                 <span class="status-badge status-<%= row.status %>">
                   <%= row.shipment&.status_label || "Pendente" %>
                 </span>
@@ -195,6 +207,9 @@
                 <div class="ledger-row-actions">
                   <%= link_to "JSON",
                               siage_grades_export_path(classroom_id: row.classroom.id, bimester: row.bimester),
+                              class: "button button-secondary button-small" %>
+                  <%= link_to "Planilha",
+                              siage_grades_export_path(classroom_id: row.classroom.id, bimester: row.bimester, spreadsheet: 1),
                               class: "button button-secondary button-small" %>
                   <%= button_to "Parcial",
                                 partial_siage_grade_ledger_path(row.classroom, row.bimester),
@@ -217,8 +232,8 @@
     </div>
   <% else %>
     <section class="empty-state">
-      <strong>Ainda não há envio de notas.</strong>
-      <p>Em Notas e médias, use Exportar 3 unidades para o SIAGE. Isso não mistura com projetos.</p>
+      <strong>Ainda não há nota lançada no caderno.</strong>
+      <p>Lance a nota da atividade (incluindo Simulado ENEM) na turma. Quando houver pelo menos uma nota, o JSON aparece aqui para ir ao SIAGE.</p>
       <%= link_to "Notas e médias",
                   @classroom.present? ? grades_path(classroom_id: @classroom.id) : grade_levels_path,
                   class: "button button-primary" %>

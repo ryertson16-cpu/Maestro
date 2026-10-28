@@ -52,4 +52,30 @@ class SiageExportsControllerTest < ActionDispatch::IntegrationTest
     assert_includes body, "2ª SÉRIE F"
     assert_includes body, "2ª SÉRIE G"
   end
+
+  test "grades export can be json or spreadsheet" do
+    sign_in @professor
+    student = @professor.students.create!(name: "Ana")
+    Enrollment.create!(
+      professor: @professor,
+      classroom: @classroom,
+      student: student,
+      enrolled_on: Date.new(2026, 2, 2),
+      status: "active"
+    )
+
+    get siage_grades_export_path(classroom_id: @classroom.id, bimester: 4)
+    assert_response :success
+    json = JSON.parse(response.body)
+    assert_equal "grades", json["kind"]
+    assert_equal "Ana", json["grades"].first["name"]
+
+    get siage_grades_export_path(classroom_id: @classroom.id, bimester: 4, spreadsheet: 1)
+    assert_response :success
+    body = response.body.force_encoding("UTF-8")
+    assert_includes body, "Aluno"
+    assert_includes body, "1ª unidade"
+    assert_includes body, "Ana"
+    refute_includes body, "REC GLOBAL"
+  end
 end

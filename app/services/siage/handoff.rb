@@ -44,19 +44,20 @@ module Siage
     end
 
     def grade_payloads
-      bimester = Siage.bimester_for_date(Date.current)
       rooms = classroom ? [classroom] : professor.classrooms.order(:name)
 
-      rooms.filter_map do |room|
-        payload = Siage::PayloadBuilder.for_grades(
-          professor: professor,
-          classroom: room,
-          bimester: bimester,
-          origin: origin
-        )
-        next unless scored?(payload)
+      rooms.flat_map do |room|
+        (1..4).filter_map do |bimester|
+          payload = Siage::PayloadBuilder.for_grades(
+            professor: professor,
+            classroom: room,
+            bimester: bimester,
+            origin: origin
+          )
+          next unless scored?(payload)
 
-        payload
+          payload
+        end
       end
     end
 

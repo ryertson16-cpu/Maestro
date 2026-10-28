@@ -1,0 +1,68 @@
+<section class="data-card">
+  <h2>Corrigir cartões no computador</h2>
+  <% if @lira_ready %>
+    <p class="activity-type-hint">
+      No celular o Maestro lê o cartão na câmera, sem gravar foto. Aqui você envia
+      foto ou PDF em lote. Quem já tem nota não é alterado. Discursiva continua no celular.
+    </p>
+    <%= form_with url: scan_cards_activity_path(activity),
+                  method: :post,
+                  local: true,
+                  multipart: true,
+                  class: "question-bank-filters" do %>
+      <%= file_field_tag "cards[]",
+                         multiple: true,
+                         accept: "application/pdf,image/png,image/jpeg,image/webp",
+                         required: true %>
+      <%= submit_tag "Ler cartões", class: "button button-primary" %>
+    <% end %>
+  <% else %>
+    <p class="activity-type-hint">
+      Sem OpenAI/Gemini, use o QR no celular e marque as letras na tela.
+    </p>
+  <% end %>
+
+  <% if pending_cards.any? %>
+    <h3>Conferir</h3>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Arquivo</th>
+            <th>Nome lido</th>
+            <th>Bolhas</th>
+            <th>Aluno</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% pending_cards.each do |card| %>
+            <tr>
+              <td><%= card.filename %></td>
+              <td><%= card.name_hint.presence || "—" %></td>
+              <td><%= card.filled_count %></td>
+              <td>
+                <%= form_with url: assign_activity_pending_card_path(activity, card),
+                              method: :post,
+                              local: true,
+                              class: "question-bank-filters" do %>
+                  <%= select_tag :student_id,
+                                 options_from_collection_for_select(students, :id, :name, card.student_id),
+                                 include_blank: "Escolher aluno" %>
+                  <%= submit_tag "Lançar", class: "button button-primary button-small" %>
+                <% end %>
+              </td>
+              <td>
+                <%= button_to "Descartar",
+                              activity_pending_card_path(activity, card),
+                              method: :delete,
+                              class: "button button-secondary button-small",
+                              data: { turbo_confirm: "Tirar este cartão da conferência?" } %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+</section>

@@ -1,11 +1,9 @@
-<% content_for :title, "Corrigir por QR | Maestro" %>
+<% content_for :title, "Prova | Maestro" %>
 
 <div class="page-header">
-  <h1>Corrigir por QR Code</h1>
+  <h1>Prova</h1>
   <p>
-    Este computador só mostra o código. Abra o app <strong>Câmera</strong> do celular
-    (não o Maestro) e aponte para o QR. A correção abre no telefone, sem login,
-    e a nota cai na atividade, nas médias e no monitoramento.
+    Escolha a turma e a atividade. QR, folha do aluno e correção ficam na mesma ficha.
   </p>
 </div>
 
@@ -27,7 +25,7 @@
                          @activity&.id
                        ) %>
       <% end %>
-      <%= submit_tag "Mostrar QR", class: "button button-secondary" %>
+      <%= submit_tag "Abrir prova", class: "button button-secondary" %>
     <% end %>
   </section>
 
@@ -41,60 +39,16 @@
     <section class="empty-state">
       <strong><%= @activity.title %> ainda não tem questões.</strong>
       <p>Inclua as questões na montagem. Sem gabarito, o celular não tem o que corrigir.</p>
-      <%= link_to "Montar atividade", assemble_activity_path(@activity), class: "button button-primary" %>
+      <%= link_to "Montar prova", assemble_activity_path(@activity), class: "button button-primary" %>
     </section>
   <% else %>
     <section class="data-card">
-      <div class="section-heading">
-        <div>
-          <span class="section-eyebrow">Celular</span>
-          <h2><%= @activity.title %></h2>
-          <p>
-            <%= @classroom.name %>
-            · <%= @activity.activity_type %>
-            · <%= @activity.bimester_label %>
-          </p>
-        </div>
-      </div>
-
-      <% if localhost_correction_host? %>
-        <p class="activity-type-hint">
-          O celular não abre localhost. Use o IP deste computador na rede Wi-Fi, por exemplo
-          <code><%= lan_reachable_host %></code>.
-        </p>
-      <% else %>
-        <p class="activity-type-hint">
-          Celular e computador na mesma Wi-Fi. A Câmera do telefone lê este QR e abre o gabarito.
-        </p>
-      <% end %>
-
-      <%= form_with url: corrections_path, method: :get, local: true, class: "question-bank-filters" do %>
-        <%= hidden_field_tag :classroom_id, @classroom.id %>
-        <%= hidden_field_tag :activity_id, @activity.id %>
-        <%= text_field_tag :correction_host,
-                           correction_host,
-                           placeholder: "http://192.168.0.10:3000" %>
-        <%= submit_tag "Atualizar endereço do QR", class: "button button-secondary" %>
-      <% end %>
-
-      <div class="gabarito-qr is-desk">
-        <%= raw RQRCode::QRCode.new(@correction_url).as_svg(module_size: 6, viewbox: true) %>
-        <p><code><%= @correction_url %></code></p>
-      </div>
-
-      <div class="page-header-actions" style="margin-top: 16px">
-        <%= link_to "Já estou no celular — abrir gabarito",
-                    @correction_url,
-                    class: "button button-primary",
-                    target: "_blank",
-                    rel: "noopener" %>
-        <%= link_to "Folha com QR (PDF)",
-                    sheet_activity_path(@activity),
-                    class: "button button-secondary" %>
-        <%= link_to "Montar questões",
-                    assemble_activity_path(@activity),
-                    class: "button button-ghost" %>
-      </div>
+      <p class="activity-type-hint">
+        QR, folha e correção desta prova estão em uma ficha só.
+      </p>
+      <%= link_to "Abrir prova",
+                  assemble_activity_path(@activity),
+                  class: "button button-primary" %>
     </section>
   <% end %>
 <% end %>

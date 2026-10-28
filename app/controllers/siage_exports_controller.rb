@@ -14,16 +14,6 @@ class SiageExportsController < ApplicationController
     aulas = Array(@handoff.dig("job", "grupos")).sum { |grupo| Array(grupo["aulas"]).size }
     notas = Array(@handoff["grades"]).size
 
-    open_lessons = Siage::Ledger.new(professor: current_professor, classroom: @classroom).open_lessons
-    open_lessons.each do |lesson|
-      record_shipment(
-        classroom: lesson.classroom,
-        kind: "lesson",
-        lesson: lesson,
-        filename: "siage-abrir.csv"
-      )
-    end
-
     @resumo = {
       aulas: aulas,
       notas: notas,
@@ -157,23 +147,26 @@ class SiageExportsController < ApplicationController
     bimester = params[:bimester].to_i
     bimester = 3 unless (1..4).cover?(bimester)
     filename = "siage-notas-#{classroom.name.parameterize}-#{bimester}-bimestre"
+    payload = Siage::PayloadBuilder.for_grades(
+      professor: current_professor,
+      classroom: classroom,
+      bimester: bimester,
+      origin: request.base_url
+    )
+    spreadsheet = grades_spreadsheet_request?
 
     record_shipment(
       classroom: classroom,
       kind: "grades",
-      filename: "#{filename}.json",
+      filename: "#{filename}.#{spreadsheet ? 'csv' : 'json'}",
       bimester: bimester
     )
 
-    send_payload(
-      Siage::PayloadBuilder.for_grades(
-        professor: current_professor,
-        classroom: classroom,
-        bimester: bimester,
-        origin: request.base_url
-      ),
-      filename
-    )
+    if spreadsheet
+      send_spreadsheet(Siage::GradeSpreadsheet.csv(payload), filename)
+    else
+      send_payload(payload, filename)
+    end
   end
 
   private
@@ -194,6 +187,12 @@ class SiageExportsController < ApplicationController
               filename: "#{filename}.csv",
               type: "text/tab-separated-values; charset=utf-8",
               disposition: "attachment"
+  end
+
+  def grades_spreadsheet_request?
+    request.format.csv? ||
+      params[:format].to_s == "csv" ||
+      params[:spreadsheet].present?
   end
 
   def send_payload(payload, filename)

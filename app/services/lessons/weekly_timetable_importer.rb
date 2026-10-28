@@ -27,6 +27,7 @@ module Lessons
     def initialize(professor:, upload:)
       @professor = professor
       @upload = upload
+      @created_classrooms = []
     end
 
     def call
@@ -35,10 +36,9 @@ module Lessons
 
       slots = parse_slots
       if slots.empty?
-        first = @professor.name.to_s.split.first
         return {
           ok: false,
-          error: "Não encontrei #{first} neste PDF. Confira se o horário é o da escola e se o nome está escrito como no cadastro."
+          error: "Não encontrei #{identity_label.presence || @professor.greeting_name} neste PDF. Confira se o horário é o da escola e se o nome no cadastro é o mesmo da grade."
         }
       end
 
@@ -47,6 +47,9 @@ module Lessons
         ok: true,
         count: saved,
         skipped: skipped,
+        created_classrooms: @created_classrooms,
+        preview: preview_for(slots),
+        identity: identity_label,
         message: message_for(saved, skipped, slots.size)
       }
     end
@@ -85,8 +88,10 @@ module Lessons
       return [] unless weekday
 
       items = runs_for(page)
-      (layout_slots(items, weekday) + text_slots(page, weekday))
-        .uniq { |slot| [slot[:weekday], slot[:period], slot[:classroom_label]] }
+      layout = layout_slots(items, weekday)
+      return layout if layout.any?
+
+      text_slots(page, weekday)
     end
 
     def weekday_for(page)
@@ -125,10 +130,10 @@ module Lessons
 
       items.select { |item| professor_hit?(item[:text]) }.filter_map do |name_run|
         col = columns.min_by { |column| (column[:x] - name_run[:x]).abs }
-        next if col.blank? || (col[:x] - name_run[:x]).abs > 58
+        next if col.blank? || (col[:x] - name_run[:x]).abs > 72
 
         row = periods.min_by { |period| (period[:y] - name_run[:y]).abs }
-        next if row.blank? || (row[:y] - name_run[:y]).abs > 42
+        next if row.blank? || (row[:y] - name_run[:y]).abs > 55
 
         subject = subject_near(items, name_run) || "Componente"
         slot_hash(weekday, row, col[:label], subject, name_run[:text])
@@ -261,13 +266,18 @@ module Lessons
         @professor.timetable_entries.delete_all
 
         slots.each do |slot|
-          classroom = match_classroom(slot[:classroom_label])
+          classroom = match_classroom(slot[:classroom_label]) || build_classroom(slot[:classroom_label])
           unless classroom
             skipped += 1
             next
           end
 
-          course = match_course(slot[:subject])
+          course = match_course(slot[:subject]) || sole_course
+          unless course
+            skipped += 1
+            next
+          end
+
           entry = @professor.timetable_entries.find_or_initialize_by(
             classroom: classroom,
             weekday: slot[:weekday],
@@ -292,14 +302,65 @@ module Lessons
       end
     end
 
+    def professor_hit?(text)
+      NameMatcher.professor_in_text?(text, @professor)
+    end
+
+    def build_classroom(label)
+      wanted = NameMatcher.serie_and_letter(label)
+      return if wanted.blank?
+
+      serie, letter = wanted
+      name = "#{serie}ª #{letter.upcase}"
+      existing = match_classroom(name)
+      return existing if existing
+
+      classroom = @professor.classrooms.create!(
+        name: name,
+        school_year: default_school_year,
+        grade_level: grade_for(serie),
+        active: true
+      )
+      @classrooms << classroom
+      @created_classrooms << name
+      classroom
+    end
+
+    def grade_for(serie)
+      @professor.grade_levels.find { |grade|
+        NameMatcher.normalize(grade.name).match?(/\b#{Regexp.escape(serie.to_s)}\b/)
+      } || @professor.grade_levels.first || @professor.grade_levels.create!(name: "#{serie}º ano")
+    end
+
     def match_course(subject)
-      @courses ||= @professor.courses.to_a
+      @courses ||= @professor.courses.active.to_a
       @courses.find { |course| NameMatcher.discipline_match?(subject, course.name) }
     end
 
-    def professor_hit?(text)
-      NameMatcher.similar?(text, @professor.name.to_s.split.first) ||
-        NameMatcher.similar?(text, @professor.name)
+    def default_school_year
+      @default_school_year ||= @professor.classrooms.maximum(:school_year) || Date.current.year
+    end
+
+    def identity_label
+      names = @professor.timetable_search_names.join(" / ")
+      disciplines = @professor.timetable_discipline_names.join(", ")
+      [names.presence, disciplines.presence].compact.join(" · ")
+    end
+
+    def preview_for(slots)
+      slots.sort_by { |slot| [slot[:weekday], slot[:period], slot[:classroom_label].to_s] }.map do |slot|
+        {
+          weekday: slot[:weekday],
+          period: slot[:period],
+          classroom: slot[:classroom_label],
+          subject: slot[:subject]
+        }
+      end
+    end
+
+    def sole_course
+      courses = @professor.courses.active.to_a
+      courses.one? ? courses.first : nil
     end
 
     def subject_known?(text)
@@ -319,8 +380,10 @@ module Lessons
     end
 
     def message_for(saved, skipped, found)
-      first = @professor.name.to_s.split.first
-      parts = ["Gerei o horário de #{first}: #{saved} aula(s) na grade."]
+      parts = ["Gerei o horário de #{identity_label}: #{saved} tempo(s) na grade."]
+      if @created_classrooms.any?
+        parts << "Criei as turmas #{@created_classrooms.uniq.join(", ")} que estavam no PDF e ainda não existiam no caderno."
+      end
       parts << "#{skipped} não bateram com turmas cadastradas no Maestro." if skipped.positive?
       parts << "Encontrei #{found} ocorrência(s) no PDF." if found != saved
       parts.join(" ")

@@ -19,6 +19,28 @@ class SiageExportsOpenTest < ActionDispatch::IntegrationTest
     sign_in @professor
   end
 
+  test "opening siage does not queue lessons before the extension runs" do
+    grade = @professor.grade_levels.create!(name: "2º ano")
+    classroom = @professor.classrooms.create!(
+      name: "2ª F",
+      school_year: 2026,
+      grade_level: grade,
+      active: true
+    )
+    @professor.lessons.create!(
+      classroom: classroom,
+      lesson_date: Date.current,
+      theme: "Ácidos",
+      has_activity: false,
+      siage_time_slot: "1"
+    )
+
+    get siage_open_path
+
+    assert_response :success
+    assert_equal 0, SiageShipment.where(professor: @professor).count
+  end
+
   test "open page exposes handoff json and open button" do
     get siage_open_path
 

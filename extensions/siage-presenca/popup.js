@@ -91,6 +91,14 @@ function ehCabecalho(celulas) {
   return /\bdata\b/.test(t) && /tempo/.test(t);
 }
 
+function ehPlanilhaDeAula(linhas) {
+  const cab = (linhas && linhas[0]) || [];
+  return ehCabecalho(cab) || (
+    cab.map(norm).some((c) => c === "data") &&
+    cab.map(norm).some((c) => /^tempo/.test(c))
+  );
+}
+
 // Recebe linhas (arrays de células) e monta os grupos turma+componente
 function montarGrupos(linhas) {
   const erros = [];
@@ -341,6 +349,116 @@ $("iniciar").addEventListener("click", async () => {
 
 let payloadNotas = null;
 
+function lerNotaCelula(valor) {
+  if (valor == null || valor === "") return null;
+  const texto = String(valor).trim().replace(/\s+/g, "").replace(",", ".");
+  if (!texto) return null;
+  const n = Number(texto);
+  return Number.isFinite(n) ? n : null;
+}
+
+function payloadDeJsonNotas(texto) {
+  const json = JSON.parse(String(texto || "").replace(/^\uFEFF/, ""));
+  if (!json || !Array.isArray(json.grades)) throw new Error("arquivo sem a lista de notas");
+  return json;
+}
+
+function indiceColunaNotas(cabecalhos, testes) {
+  const nomes = cabecalhos.map(norm);
+  const exato = nomes.findIndex((c) => testes.includes(c));
+  if (exato >= 0) return exato;
+  return nomes.findIndex((c) => testes.some((teste) => c.includes(teste)));
+}
+
+function payloadDePlanilhaNotas(linhas) {
+  const rows = (linhas || []).filter((row) => (row || []).some((c) => String(c || "").trim()));
+  if (!rows.length) throw new Error("planilha vazia");
+  if (ehPlanilhaDeAula(rows)) {
+    throw new Error("este CSV é de aula/frequência (Data, Tempos, Turma). Para notas, baixe no Maestro JSON das 3 unidades ou Planilha das 3 unidades");
+  }
+
+  let cabIndex = rows.findIndex((row) => {
+    const n = row.map(norm).join(" ");
+    return /aluno|estudante/.test(n) || (/\bnome\b/.test(n) && /unidade|nota|bimestre/.test(n));
+  });
+  if (cabIndex < 0) cabIndex = 0;
+  const cab = rows[cabIndex].map((c) => String(c || ""));
+  const dados = rows.slice(cabIndex + 1);
+  const colAluno = (() => {
+    const aluno = indiceColunaNotas(cab, ["aluno", "estudante", "nome do aluno"]);
+    if (aluno >= 0) return aluno;
+    const nome = indiceColunaNotas(cab, ["nome"]);
+    return nome >= 0 ? nome : 0;
+  })();
+  const colTurma = indiceColunaNotas(cab, ["turma"]);
+  const colBim = indiceColunaNotas(cab, ["bimestre", "periodo", "período"]);
+  const colUnidade = (n) => indiceColunaNotas(cab, [
+    `${n}a unidade`, `${n}ª unidade`, `${n} unidade`, `unidade ${n}`, `nota ${n}`, `${n}a`, `${n}ª`
+  ]);
+  const colRec = (n) => indiceColunaNotas(cab, [
+    `rec ${n}`, `rec/rep ${n}`, `recuperacao ${n}`, `recuperação ${n}`, `rec ${n}a`
+  ]);
+
+  let u1 = colUnidade(1);
+  let r1 = colRec(1);
+  let u2 = colUnidade(2);
+  let r2 = colRec(2);
+  let u3 = colUnidade(3);
+  let r3 = colRec(3);
+  if (u1 < 0 && u2 < 0 && u3 < 0) {
+    u1 = colAluno + 1;
+    r1 = colAluno + 2;
+    u2 = colAluno + 3;
+    r2 = colAluno + 4;
+    u3 = colAluno + 5;
+    r3 = colAluno + 6;
+  }
+
+  const grades = [];
+  let turma = "";
+  let bimester = null;
+  dados.forEach((row) => {
+    const nome = String(row[colAluno] || "").trim();
+    if (!nome || /aluno|estudante/.test(norm(nome))) return;
+    const units = [1, 2, 3].map((number) => {
+      const scoreIdx = number === 1 ? u1 : number === 2 ? u2 : u3;
+      const recIdx = number === 1 ? r1 : number === 2 ? r2 : r3;
+      return {
+        number,
+        score: scoreIdx >= 0 ? lerNotaCelula(row[scoreIdx]) : null,
+        recovery: recIdx >= 0 ? lerNotaCelula(row[recIdx]) : null
+      };
+    });
+    if (colTurma >= 0 && row[colTurma]) turma = String(row[colTurma]).trim() || turma;
+    if (colBim >= 0 && row[colBim]) {
+      const n = Number(String(row[colBim]).replace(/\D/g, ""));
+      if (n >= 1 && n <= 4) bimester = n;
+    }
+    grades.push({ name: nome, units, global_recovery: null, period_average: null });
+  });
+  if (!grades.length) throw new Error("não achei aluno com nota na planilha");
+
+  return {
+    source: "maestro",
+    kind: "grades",
+    bimester: bimester || null,
+    classroom: { name: turma || "turma" },
+    grades
+  };
+}
+
+async function lerArquivoNotas(f) {
+  const nome = f.name || "";
+  if (/\.json$/i.test(nome)) return payloadDeJsonNotas(await f.text());
+  const linhas = await linhasDoArquivoEscolhido(f);
+  const primeira = String((linhas[0] && linhas[0][0]) || "").trim();
+  if (linhas.length <= 2 && primeira.startsWith("{")) return payloadDeJsonNotas(await f.text());
+  if (/siage-aula/i.test(nome) || ehPlanilhaDeAula(linhas)) {
+    throw new Error("este CSV é de aula/frequência. Para notas, baixe no Maestro JSON das 3 unidades ou Planilha das 3 unidades");
+  }
+  return payloadDePlanilhaNotas(linhas);
+}
+
 function mostrarPreviaNotas() {
   const el = $("previaNotas");
   const escolha = $("escolhaNotas");
@@ -359,14 +477,11 @@ $("arquivoNotas").addEventListener("change", async () => {
   payloadNotas = null;
   if (!f) { mostrarPreviaNotas(); return; }
   try {
-    const texto = await f.text();
-    const json = JSON.parse(texto);
-    if (!json || !Array.isArray(json.grades)) throw new Error("JSON sem notas");
-    payloadNotas = json;
+    payloadNotas = await lerArquivoNotas(f);
     mostrarPreviaNotas();
     mostrar("Arquivo de notas carregado. Escolha salvar parcialmente ou lançar.", "ok");
   } catch (e) {
-    mostrar("Não li o JSON de notas: " + e.message, "erro");
+    mostrar("Não li as notas: " + e.message, "erro");
     mostrarPreviaNotas();
   }
 });
@@ -381,7 +496,7 @@ async function acordarNotas(aba, saveMode, senha) {
 }
 
 async function enviarNotas(saveMode) {
-  if (!payloadNotas) return mostrar("Escolha o JSON de notas exportado pelo Maestro.", "erro");
+  if (!payloadNotas) return mostrar("Escolha o JSON ou a planilha de notas exportados pelo Maestro.", "erro");
   const senha = $("senha").value.trim();
   if (saveMode === "launch" && !senha) {
     return mostrar("Digite a senha do SIAGE (campo acima) para lançar as notas.", "erro");

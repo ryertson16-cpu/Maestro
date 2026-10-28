@@ -131,11 +131,24 @@ module Lessons
       false
     end
 
-    def professor_in_text?(text, professor_name)
-      first = normalize(professor_name).split.first
-      return false if first.blank?
+    def professor_in_text?(text, professor_or_names)
+      needles = identity_tokens(professor_or_names)
+      return false if needles.empty?
 
-      normalize(text).split.include?(first) || normalize(text).include?(first)
+      hay_tokens = normalize(text).split
+      needles.any? { |needle| hay_tokens.include?(needle) }
+    end
+
+    def identity_tokens(professor_or_names)
+      names = if professor_or_names.respond_to?(:timetable_search_names)
+                professor_or_names.timetable_search_names
+              else
+                Array(professor_or_names)
+              end
+
+      names.flat_map { |name| normalize(name).split }
+           .select { |token| token.length >= 4 }
+           .uniq
     end
 
     def classroom_in_text?(text, classroom_name)

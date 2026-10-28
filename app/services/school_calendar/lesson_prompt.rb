@@ -38,13 +38,15 @@ module SchoolCalendar
     end
 
     def confirm_phrase(date:, time_slots:)
+      slots = Array(time_slots).map(&:presence).compact
+      verb = slots.size == 1 ? "a aula" : "as aulas"
       parts = [
         weekday_name(date),
         I18n.l(date),
-        time_slots_text(time_slots),
+        time_slots_text(slots),
         bimester_label(date) || "bimestre não definido"
       ]
-      "Deseja criar a aula #{parts.join(", ")}?"
+      "Deseja criar #{verb} #{parts.join(", ")}?"
     end
 
     def school_day?(professor, date)

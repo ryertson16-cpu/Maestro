@@ -103,7 +103,12 @@ module Lira
     def already_processed?(message_id)
       return false if message_id.blank?
 
-      AgentMessage.where("json_extract(metadata, '$.whatsapp_message_id') = ?", message_id).exists?
+      scope = AgentMessage.all
+      if AgentMessage.connection.adapter_name.match?(/postg/i)
+        scope.where("metadata->>'whatsapp_message_id' = ?", message_id).exists?
+      else
+        scope.where("json_extract(metadata, '$.whatsapp_message_id') = ?", message_id).exists?
+      end
     end
   end
 end

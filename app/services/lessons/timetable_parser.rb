@@ -312,8 +312,7 @@ module Lessons
     end
 
     def professor_matches?(teacher)
-      NameMatcher.similar?(teacher, @professor_first) ||
-        NameMatcher.similar?(teacher, @professor.name)
+      NameMatcher.professor_in_text?(teacher, @professor)
     end
 
     def slot_hash(block, teacher, subject)

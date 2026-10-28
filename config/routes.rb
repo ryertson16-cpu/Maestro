@@ -174,6 +174,10 @@ Rails.application.routes.draw do
        to: "public_corrections#grade",
        as: :gabarito_grade
 
+  post "/g/:token/cartao",
+       to: "public_corrections#scan_card",
+       as: :gabarito_scan
+
   resources :activities, only: %i[create update destroy] do
     resources :activity_questions, only: %i[create destroy] do
       member do
@@ -183,10 +187,22 @@ Rails.application.routes.draw do
 
     member do
       get :sheet, defaults: { format: :pdf }
+      get :key_sheet, path: "folha-gabarito", defaults: { format: :pdf }
       get :adapt
       get :assemble, path: "montar"
+      get :open_gabarito, path: "abrir-gabarito"
+      post :build_exam, path: "montar/prova"
       get :correct, path: "corrigir"
       post :grade, path: "corrigir"
+      post :scan_cards, path: "cartoes"
+    end
+
+    resources :pending_cards,
+              controller: "activity_pending_cards",
+              only: :destroy do
+      member do
+        post :assign
+      end
     end
   end
 
@@ -287,6 +303,10 @@ Rails.application.routes.draw do
   post "/horario/gerar-semana",
        to: "timetables#generate_week",
        as: :generate_timetable_week
+
+  post "/horario/gerar-dia",
+       to: "timetables#generate_day",
+       as: :generate_timetable_day
 
   get "/calendario",
       to: "school_calendars#show",

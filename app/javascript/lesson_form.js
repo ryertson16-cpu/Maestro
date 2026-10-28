@@ -48,6 +48,7 @@ function initializeTimetableImport() {
 
   generateButton?.addEventListener("click", async () => {
     const file = fileInput?.files[0]
+    const createDay = generateButton.hasAttribute("data-timetable-create-day")
     if (!file) {
       setStatus(status, "Anexe o PDF do horário da escola.", "erro")
       return
@@ -55,7 +56,11 @@ function initializeTimetableImport() {
 
     const classroomId = document.getElementById("lesson_classroom_id")?.value
     const lessonDate = document.getElementById("lesson_lesson_date")?.value
-    if (!classroomId || !lessonDate) {
+    if (!lessonDate) {
+      setStatus(status, "Selecione a data da aula antes de gerar.", "erro")
+      return
+    }
+    if (!createDay && !classroomId) {
       setStatus(status, "Selecione a turma e a data da aula antes de gerar.", "erro")
       return
     }
@@ -63,13 +68,17 @@ function initializeTimetableImport() {
     const token = document.querySelector('meta[name="csrf-token"]')?.content
     const payload = new FormData()
     payload.append("timetable", file)
-    payload.append("classroom_id", classroomId)
     payload.append("lesson_date", lessonDate)
+    if (createDay) {
+      payload.append("create_all", "true")
+    } else if (classroomId) {
+      payload.append("classroom_id", classroomId)
+    }
     const courseId = document.getElementById("lesson_course_id")?.value
     if (courseId) payload.append("course_id", courseId)
 
     generateButton.disabled = true
-    setStatus(status, "Lendo o horário e preenchendo a aula…", "")
+    setStatus(status, createDay ? "Lendo o horário e criando as aulas deste dia…" : "Lendo o horário e preenchendo a aula…", "")
 
     try {
       const response = await fetch(generateButton.dataset.timetableUrl, {
@@ -83,6 +92,12 @@ function initializeTimetableImport() {
       const data = await response.json()
       if (!response.ok || !data.ok) {
         setStatus(status, data.error || "Não foi possível gerar a aula.", "erro")
+        return
+      }
+
+      if (data.redirect_url) {
+        window.MaestroToast?.show({ kind: "success", message: data.message })
+        window.location.assign(data.redirect_url)
         return
       }
 

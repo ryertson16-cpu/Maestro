@@ -4,7 +4,7 @@ class SchoolCalendarsController < ApplicationController
   def show
     @year = (params[:year].presence || Date.current.year).to_i
     @classrooms = current_professor.classrooms.order(:name)
-    @classroom = resolve_classroom(fallback: true)
+    @classroom = current_professor.classrooms.find_by(id: params[:classroom_id]) if params[:classroom_id].present?
     @days = current_professor.school_calendar_days.where(day: Date.new(@year, 1, 1)..Date.new(@year, 12, 31)).order(:day)
     @entries = if @classroom
                  current_professor.timetable_entries.where(classroom: @classroom).includes(:course).order(:weekday, :period)
@@ -14,7 +14,8 @@ class SchoolCalendarsController < ApplicationController
     @courses = current_professor.courses.active.order(:name)
     @year_view = SchoolCalendar::YearView.new(year: @year, marked_days: @days)
     @selected_day = parse_selected_day
-    @selected_slots = selected_slots_for(@selected_day)
+    @day_entries = day_entries_for(@selected_day)
+    @selected_slots = @day_entries.map { |entry| "#{entry.period}º · #{entry.classroom.name}" }
     @tempos_by_weekday = tempos_by_weekday
   end
 
@@ -48,42 +49,41 @@ class SchoolCalendarsController < ApplicationController
   end
 
   def generate_lessons
-    classroom = current_professor.classrooms.find(params[:classroom_id])
-    starts_on = Date.parse(params[:starts_on].presence || params[:lesson_date].to_s)
-    ends_on = Date.parse(params[:ends_on].presence || params[:lesson_date].to_s)
+    lesson_date = Date.parse(params[:starts_on].presence || params[:lesson_date].to_s)
+    calendar_location = { year: lesson_date.year, classroom_id: params[:classroom_id], day: lesson_date }
 
-    unless SchoolCalendar::LessonPrompt.school_day?(current_professor, starts_on)
-      redirect_to school_calendar_path(year: starts_on.year, classroom_id: classroom.id, day: starts_on),
-                  alert: "Este dia não é letivo."
+    unless SchoolCalendar::LessonPrompt.school_day?(current_professor, lesson_date)
+      redirect_to school_calendar_path(calendar_location), alert: "Este dia não é letivo."
       return
     end
 
-    ensure_grade_slot!(classroom, starts_on)
-
-    if current_professor.timetable_entries.where(classroom: classroom, weekday: starts_on.cwday).none?
-      redirect_to school_calendar_path(year: starts_on.year, classroom_id: classroom.id, day: starts_on),
-                  alert: "Informe o tempo da aula no campo Tempo."
-      return
+    only_one = ActiveModel::Type::Boolean.new.cast(params[:only_classroom])
+    classroom = current_professor.classrooms.find_by(id: params[:classroom_id]) if only_one
+    if only_one
+      ensure_grade_slot!(classroom, lesson_date) if classroom
+      unless classroom
+        redirect_to school_calendar_path(calendar_location), alert: "Escolha a turma para gerar só a grade dela."
+        return
+      end
     end
 
-    result = SchoolCalendar::LessonFactory.new(
+    result = Lessons::DayLessonsFromTimetable.new(
       professor: current_professor,
-      classroom: classroom,
-      starts_on: starts_on,
-      ends_on: ends_on
+      lesson_date: lesson_date,
+      classroom: classroom
     ).call
 
-    redirect_to school_calendar_path(year: starts_on.year, classroom_id: classroom.id, day: starts_on),
-                notice: generate_notice(starts_on, result)
+    if result[:ok]
+      redirect_to school_calendar_path(calendar_location), notice: result[:message]
+    else
+      redirect_to school_calendar_path(calendar_location), alert: result[:error]
+    end
   rescue Date::Error
     redirect_to school_calendar_path(classroom_id: params[:classroom_id]),
                 alert: "Escolha um dia no calendário para gerar a aula."
-  rescue ActiveRecord::RecordNotFound
-    redirect_to school_calendar_path, alert: "Turma não encontrada."
   end
 
   def create_lesson_from_timetable
-    classroom = current_professor.classrooms.find(params[:classroom_id])
     lesson_date = Date.parse(params[:lesson_date].to_s)
 
     unless SchoolCalendar::LessonPrompt.school_day?(current_professor, lesson_date)
@@ -91,12 +91,10 @@ class SchoolCalendarsController < ApplicationController
       return
     end
 
-    result = Lessons::TimetableLessonGenerator.new(
+    result = Lessons::DayLessonsFromTimetable.new(
       professor: current_professor,
-      classroom: classroom,
       lesson_date: lesson_date,
-      upload: params[:timetable],
-      course: current_professor.courses.find_by(id: params[:course_id])
+      upload: params[:timetable]
     ).call
 
     unless result[:ok]
@@ -104,38 +102,14 @@ class SchoolCalendarsController < ApplicationController
       return
     end
 
-    persist_timetable_slots!(classroom, lesson_date, result)
-    lessons = build_lessons_from_timetable(classroom, lesson_date, result)
-    attendances = lessons.sum do |lesson|
-      SchoolCalendar::AttendanceSeeder.new(
-        professor: current_professor,
-        classroom: classroom,
-        lesson: lesson
-      ).call
-    end
     bimester = SchoolCalendar::LessonPrompt.bimester_label(lesson_date)
-    tempos = lessons.map(&:siage_time_slot).compact.uniq.join(" e ")
-
     render json: {
       ok: true,
-      message: [
-        result[:message],
-        bimester && "A aula entra no #{bimester}.",
-        tempos.present? && "Frequência criada para #{tempos}.",
-        attendances.positive? && "#{attendances} registro(s) de chamada."
-      ].select { |part| part.present? }.join(" "),
+      message: [result[:message], bimester && "As aulas entram no #{bimester}."].compact.join(" "),
       warning: result[:warning],
-      lesson_id: lessons.last&.id,
-      diary_url: attendance_records_path(
-        classroom_id: classroom.id,
-        attendance_date: lesson_date
-      )
+      classrooms: result[:classrooms],
+      diary_url: lessons_path
     }
-  rescue ActiveRecord::RecordInvalid => error
-    render json: { ok: false, error: error.record.errors.full_messages.to_sentence },
-           status: :unprocessable_entity
-  rescue ActiveRecord::RecordNotFound
-    render json: { ok: false, error: "Turma não encontrada." }, status: :not_found
   rescue Date::Error
     render json: { ok: false, error: "Escolha o dia da aula no calendário." },
            status: :unprocessable_entity
@@ -189,33 +163,22 @@ class SchoolCalendarsController < ApplicationController
     Date.new(@year, 1, 1)
   end
 
-  def generate_notice(day, result)
-    bimester = SchoolCalendar::LessonPrompt.bimester_label(day)
-    parts = ["Criei #{result[:created]} aula(s) neste dia"]
-    parts << "no #{bimester}" if bimester
-    parts << "e a frequência de cada tempo" if result[:attendances].to_i.positive? || result[:created].positive?
-    sentence = "#{parts.join(" ")}."
-    sentence += " #{result[:skipped]} já existiam." if result[:skipped].to_i.positive?
-    sentence
-  end
-
-  def selected_slots_for(date)
-    return [] unless @classroom
-
+  def day_entries_for(date)
     current_professor.timetable_entries
-                     .where(classroom: @classroom, weekday: date.cwday)
-                     .order(:period)
-                     .map(&:time_slot_label)
+                     .joins(:classroom)
+                     .includes(:classroom, :course)
+                     .where(weekday: date.cwday)
+                     .order("timetable_entries.period, classrooms.name")
   end
 
   def tempos_by_weekday
-    return {} unless @classroom
-
     current_professor.timetable_entries
-                     .where(classroom: @classroom)
+                     .includes(:classroom)
                      .order(:weekday, :period)
                      .group_by(&:weekday)
-                     .transform_values { |rows| rows.map(&:time_slot_label) }
+                     .transform_values do |rows|
+                       rows.map { |entry| "#{entry.period}º · #{entry.classroom.name}" }
+                     end
   end
 
   def ensure_grade_slot!(classroom, date)
@@ -236,51 +199,4 @@ class SchoolCalendarsController < ApplicationController
     entry.save!
   end
 
-  def persist_timetable_slots!(classroom, lesson_date, result)
-    weekday = result[:weekday].to_i
-    return unless (1..6).cover?(weekday)
-
-    Array(result[:slots]).each do |slot|
-      period = slot[:period].to_i
-      next unless period.positive?
-
-      entry = current_professor.timetable_entries.find_or_initialize_by(
-        classroom: classroom,
-        weekday: weekday,
-        period: period
-      )
-      entry.course_id = result[:course_id]
-      entry.time_slot = slot[:time_slot].presence || "#{period}º tempo"
-      entry.save
-    end
-  end
-
-  def build_lessons_from_timetable(classroom, lesson_date, result)
-    slots = Array(result[:slots])
-    if slots.empty?
-      slots = [{ time_slot: result[:siage_time_slot].presence || "1º tempo" }]
-    end
-
-    slots.map do |slot|
-      time_slot = slot[:time_slot].presence || "#{slot[:period].to_i}º tempo"
-      lesson = current_professor.lessons.find_or_initialize_by(
-        classroom: classroom,
-        lesson_date: lesson_date,
-        course_id: result[:course_id],
-        siage_time_slot: time_slot
-      )
-      lesson.assign_attributes(
-        theme: result[:theme],
-        objective: result[:objective],
-        content: result[:content],
-        methodology: result[:methodology],
-        siage_period: result[:siage_period],
-        siage_class_mode: result[:siage_class_mode],
-        siage_class_type: result[:siage_class_type],
-        siage_time_slot: time_slot
-      )
-      lesson.save!
-      lesson
-    end
-  end
 end

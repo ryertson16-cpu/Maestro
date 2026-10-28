@@ -1,12 +1,14 @@
 module Activities
   class Grader
-    def initialize(activity)
+    def initialize(activity, assignment: nil)
       @activity = activity
+      @assignment = assignment
       @items = activity.activity_questions.order(:position)
+      @assigner = Activities::ExamAssigner.new(activity)
     end
 
     def score(answers)
-      answers = stringify(answers)
+      answers = @assigner.map_answers(answers, assignment: @assignment)
       earned = 0.to_d
       total = @items.sum { |item| item.points.to_d }
       return 0 if total <= 0

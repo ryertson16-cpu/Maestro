@@ -44,6 +44,14 @@ class Activity < ApplicationRecord
            -> { order(:position) },
            dependent: :destroy
 
+  has_many :pending_cards,
+           class_name: "ActivityPendingCard",
+           dependent: :destroy
+
+  has_many :exam_assignments,
+           class_name: "ActivityExamAssignment",
+           dependent: :delete_all
+
   has_one :enem_simulado, dependent: :nullify
 
   before_validation :ensure_correction_token, on: :create

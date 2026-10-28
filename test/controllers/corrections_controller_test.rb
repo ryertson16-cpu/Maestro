@@ -51,13 +51,17 @@ class CorrectionsControllerTest < ActionDispatch::IntegrationTest
     sign_in @professor
   end
 
-  test "desk page shows the activity qr and does not ask for the computer camera" do
+  test "choosing an activity opens the prova desk" do
     get corrections_path(classroom_id: @classroom.id, activity_id: @activity.id)
+
+    assert_redirected_to assemble_activity_path(@activity)
+  end
+
+  test "picker does not ask for the computer camera" do
+    get corrections_path(classroom_id: @classroom.id)
 
     assert_response :success
     assert_includes response.body, "Lista genética"
-    assert_includes response.body, "Câmera"
-    assert_includes response.body, "/g/#{@activity.reload.correction_token}"
     refute_includes response.body, "data-qr-video"
     refute_includes response.body, "Pedindo câmera"
   end

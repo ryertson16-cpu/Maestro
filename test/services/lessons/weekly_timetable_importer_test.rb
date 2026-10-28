@@ -19,7 +19,7 @@ class Lessons::WeeklyTimetableImporterTest < ActiveSupport::TestCase
       active: true
     )
     grade = @professor.grade_levels.create!(name: "2º ano")
-    %w[2ª\ H 2ª\ F 2ª\ I 2ª\ J 3ª\ K 3ª\ M 3ª\ N 3ª\ O 3ª\ P].each do |name|
+    %w[2ª\ H 2ª\ F 2ª\ I 2ª\ J 3ª\ K 3ª\ L 3ª\ M 3ª\ N 3ª\ O 3ª\ P].each do |name|
       @professor.classrooms.create!(
         name: name,
         school_year: 2026,
@@ -40,6 +40,12 @@ class Lessons::WeeklyTimetableImporterTest < ActiveSupport::TestCase
     assert_operator result[:count], :>=, 3
     assert_operator @professor.timetable_entries.count, :>=, 3
     assert @professor.timetable_entries.joins(:classroom).exists?(["classrooms.name LIKE ?", "%H%"])
+
+    thursday = @professor.timetable_entries.where(weekday: 4).includes(:classroom, :course)
+    assert_equal 6, thursday.count
+    assert_equal ["Química"], thursday.map { |entry| entry.course.name }.uniq
+    letters = thursday.map { |entry| entry.classroom.name }.join
+    %w[F H L M N K].each { |letter| assert_includes letters, letter }
   end
 
   test "rejects a missing file" do

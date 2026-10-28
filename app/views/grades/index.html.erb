@@ -25,10 +25,18 @@
                 class: "button button-secondary",
                 target: "_blank" %>
 
-    <%= link_to "Exportar 3 unidades para o SIAGE",
+    <%= link_to "JSON das 3 unidades",
                 siage_grades_export_path(
                   classroom_id: @classroom.id,
                   bimester: @bimester
+                ),
+                class: "button button-secondary" %>
+
+    <%= link_to "Planilha das 3 unidades",
+                siage_grades_export_path(
+                  classroom_id: @classroom.id,
+                  bimester: @bimester,
+                  spreadsheet: 1
                 ),
                 class: "button button-secondary" %>
 

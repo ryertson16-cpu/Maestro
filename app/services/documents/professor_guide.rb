@@ -159,7 +159,7 @@ module Documents
               "No mesmo perfil, informe CPF e senha do SIAGE uma vez. A senha fica cifrada no caderno; o Maestro não a grava em arquivo de projeto nem a mostra depois.",
               "Confira a assinatura (período de teste e plano mensal). Sem acesso pleno, o caderno e o WhatsApp da Lira não abrem."
             ]),
-            p("Na tela inicial você vê a turma em uso, o briefing do dia e os atalhos: Diário, Atividades, Monitoramento, Projetos, Turmas, Alunos, Cursos e Conversar.")
+            p("Na tela inicial você vê a turma em uso, o briefing do dia e os atalhos: Diário, Atividades, Monitoramento, Projetos, Turmas, Alunos, Disciplinas e Maestro.")
           ]
         },
         {
@@ -228,7 +228,7 @@ module Documents
               "No card da atividade (ou no lançamento), clique em Aviso do grupo.",
               "O texto já vem com quem não entregou. Troque o recorte para Com atraso ou Resumo da turma.",
               "Edite se quiser, copie e cole no grupo. A Lira não envia.",
-              "Pedidos mais livres (reunião de pais, boa prova) ficam em Conversar: peça a mensagem citando a turma."
+              "Pedidos mais livres (reunião de pais, boa prova) ficam no Maestro: peça a mensagem citando a turma."
             ]),
             p("A média ponderada do bimestre é a soma (nota × peso) dividida pela soma dos pesos das atividades com nota lançada. Atividade sem nota não entra na conta; nota 0 entra.")
           ]
@@ -316,12 +316,12 @@ module Documents
           ]
         },
         {
-          title: "Lira: Conversar, atalho do PC e WhatsApp do professor",
+          title: "Maestro: conversa no site, atalho do PC e WhatsApp do professor",
           blocks: [
             p("A Lira é o caderno falando com você. Abertura típica: “Tudo bem, professor(a) [nome].” Ela só usa os dados da sua conta."),
             h3("Onde falar"),
             bullets([
-              "Conversar — histórico completo no site.",
+              "Maestro — histórico completo no site.",
               "Atalho Maestro no topo — lembrete ou recado rápido, sem abrir o histórico. Ex.: “me lembra da reunião amanhã às 19h” (sino, com o caderno aberto neste PC).",
               "WhatsApp do número cadastrado no perfil — os mesmos comandos e as mesmas consultas. Não é o grupo da turma."
             ]),
@@ -358,7 +358,7 @@ module Documents
           title: "Rotina sugerida da semana",
           blocks: [
             steps([
-              "Segunda: conferir calendário e gerar a semana pelo horário. Abrir o briefing (hoje) no Conversar ou no atalho.",
+              "Segunda: conferir calendário e gerar a semana pelo horário. Abrir o briefing (hoje) no Maestro ou no atalho.",
               "Todo tempo de aula: chamada no Diário → salvar → pendente no livro-razão. Se houver atividade, já nascer no formulário da aula.",
               "Quando o prazo da lista vencer: lançar entregas em Atividades → Relatório da atividade → Aviso do grupo → colar no WhatsApp da turma → Abrir SIAGE quando for a vez das unidades.",
               "Antes do conselho: Monitoramento + pareceres. Conferir médias. Fechar bimestre só com nota conferida.",

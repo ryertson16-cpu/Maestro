@@ -58,7 +58,25 @@ Rails.application.configure do
   # config.action_mailer.raise_delivery_errors = false
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "example.com" }
+  public_host = ENV["MAESTRO_PUBLIC_HOST"].presence || ENV["RENDER_EXTERNAL_URL"].presence
+  if public_host.present?
+    uri = URI.parse(public_host)
+    config.action_mailer.default_url_options = {
+      host: uri.host,
+      protocol: uri.scheme.presence || "https"
+    }
+  else
+    config.action_mailer.default_url_options = { host: "example.com" }
+  end
+
+  if ENV["RENDER"].present?
+    config.assume_ssl = true
+    config.force_ssl = true
+    config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
+    config.hosts << /.*\.onrender\.com/
+    config.hosts << ENV["RENDER_EXTERNAL_HOSTNAME"] if ENV["RENDER_EXTERNAL_HOSTNAME"].present?
+    config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  end
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via bin/rails credentials:edit.
   # config.action_mailer.smtp_settings = {

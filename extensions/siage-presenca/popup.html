@@ -59,9 +59,9 @@
 
   <hr style="border:0;border-top:1px solid #e5e7eb;margin:16px 0">
   <div class="bloco">
-    <b>Notas do SIAGE</b> <small>(JSON de Exportar 3 unidades)</small><br>
-    <input type="file" id="arquivoNotas" accept=".json" style="margin:4px 0">
-    <p class="dica">Abra a tela de notas da turma no SIAGE. Digite a senha do SIAGE no campo acima. Depois do arquivo, escolha salvar parcialmente (ainda dá para mudar) ou lançar notas (o portal pede a senha e trava).</p>
+    <b>Notas do SIAGE</b> <small>(JSON ou planilha das 3 unidades)</small><br>
+    <input type="file" id="arquivoNotas" accept=".json,.xlsx,.xls,.csv,.txt" style="margin:4px 0">
+    <p class="dica">Use o JSON ou a planilha das 3 unidades (Aluno, 1ª unidade…). Não use o CSV de aula (Data, Tempos). Abra a tela de notas da turma no SIAGE. Digite a senha no campo acima.</p>
     <div id="previaNotas"></div>
     <div id="escolhaNotas" style="display:none">
       <button class="sec" id="notasParcial" style="width:100%;margin:0 0 6px">Salvar parcialmente</button>

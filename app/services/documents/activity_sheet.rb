@@ -2,7 +2,7 @@ module Documents
   class ActivitySheet
     BLANK_QUESTION_COUNT = 8
 
-    def initialize(professor:, activity:, correction_url: nil, students: [], student_url: nil)
+    def initialize(professor:, activity:, correction_url: nil, students: [], student_url: nil, mode: :student)
       @professor = professor
       @activity = activity
       @lesson = activity.lesson
@@ -10,8 +10,10 @@ module Documents
       @correction_url = correction_url
       @students = Array(students)
       @student_url = student_url
+      @mode = mode.to_s == "answer_key" ? :answer_key : :student
       @letterhead = Letterhead.new(professor)
       @qr = QrMark.new(correction_url)
+      @assigner = Activities::ExamAssigner.new(activity)
       @image_tempfiles = []
     end
 
@@ -19,25 +21,35 @@ module Documents
       pdf = Prawn::Document.new(
         page_size: "A4",
         page_layout: :portrait,
-        margin: 36,
+        margin: 28,
         info: {
           Title: "#{@activity.activity_type} - #{@activity.title}",
           Author: @professor.name.presence || "Maestro"
         }
       ) do |document|
-        @letterhead.draw(
-          document,
-          title: @activity.adapted? ? "#{@activity.activity_type} · ADAPTADA" : @activity.activity_type,
-          subtitle: @activity.title,
-          variant: :official
-        )
+        Documents::PdfFont.apply(document)
+        unless personalized_exams?
+          @letterhead.draw(
+            document,
+            title: sheet_heading,
+            subtitle: @activity.title,
+            variant: :official
+          )
+        end
 
-        draw_identification(document)
-        draw_student_line(document)
-        draw_instructions(document)
-        draw_questions(document)
-        draw_answer_sheet(document) if assembled_items.any?
-        draw_student_sheets(document) if assembled_items.any? && @students.any?
+        if answer_key?
+          draw_identification(document)
+          draw_instructions(document)
+          draw_professor_keys(document)
+        elsif personalized_exams?
+          draw_personalized_exams(document)
+        else
+          draw_identification(document)
+          draw_student_line(document)
+          draw_instructions(document)
+          draw_questions(document)
+          draw_omr_card(document)
+        end
         draw_footer(document)
       end
 
@@ -57,6 +69,23 @@ module Documents
 
     def assembled_items
       @assembled_items ||= @activity.activity_questions.to_a
+    end
+
+    def answer_key?
+      @mode == :answer_key
+    end
+
+    def student_copy?
+      !answer_key?
+    end
+
+    def personalized_exams?
+      student_copy? && assembled_items.any? && @students.any?
+    end
+
+    def sheet_heading
+      base = @activity.adapted? ? "#{@activity.activity_type} · ADAPTADA" : @activity.activity_type
+      answer_key? ? "Gabarito · #{base}" : base
     end
 
     def draw_identification(pdf)
@@ -197,6 +226,12 @@ module Documents
         item.choice_pairs.each do |letter, text|
           pdf.text "#{letter}) #{text}", size: 10, leading: 2
         end
+        if answer_key?
+          pdf.move_down 4
+          pdf.fill_color "1F4E79"
+          pdf.text "Gabarito: #{item.correct_letter}  ·  #{format('%.1f', item.points).tr('.', ',')} pt", size: 9, style: :bold
+          pdf.fill_color "20263D"
+        end
         pdf.move_down 10
       else
         pdf.move_down 8
@@ -209,10 +244,10 @@ module Documents
       file = question_image_file(item.image)
       return unless file
 
-      pdf.start_new_page if pdf.cursor < 170
-      pdf.move_down 6
-      pdf.image file.path, fit: [pdf.bounds.width * 0.72, 170]
-      pdf.move_down 8
+      pdf.start_new_page if pdf.cursor < 120
+      pdf.move_down 3
+      pdf.image file.path, fit: [pdf.bounds.width * 0.55, 110]
+      pdf.move_down 4
     rescue StandardError
       nil
     end
@@ -231,108 +266,278 @@ module Documents
       nil
     end
 
-    def draw_answer_sheet(pdf)
+    def draw_omr_card(pdf, student: nil, presented: nil)
+      rows = omr_rows(presented)
+      return if rows.empty?
+
       pdf.start_new_page
-      @letterhead.draw(
-        pdf,
-        title: "Folha de respostas",
-        subtitle: @activity.title,
-        variant: :official
-      )
+      draw_omr_banner(pdf, student)
 
-      pdf.fill_color "20263D"
-      pdf.text(
-        "Aluno(a): ________________________________  Nº: ________",
-        size: 10
-      )
-      pdf.move_down 6
-      pdf.text(
-        "Pinte um circulo por questao objetiva. O professor abre a camera do celular no QR do gabarito.",
-        size: 9
-      )
-      pdf.move_down 14
+      layout = omr_layout_for(rows.size)
+      top = pdf.cursor
+      url = omr_qr_url(student)
+      box_left = 0
+      box_width = pdf.bounds.width
+      padding = 10
+      qr_size = url.present? ? layout[:qr_size] : 0
+      single = layout[:columns] == 1 && qr_size.positive?
 
-      if @correction_url.present?
-        mark_top = pdf.cursor
-        @qr.draw(pdf, size: 72)
-        pdf.move_cursor_to(mark_top - 8)
-      end
-
-      assembled_items.each_with_index do |item, index|
-        pdf.start_new_page if pdf.cursor < 36
-        label = "#{index + 1}."
-        pdf.text_box label, at: [0, pdf.cursor], width: 28, height: 16, size: 10, style: :bold
-
-        if item.objective?
-          draw_bubbles(pdf, item)
-        else
-          pdf.fill_color "20263D"
-          pdf.text_box "Discursiva - #{format('%.1f', item.points).tr('.', ',')} pt",
-                       at: [32, pdf.cursor],
-                       width: 300,
-                       height: 16,
-                       size: 9
+      if single
+        grid_left = padding + qr_size + 14
+        grid_width = box_width - grid_left - padding
+        grid_top = top - padding
+        @qr.draw(pdf, size: qr_size, url: url, at: [padding, grid_top])
+      else
+        if qr_size.positive?
+          @qr.draw(pdf, size: qr_size, url: url, at: [box_width - padding - qr_size, top])
+          pdf.move_cursor_to(top - qr_size - 8)
+          top = pdf.cursor
         end
-        pdf.move_down 22
+        grid_left = padding
+        grid_width = box_width - (padding * 2)
+        grid_top = top - 4
       end
+
+      grid_height = draw_omr_grid(
+        pdf,
+        rows,
+        left: grid_left,
+        top: grid_top,
+        width: grid_width,
+        layout: layout
+      )
+      box_height = if single
+                     [qr_size, grid_height].max + (padding * 2)
+                   else
+                     (top - (grid_top - grid_height)) + 8
+                   end
+
+      pdf.stroke_color "000000"
+      pdf.line_width 1.1
+      pdf.stroke_rectangle [box_left, top + 2], box_width, box_height
+      pdf.move_cursor_to(top + 2 - box_height - 10)
+      pdf.fill_color "444444"
+      pdf.text "Pinte um círculo por questão. Não amasse o cartão.", size: 8
     end
 
-    def draw_student_sheets(pdf)
-      @students.each do |student|
-        url = @student_url&.call(student).to_s
-        pdf.start_new_page
+    def draw_personalized_exams(pdf)
+      @students.each_with_index do |student, index|
+        pdf.start_new_page if index.positive?
         @letterhead.draw(
           pdf,
-          title: "Folha de respostas",
+          title: sheet_heading,
           subtitle: @activity.title,
           variant: :official
         )
-
-        top = pdf.cursor
-        if url.present?
-          pdf.float do
-            pdf.bounding_box([pdf.bounds.width - 78, top], width: 78, height: 86) do
-              @qr.draw(pdf, size: 72, url: url)
-            end
-          end
+        draw_named_header(pdf, student)
+        presented = @assigner.presented_for(student)
+        presented.each do |row|
+          pdf.start_new_page if pdf.cursor < 72
+          draw_presented_item(pdf, row, show_key: false)
         end
+        draw_omr_card(pdf, student: student, presented: presented)
+      end
+    end
 
-        pdf.fill_color "20263D"
-        pdf.text student.name.to_s, size: 12, style: :bold
+    def draw_professor_keys(pdf)
+      assignments = @activity.exam_assignments.includes(:student).order(:slot)
+      if assignments.none?
+        draw_questions(pdf)
+        return
+      end
+
+      assignments.group_by(&:slot).each do |slot, rows|
+        pdf.start_new_page if pdf.cursor < 90
+        pdf.fill_color "1F4E79"
+        pdf.text "Chave da folha #{slot} · só o professor", size: 11, style: :bold
         pdf.move_down 4
-        pdf.text "#{@classroom.name}  ·  camera do celular no QR", size: 9
-        pdf.move_down 16
-
-        assembled_items.each_with_index do |item, index|
-          pdf.start_new_page if pdf.cursor < 36
-          pdf.text_box "#{index + 1}.", at: [0, pdf.cursor], width: 28, height: 16, size: 10, style: :bold
-          if item.objective?
-            draw_bubbles(pdf, item)
-          else
-            pdf.text_box "Discursiva - #{format('%.1f', item.points).tr('.', ',')} pt",
-                         at: [32, pdf.cursor],
-                         width: 300,
-                         height: 16,
-                         size: 9
-          end
-          pdf.move_down 22
+        pdf.fill_color "707891"
+        pdf.text rows.map { |row| row.student.name }.join("  ·  "), size: 9
+        pdf.move_down 10
+        pdf.fill_color "20263D"
+        @assigner.present(rows.first).each do |presented|
+          pdf.start_new_page if pdf.cursor < 110
+          draw_presented_item(pdf, presented, show_key: true)
         end
       end
     end
 
-    def draw_bubbles(pdf, item)
-      letters = item.choice_pairs.map(&:first)
-      letters = Question::LETTERS.first(4) if letters.blank?
+    def draw_named_header(pdf, student)
+      meta = [
+        @classroom.name,
+        @lesson.course&.name,
+        score_label
+      ].compact.join("  ·  ")
+
+      pdf.fill_color "20263D"
+      pdf.text student.name.to_s, size: 11, style: :bold
+      pdf.fill_color "707891"
+      pdf.text meta, size: 8
+      pdf.move_down 10
+    end
+
+    def draw_presented_item(pdf, presented, show_key:)
+      item = presented.item
+      pdf.fill_color "20263D"
+      pdf.text "#{presented.number}. #{item.prompt}", size: 9, leading: 2, inline_format: false
+      if show_key && item.bncc_skill.present?
+        pdf.fill_color "707891"
+        pdf.text "BNCC: #{item.bncc_skill}", size: 7
+        pdf.fill_color "20263D"
+      end
+      draw_item_image(pdf, item)
+
+      if item.objective?
+        pdf.move_down 3
+        presented.pairs.each do |letter, text|
+          pdf.text "#{letter}) #{text}", size: 9, leading: 1.5
+        end
+        if show_key
+          pdf.move_down 2
+          pdf.fill_color "1F4E79"
+          pdf.text "Gabarito: #{presented.printed_correct}  ·  #{format('%.1f', item.points).tr('.', ',')} pt", size: 8, style: :bold
+          pdf.fill_color "20263D"
+        end
+        pdf.move_down 6
+      else
+        pdf.move_down 4
+        draw_answer_rule(pdf)
+        pdf.move_down 4
+      end
+    end
+
+    def draw_omr_banner(pdf, student)
+      pdf.fill_color "000000"
+      pdf.text omr_banner_title, size: 11, style: :bold, align: :center
+      pdf.move_down 8
+      if student
+        pdf.text student.name.to_s, size: 10, style: :bold
+      else
+        pdf.text "Aluno(a): ________________________________  Nº: ________", size: 10
+      end
+      pdf.move_down 12
+    end
+
+    def omr_banner_title
+      [
+        @classroom.name,
+        @lesson.course&.name.presence,
+        @activity.title
+      ].compact.join("  ·  ")
+    end
+
+    def omr_qr_url(student)
+      return @student_url.call(student).to_s if student && @student_url
+
+      @correction_url.to_s
+    end
+
+    def omr_rows(presented)
+      if presented
+        presented.filter_map do |row|
+          next unless row.item.objective?
+
+          { number: row.number, letters: row.pairs.map(&:first) }
+        end
+      else
+        assembled_items.each_with_index.filter_map do |item, index|
+          next unless item.objective?
+
+          letters = item.choice_pairs.map(&:first)
+          letters = Question::LETTERS if letters.blank?
+          { number: index + 1, letters: letters }
+        end
+      end
+    end
+
+    def omr_letters(rows)
+      rows.flat_map { |row| row[:letters] }.uniq.sort.presence || Question::LETTERS
+    end
+
+    def omr_layout_for(count)
+      if count <= 16
+        { columns: 1, qr_size: 210, row_h: 22, radius: 7, fiducial: 12 }
+      elsif count <= 36
+        { columns: 2, qr_size: 88, row_h: 18, radius: 6, fiducial: 11 }
+      else
+        { columns: 3, qr_size: 72, row_h: 16, radius: 5, fiducial: 10 }
+      end
+    end
+
+    def draw_omr_grid(pdf, rows, left:, top:, width:, layout:)
+      letters = omr_letters(rows)
+      columns = layout[:columns]
+      fiducial = layout[:fiducial]
+      row_h = layout[:row_h]
+      per_col = (rows.size.to_f / columns).ceil
+      col_w = width / columns.to_f
+
+      pdf.fill_color "000000"
+      pdf.fill_rectangle [left, top], fiducial, fiducial
+      pdf.fill_rectangle [left + width - fiducial, top], fiducial, fiducial
+
+      header_top = top - fiducial - 2
+      tallest = 0
+      columns.times do |column|
+        slice = rows.slice(column * per_col, per_col) || []
+        next if slice.empty?
+
+        x = left + (column * col_w)
+        height = draw_omr_column(
+          pdf,
+          slice,
+          letters: letters,
+          left: x,
+          top: header_top,
+          width: col_w - 8,
+          row_h: row_h,
+          radius: layout[:radius]
+        )
+        tallest = height if height > tallest
+      end
+
+      fiducial + 2 + tallest
+    end
+
+    def draw_omr_column(pdf, rows, letters:, left:, top:, width:, row_h:, radius:)
+      label_w = 32
+      usable = [width - label_w, 20].max
+      step = usable / [letters.size, 1].max
+      radius = [radius, (step / 2) - 1.5].min
+      header_y = top
 
       letters.each_with_index do |letter, index|
-        x = 36 + (index * 42)
-        y = pdf.cursor - 2
-        pdf.stroke_color "1F4E79"
-        pdf.line_width 0.8
-        pdf.stroke_circle [x, y - 6], 8
-        pdf.fill_color "20263D"
-        pdf.draw_text letter, at: [x - 3, y - 9], size: 8
+        cx = left + label_w + (index * step) + (step / 2)
+        pdf.fill_color "000000"
+        pdf.text_box letter.to_s.downcase,
+                     at: [cx - 8, header_y],
+                     width: 16,
+                     height: 12,
+                     size: 9,
+                     align: :center,
+                     style: :bold
       end
+
+      y = header_y - 16
+      rows.each do |row|
+        pdf.fill_color "000000"
+        pdf.text_box "Q.#{row[:number]}",
+                     at: [left, y + 4],
+                     width: label_w,
+                     height: 14,
+                     size: 9,
+                     style: :bold
+        letters.each_with_index do |_letter, index|
+          cx = left + label_w + (index * step) + (step / 2)
+          cy = y - 2
+          pdf.stroke_color "000000"
+          pdf.line_width 0.9
+          pdf.stroke_circle [cx, cy], radius
+        end
+        y -= row_h
+      end
+
+      (header_y - y) + 6
     end
 
     def question_lines

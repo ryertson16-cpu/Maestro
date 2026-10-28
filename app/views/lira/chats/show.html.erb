@@ -1,14 +1,19 @@
-<% content_for :title, "Conversar | Maestro" %>
+<% content_for :title, "Maestro | Caderno" %>
 
 <div class="page-header">
   <div class="lira-page-title">
     <%= maestro_assistant_mark(size: :lg) %>
     <span class="section-eyebrow">Assistente</span>
-    <h1>Conversar</h1>
+    <h1>Maestro</h1>
     <p>
-      Conversa completa com o caderno: aulas, chamada, SIAGE e alertas da sua conta.
-      Atraso não é falta. Projetos ficam à parte do SIAGE. Recado rápido fica no Conversar do topo.
-      Pergunta solta usa o cérebro deste servidor (<%= Lira.brain_label %>): consulta o caderno e, se você pedir, monta recado de WhatsApp para copiar — não envia no grupo, não lança nota, falta nem SIAGE.
+      Conversa com o caderno: aulas, chamada, SIAGE e alertas da sua conta.
+      Atraso não é falta. Projetos ficam à parte do SIAGE.
+      <% if Lira.llm_enabled? %>
+        Pergunta solta usa <%= Lira.brain_label %>: consulta o caderno e, se você pedir, monta recado de WhatsApp para copiar — não envia no grupo, não lança nota, falta nem SIAGE.
+      <% else %>
+        Sem OpenAI/Gemini neste caderno: valem os comandos locais (hoje, avisos, ajuda).
+        Gabarito por foto e questões geradas ficam desligados até ligar a chave.
+      <% end %>
     </p>
   </div>
 </div>

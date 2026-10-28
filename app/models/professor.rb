@@ -73,6 +73,14 @@ class Professor < ApplicationRecord
     preferred_name.presence || name.to_s.split.first.presence
   end
 
+  def timetable_search_names
+    [greeting_name, name.to_s.split.first].compact.map(&:strip).uniq.select { |token| token.length >= 4 }
+  end
+
+  def timetable_discipline_names
+    courses.active.order(:name).pluck(:name)
+  end
+
   def feminine?
     sex == "female"
   end

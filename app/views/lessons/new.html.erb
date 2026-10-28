@@ -13,12 +13,20 @@
   <section class="data-card lesson-form-card">
     <div class="lesson-form-header">
       <div>
-        <h2>Seu horário neste dia</h2>
+        <h2>Suas aulas neste dia</h2>
         <p>
-          Vem da grade em <%= link_to "Meu horário", timetable_path %>.
-          Clique num tempo para preencher turma, disciplina e horário.
+          Grade de <%= link_to "Meu horário", timetable_path %>.
+          Crie todas de uma vez — não precisa ir turma por turma.
         </p>
       </div>
+      <%= button_to "Criar todas as aulas deste dia",
+                    generate_timetable_day_path,
+                    method: :post,
+                    params: { lesson_date: @lesson.lesson_date },
+                    class: "button button-primary",
+                    data: {
+                      confirm_message: "Criar as #{@weekday_entries.size} aula(s) de #{l(@lesson.lesson_date)} em todas as turmas da sua grade? As que já existirem são mantidas."
+                    } %>
     </div>
     <div class="my-timetable-slots" data-my-timetable-slots>
       <% @weekday_entries.each do |entry| %>
@@ -35,10 +43,13 @@
 <section class="data-card lesson-form-card timetable-import-card" data-timetable-import>
   <div class="lesson-form-header">
     <div>
-      <h2>Gerar aula pelo horário da escola</h2>
+      <h2>Criar aulas atrasadas pelo horário da semana</h2>
       <p>
-        Prefira gerar a grade em <%= link_to "Meu horário", timetable_path %>
-        e criar as aulas por lá. Ou anexe o PDF do dia para preencher só esta aula.
+        Anexe o PDF completo da semana. O Maestro procura o nome
+        <strong><%= current_professor.timetable_search_names.to_sentence %></strong>
+        e a disciplina
+        <strong><%= current_professor.timetable_discipline_names.to_sentence.presence || "cadastrada no caderno" %></strong>
+        — não a de outro professor. Cria todas as suas aulas da data, em todas as turmas.
       </p>
     </div>
   </div>
@@ -58,9 +69,10 @@
       type="button"
       class="button button-primary"
       data-timetable-generate
+      data-timetable-create-day
       data-timetable-url="<%= generate_from_timetable_lessons_path %>"
     >
-      Gerar aula pelo horário da escola
+      Criar minhas aulas deste dia
     </button>
   </div>
 

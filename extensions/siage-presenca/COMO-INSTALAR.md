@@ -1,4 +1,4 @@
-# SIAGE Presença Automática (versão 4.8.1) — como instalar e usar
+# SIAGE Presença Automática (versão 4.8.3) — como instalar e usar
 
 ## Instalar / atualizar
 1. Descompacte `siage-presenca.zip`. Use a pasta `siage-presenca` que contém o `manifest.json`.
@@ -18,6 +18,12 @@
    clica na prancheta, abre a aba **Frequência**, clica em **Registrar Frequência**, preenche data, período e tempo e marca a chamada. Notas vão em **Registro de Avaliações**.
 8. O painel no canto da página mostra o andamento por turma e os erros. O botão **Parar** interrompe;
    depois, **Continuar** no popup retoma de onde parou. Não mexa na aba enquanto ela trabalha.
+
+## Notas (JSON ou planilha)
+1. No Maestro, baixe **JSON das 3 unidades** ou **Planilha das 3 unidades**.
+2. Abra a tela de notas da turma no SIAGE.
+3. Na extensão, em **Notas do SIAGE**, escolha o arquivo (`.json`, `.csv` ou Excel).
+4. Use a senha do campo acima. **Salvar parcialmente** ainda dá para mudar; **Lançar notas** o portal trava.
 
 ## Segurança
 - A extensão só registra se a turma e o componente no topo da página forem os da planilha.

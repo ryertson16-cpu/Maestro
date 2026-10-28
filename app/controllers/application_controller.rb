@@ -2,7 +2,9 @@ class ApplicationController < ActionController::Base
   include CurrentClassroom
 
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
-  allow_browser versions: :modern
+  allow_browser versions: :modern, unless: -> {
+    controller_path == "public_corrections" || Rails.env.development?
+  }
 
   # Changes to the importmap will invalidate the etag for HTML responses
   stale_when_importmap_changes

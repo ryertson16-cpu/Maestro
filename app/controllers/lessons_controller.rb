@@ -141,25 +141,38 @@ class LessonsController < ApplicationController
   end
 
   def generate_from_timetable
-    classroom = current_professor.classrooms.find(params[:classroom_id])
     lesson_date = Date.parse(params[:lesson_date].to_s)
-    file = params[:timetable]
+    create_all = ActiveModel::Type::Boolean.new.cast(params[:create_all]) ||
+                 params[:classroom_id].blank? ||
+                 params[:timetable].present?
 
+    day = Lessons::DayLessonsFromTimetable.new(
+      professor: current_professor,
+      lesson_date: lesson_date,
+      upload: params[:timetable]
+    ).call
+
+    unless day[:ok]
+      render json: { ok: false, error: day[:error] }, status: :unprocessable_entity
+      return
+    end
+
+    if create_all
+      render json: day.merge(redirect_url: lessons_path)
+      return
+    end
+
+    classroom = current_professor.classrooms.find(params[:classroom_id])
     result = Lessons::TimetableLessonGenerator.new(
       professor: current_professor,
       classroom: classroom,
       lesson_date: lesson_date,
-      upload: file,
+      upload: nil,
       course: current_professor.courses.find_by(id: params[:course_id])
     ).call
 
-    if result[:ok]
-      persist_timetable_slots!(classroom, lesson_date, result)
-      render json: result
-    else
-      render json: { ok: false, error: result[:error] },
-             status: :unprocessable_entity
-    end
+    payload = result[:ok] ? result : { ok: true }
+    render json: payload.merge(message: [day[:message], payload[:message]].compact.join(" "))
   rescue ActiveRecord::RecordNotFound
     render json: { ok: false, error: "Turma não encontrada." },
            status: :not_found
@@ -169,25 +182,6 @@ class LessonsController < ApplicationController
   end
 
   private
-
-  def persist_timetable_slots!(classroom, lesson_date, result)
-    weekday = result[:weekday].to_i
-    return unless (1..6).cover?(weekday)
-
-    Array(result[:slots]).each do |slot|
-      period = slot[:period].to_i
-      next unless period.positive?
-
-      entry = current_professor.timetable_entries.find_or_initialize_by(
-        classroom: classroom,
-        weekday: weekday,
-        period: period
-      )
-      entry.course_id = result[:course_id]
-      entry.time_slot = slot[:time_slot].presence || "#{period}º tempo"
-      entry.save
-    end
-  end
 
   def set_lesson
     @lesson = current_professor.lessons
@@ -239,9 +233,11 @@ class LessonsController < ApplicationController
   def weekday_entries_for(lesson)
     return TimetableEntry.none if lesson.lesson_date.blank?
 
-    scope = current_professor.timetable_entries.includes(:classroom, :course).where(weekday: lesson.lesson_date.cwday).order(:period)
-    scope = scope.where(classroom_id: lesson.classroom_id) if lesson.classroom_id.present?
-    scope
+    current_professor.timetable_entries
+                     .joins(:classroom)
+                     .includes(:classroom, :course)
+                     .where(weekday: lesson.lesson_date.cwday)
+                     .order("timetable_entries.period, classrooms.name")
   end
 
   def lesson_date_from_params

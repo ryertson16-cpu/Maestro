@@ -259,7 +259,7 @@
     if (!ehTelaDeNotas()) {
       return { ok: false, msg: "Abra a tela de notas da turma no SIAGE (1ª, 2ª e 3ª unidade)." };
     }
-    if (!alunos.length) return { ok: false, msg: "Este JSON não tem notas." };
+    if (!alunos.length) return { ok: false, msg: "Este arquivo não tem notas." };
 
     const r = preencherNotas(alunos);
     if (!r.preenchidos && r.travados.length) {

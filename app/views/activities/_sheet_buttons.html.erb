@@ -1,0 +1,12 @@
+<% css_class = local_assigns[:css_class].presence || "button button-secondary button-small" %>
+<%= link_to "Folha do aluno",
+            sheet_activity_path(activity, format: :pdf),
+            class: css_class,
+            target: "_blank",
+            rel: "noopener",
+            title: "Cada aluno recebe questões e alternativas em ordem diferente. O grupo não aparece no papel." %>
+<%= link_to "Gabarito do professor",
+            key_sheet_activity_path(activity, format: :pdf),
+            class: css_class,
+            target: "_blank",
+            rel: "noopener" %>
