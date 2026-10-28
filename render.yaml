@@ -1,6 +1,5 @@
-# Blueprint do Render (sem Docker).
-# Dashboard → New → Blueprint → repositório Maestro.
-# No plano gratuito a migração fica no build (preDeployCommand só no plano pago).
+# Blueprint do Render.
+# Native Ruby do Render não tem Ruby 4.0.6; o Dockerfile da raiz usa a mesma versão do PC.
 databases:
   - name: maestro-db
     databaseName: maestro
@@ -10,10 +9,10 @@ databases:
 services:
   - type: web
     name: maestro
-    runtime: ruby
+    runtime: docker
     plan: free
-    buildCommand: "./bin/render-build.sh"
-    startCommand: bundle exec puma -C config/puma.rb
+    dockerfilePath: ./Dockerfile
+    dockerCommand: bundle exec puma -C config/puma.rb
     healthCheckPath: /up
     envVars:
       - key: DATABASE_URL
