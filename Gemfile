@@ -78,7 +78,7 @@ gem "omniauth-facebook", "~> 10.0"
 gem "omniauth-instagram-api", "~> 0.1"
 
 gem "csv", "~> 3.3"
-gem "rubyzip", "~> 3.2"
+gem "rubyzip", "~> 3.7"
 
 gem "prawn", "~> 2.5"
 gem "prawn-table", "~> 0.2"
