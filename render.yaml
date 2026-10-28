@@ -24,7 +24,9 @@ services:
       - key: SOLID_QUEUE_IN_PUMA
         value: "true"
       - key: WEB_CONCURRENCY
-        value: "2"
+        value: "0"
+      - key: RAILS_MAX_THREADS
+        value: "3"
       - key: MAESTRO_BILLING_ENFORCED
         value: "false"
       - key: RAILS_MASTER_KEY

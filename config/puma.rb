@@ -27,6 +27,8 @@
 # threads. This includes Active Record's `pool` parameter in `database.yml`.
 threads_count = ENV.fetch("RAILS_MAX_THREADS", 3)
 threads threads_count, threads_count
+environment ENV.fetch("RAILS_ENV", "development")
+workers ENV.fetch("WEB_CONCURRENCY", 0).to_i
 
 # 0.0.0.0: no Windows, 127.0.0.1 não alcança o Puma do WSL se ele escuta só em localhost.
 # O banner do Puma mostra http://0.0.0.0:PORTA, que o navegador não abre; o endereço útil é 127.0.0.1.
