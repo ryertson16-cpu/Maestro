@@ -1,16 +1,18 @@
-# Blueprint nativo do Render (sem Docker).
+# Blueprint do Render (sem Docker).
 # Dashboard → New → Blueprint → repositório Maestro.
+# No plano gratuito a migração fica no build (preDeployCommand só no plano pago).
 databases:
   - name: maestro-db
     databaseName: maestro
     user: maestro
+    plan: free
 
 services:
   - type: web
     name: maestro
     runtime: ruby
-    buildCommand: bundle install && bundle exec rails assets:precompile
-    preDeployCommand: bundle exec rails db:prepare
+    plan: free
+    buildCommand: "./bin/render-build.sh"
     startCommand: bundle exec puma -C config/puma.rb
     healthCheckPath: /up
     envVars:
@@ -21,7 +23,9 @@ services:
       - key: RAILS_ENV
         value: production
       - key: SOLID_QUEUE_IN_PUMA
-        value: true
+        value: "true"
+      - key: WEB_CONCURRENCY
+        value: "2"
       - key: MAESTRO_BILLING_ENFORCED
         value: "false"
       - key: RAILS_MASTER_KEY

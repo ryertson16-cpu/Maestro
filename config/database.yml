@@ -22,21 +22,22 @@ test:
 
 # Store production database in the storage/ directory, which by default
 # is mounted as a persistent Docker volume in config/deploy.yml.
-# On Render, DATABASE_URL (Postgres) replaces the SQLite files.
+# On Render, DATABASE_URL (Postgres) is the only store: cache, fila e cable
+# usam o mesmo banco (as tabelas entram na migration principal).
 production:
   primary: &production
-    <<: *default
     <% if ENV["DATABASE_URL"].present? %>
+    adapter: postgresql
+    encoding: unicode
+    pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
     url: <%= ENV["DATABASE_URL"] %>
     <% else %>
+    <<: *default
     database: storage/production.sqlite3
     <% end %>
   cache:
     <<: *production
-    migrations_paths: db/cache_migrate
   queue:
     <<: *production
-    migrations_paths: db/queue_migrate
   cable:
     <<: *production
-    migrations_paths: db/cable_migrate
