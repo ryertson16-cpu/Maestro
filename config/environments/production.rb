@@ -75,6 +75,25 @@ Rails.application.configure do
     config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
     config.hosts << /.*\.onrender\.com/
     config.hosts << ENV["RENDER_EXTERNAL_HOSTNAME"] if ENV["RENDER_EXTERNAL_HOSTNAME"].present?
+    [
+      ENV["MAESTRO_PUBLIC_HOST"],
+      ENV["RENDER_EXTERNAL_URL"],
+      "cadernomaestro.com.br",
+      "www.cadernomaestro.com.br"
+    ].each do |value|
+      next if value.blank?
+
+      host = begin
+        URI.parse(value.to_s.match?(/\Ahttps?:\/\//) ? value : "https://#{value}").host
+      rescue URI::InvalidURIError
+        nil
+      end
+      next if host.blank?
+
+      config.hosts << host
+      config.hosts << "www.#{host}" unless host.start_with?("www.")
+      config.hosts << host.delete_prefix("www.") if host.start_with?("www.")
+    end
     config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
   end
 

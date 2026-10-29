@@ -32,6 +32,8 @@ services:
         value: "false"
       - key: MAESTRO_OWNER_EMAILS
         value: "ryertson7@yahoo.com.br"
+      - key: MAESTRO_PUBLIC_HOST
+        value: "https://cadernomaestro.com.br"
       - key: RAILS_MASTER_KEY
         sync: false
       - key: SECRET_KEY_BASE
