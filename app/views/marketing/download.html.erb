@@ -1,20 +1,33 @@
 <% content_for :title, "Baixar o Maestro | Maestro" %>
 
 <section class="marketing-hero">
-  <h1>Maestro no Windows</h1>
+  <h1>Baixar o Maestro</h1>
   <p class="marketing-lead">
-    O caderno já abre no navegador, no mesmo endereço da sua conta.
-    O instalador é um atalho: inicia o Chrome no Maestro, como um programa.
+    O caderno abre no navegador. A extensão SIAGE, gratuita, é o que liga o caderno
+    ao portal da SEE-PB. Sem ela, <strong>Abrir SIAGE</strong> só chega na tela de login.
   </p>
   <div class="marketing-actions">
+    <%= link_to "Baixar extensão SIAGE",
+                download_siage_extension_path,
+                class: "button button-primary" %>
     <% if professor_signed_in? %>
-      <%= link_to "Abrir o caderno agora", root_path, class: "button button-primary" %>
+      <%= link_to "Abrir o caderno agora", root_path, class: "button button-secondary" %>
     <% else %>
-      <%= link_to "Criar conta", new_professor_registration_path, class: "button button-primary" %>
+      <%= link_to "Criar conta", new_professor_registration_path, class: "button button-secondary" %>
     <% end %>
   </div>
-  <p class="marketing-price">
-    O arquivo <code>Maestro-Setup.exe</code> entra nesta página quando o atalho Windows estiver pronto.
-    Até lá, no Chrome: menu → <strong>Salvar e compartilhar</strong> → <strong>Criar atalho</strong> → abrir como janela.
+</section>
+
+<section class="data-card siage-help-card" style="max-width: 720px; margin: 0 auto 28px;">
+  <h2>Como instalar a extensão</h2>
+  <%= render "siage_exports/install_extension" %>
+</section>
+
+<section class="marketing-hero">
+  <h2>Atalho no Windows</h2>
+  <p class="marketing-lead">
+    O caderno já abre em <strong>cadernomaestro.com.br</strong>.
+    Para parecer um programa: no Chrome, menu → <strong>Salvar e compartilhar</strong> →
+    <strong>Criar atalho</strong> → abrir como janela.
   </p>
 </section>

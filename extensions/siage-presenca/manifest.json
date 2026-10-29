@@ -1,19 +1,32 @@
 {
   "manifest_version": 3,
   "name": "SIAGE Presença Automática",
-  "version": "4.8.3",
+  "version": "4.8.4",
   "description": "Registra frequência e notas no SIAGE a partir dos arquivos do Maestro.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
     "https://professor.see.pb.gov.br/*",
     "http://127.0.0.1:3000/*",
-    "http://localhost:3000/*"
+    "http://localhost:3000/*",
+    "https://cadernomaestro.com.br/*",
+    "https://www.cadernomaestro.com.br/*",
+    "https://*.onrender.com/*"
   ],
   "background": { "service_worker": "background.js" },
   "content_scripts": [
     { "matches": ["https://professor.see.pb.gov.br/*"], "js": ["page-bridge.js"], "run_at": "document_start", "world": "MAIN" },
     { "matches": ["https://professor.see.pb.gov.br/*"], "js": ["runner.js", "grades.js"], "run_at": "document_idle" },
-    { "matches": ["http://127.0.0.1:3000/*", "http://localhost:3000/*"], "js": ["maestro-bridge.js"], "run_at": "document_idle" }
+    {
+      "matches": [
+        "http://127.0.0.1:3000/*",
+        "http://localhost:3000/*",
+        "https://cadernomaestro.com.br/*",
+        "https://www.cadernomaestro.com.br/*",
+        "https://*.onrender.com/*"
+      ],
+      "js": ["maestro-bridge.js"],
+      "run_at": "document_idle"
+    }
   ],
   "action": { "default_title": "Registrar frequência", "default_popup": "popup.html" }
 }

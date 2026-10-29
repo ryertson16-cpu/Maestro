@@ -1,3 +1,7 @@
+# Novidades: versão 4.8.4 (29/10/2026)
+
+- O ZIP da extensão baixa em cadernomaestro.com.br. O caderno publicado (`.com.br` e `www`) conversa com a extensão; **Abrir SIAGE** no site passa a entregar a chamada.
+
 # Novidades: versão 4.8.3 (27/10/2026)
 
 - Notas: recusa o CSV de aula (`siage-aula-…`, colunas Data/Tempos) e pede o JSON ou a planilha das 3 unidades.

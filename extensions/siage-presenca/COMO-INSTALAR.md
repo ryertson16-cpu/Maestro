@@ -1,10 +1,10 @@
-# SIAGE Presença Automática (versão 4.8.3) — como instalar e usar
+# SIAGE Presença Automática (versão 4.8.4) — como instalar e usar
 
 ## Instalar / atualizar
-1. Descompacte `siage-presenca.zip`. Use a pasta `siage-presenca` que contém o `manifest.json`.
-2. No Chrome, abra `chrome://extensions` e ligue o **Modo de programador**.
-3. Clique em **Carregar expandida** e escolha essa pasta.
-   Se já tinha uma versão antiga: remova-a antes, ou substitua a pasta e clique em ↻ no cartão da extensão.
+1. Baixe o ZIP em https://cadernomaestro.com.br/baixar (botão da extensão SIAGE) e extraia. Use a pasta `siage-presenca` que contém o `manifest.json`.
+2. No Chrome, abra `chrome://extensions` e ligue o **Modo do desenvolvedor**. No Edge: `edge://extensions`.
+3. Clique em **Carregar sem compactação** (ou **Load unpacked**) e escolha essa pasta.
+   Se já tinha uma versão antiga: extraia por cima da pasta e clique em ↻ no cartão da extensão.
 
 ## Usar com a planilha de todas as turmas
 1. Entre no SIAGE (professor.see.pb.gov.br). Pode estar em qualquer tela.

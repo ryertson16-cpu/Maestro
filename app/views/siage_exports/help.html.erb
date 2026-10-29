@@ -39,21 +39,13 @@
 </section>
 
 <section class="data-card siage-help-card">
-  <h2>Como instalar ou atualizar no Chrome</h2>
-  <ol class="siage-help-list">
-    <li>Abra o Chrome e acesse <code>chrome://extensions</code>.</li>
-    <li>Ative <strong>Modo do desenvolvedor</strong>.</li>
-    <li>
-      Clique em <strong>Carregar sem compactação</strong> e escolha a pasta
-      <code>C:\Users\ryert\Desktop\siage-presenca</code> (ou
-      <code>extensions/siage-presenca</code> no projeto).
-    </li>
-    <li>
-      Confira se o cartão mostra <strong><%= Siage::EXTENSION_NAME %></strong>
-      na versão <strong><%= Siage::EXTENSION_VERSION %></strong>.
-      Use o ↻ do cartão, não o Atualizar do topo.
-    </li>
-  </ol>
+  <h2>Como instalar ou atualizar no Chrome, Edge ou Brave</h2>
+  <p>
+    <%= link_to "Baixar extensão SIAGE #{Siage::EXTENSION_VERSION}",
+                download_siage_extension_path,
+                class: "button button-primary" %>
+  </p>
+  <%= render "siage_exports/install_extension" %>
 </section>
 
 <section class="data-card siage-help-card">

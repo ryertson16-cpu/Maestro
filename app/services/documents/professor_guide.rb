@@ -466,7 +466,7 @@ module Documents
         {
           title: "Extensão Chrome do SIAGE",
           blocks: [
-            p("Pacote Manifest V3: SIAGE Presença Automática #{Siage::EXTENSION_VERSION}, pasta extensions/siage-presenca. Permissões: activeTab, scripting, storage. Hosts: https://professor.see.pb.gov.br e o caderno em http://127.0.0.1:3000 (e localhost)."),
+            p("Pacote Manifest V3: SIAGE Presença Automática #{Siage::EXTENSION_VERSION}. ZIP em /baixar/extensao-siage. Permissões: activeTab, scripting, storage. Hosts: https://professor.see.pb.gov.br, cadernomaestro.com.br, www, *.onrender.com e o caderno local em http://127.0.0.1:3000."),
             bullets([
               "Service worker (background.js) orquestra o fluxo.",
               "Content scripts no portal: page-bridge (mundo MAIN), runner e grades — Frequência e Registro de Avaliações.",

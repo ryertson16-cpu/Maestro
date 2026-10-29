@@ -10312,6 +10312,19 @@ html[data-theme="night"] .marketing-grid article {
   color: var(--color-text-muted);
 }
 
+.vitrine-extension-steps {
+  max-width: 52rem;
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: var(--shadow-small);
+}
+
+.vitrine-extension-steps .siage-help-list {
+  margin: 0 0 12px;
+  padding-left: 1.2rem;
+}
+
 .vitrine-picks-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -10657,7 +10670,8 @@ html[data-theme="night"] .marketing-grid article {
 
 html[data-theme="night"] .vitrine-top,
 html[data-theme="night"] .vitrine-rail,
-html[data-theme="night"] .vitrine-picks-grid article {
+html[data-theme="night"] .vitrine-picks-grid article,
+html[data-theme="night"] .vitrine-extension-steps {
   background: rgba(28, 32, 48, 0.78);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
 }

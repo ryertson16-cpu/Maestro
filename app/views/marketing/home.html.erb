@@ -11,6 +11,7 @@
     <a href="#caderno">O caderno</a>
     <a href="#modulos">O que você faz</a>
     <a href="#siage">SIAGE</a>
+    <a href="#extensao">Extensão</a>
     <a href="#preco">Preço</a>
   </nav>
 
@@ -115,7 +116,7 @@
     <article>
       <%= maestro_icon :siage, size: :lg %>
       <h3>SIAGE</h3>
-      <p>Organize o lançamento das unidades e exporte o que a extensão precisa.</p>
+      <p>Organize o lançamento das unidades. A extensão, gratuita, preenche o SIAGE a partir do caderno.</p>
       <span>Incluso</span>
     </article>
     <article>
@@ -218,8 +219,28 @@
   </figure>
 </section>
 
+<section class="vitrine-picks" id="extensao">
+  <div class="vitrine-picks-head">
+    <div>
+      <h2>Extensão do SIAGE</h2>
+      <p>
+        Sem loja paga. Baixe o ZIP, carregue no Chrome ou no Edge e o botão
+        <strong>Abrir SIAGE</strong> passa a preencher frequência e notas.
+      </p>
+    </div>
+    <%= link_to "Baixar extensão SIAGE",
+                download_siage_extension_path,
+                class: "vitrine-btn-lime" %>
+  </div>
+  <div class="vitrine-extension-steps">
+    <%= render "siage_exports/install_extension" %>
+  </div>
+</section>
+
 <p class="vitrine-legal">
   <%= link_to "Baixar", download_maestro_path %>
+  ·
+  <%= link_to "Extensão SIAGE", download_siage_extension_path %>
   ·
   <%= link_to "Já tenho conta", new_professor_session_path %>
   ·

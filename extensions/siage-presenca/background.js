@@ -7,7 +7,13 @@ chrome.runtime.onStartup.addListener(liberarSessao);
 liberarSessao();
 
 function origensDoMaestro(origin) {
-  const lista = [origin, "http://127.0.0.1:3000", "http://localhost:3000"]
+  const lista = [
+    origin,
+    "http://127.0.0.1:3000",
+    "http://localhost:3000",
+    "https://cadernomaestro.com.br",
+    "https://www.cadernomaestro.com.br"
+  ]
     .map((s) => String(s || "").trim().replace(/\/$/, ""))
     .filter((s) => /^https?:\/\//i.test(s));
   return [...new Set(lista)];

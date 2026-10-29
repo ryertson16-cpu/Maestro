@@ -421,6 +421,9 @@ Rails.application.routes.draw do
       constraints: ->(request) { request.env["warden"]&.user(:professor).blank? }
 
   get "/baixar", to: "marketing#download", as: :download_maestro
+  get "/baixar/extensao-siage",
+      to: "marketing#siage_extension",
+      as: :download_siage_extension
 
   get "/gestao", to: "platform/desk#show", as: :platform_desk
   get "/gestao/exportar", to: "platform/desk#export", as: :platform_desk_export

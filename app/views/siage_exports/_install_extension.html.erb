@@ -1,0 +1,25 @@
+<ol class="siage-help-list">
+  <li>
+    <%= link_to "Baixe o ZIP da extensão", download_siage_extension_path %>.
+    Extraia o arquivo. Use a pasta <code>siage-presenca</code> que contém o
+    <code>manifest.json</code>.
+  </li>
+  <li>
+    No Chrome, abra <code>chrome://extensions</code>.
+    No Edge, abra <code>edge://extensions</code>. O Brave usa o mesmo caminho do Chrome.
+  </li>
+  <li>Ligue o <strong>Modo do desenvolvedor</strong> (canto superior direito).</li>
+  <li>
+    Clique em <strong>Carregar sem compactação</strong> (no Edge:
+    <strong>Load unpacked</strong>) e escolha essa pasta.
+  </li>
+  <li>
+    Confira se o cartão mostra <strong><%= Siage::EXTENSION_NAME %></strong>
+    na versão <strong><%= Siage::EXTENSION_VERSION %></strong>.
+    Para atualizar, extraia o ZIP de novo no mesmo lugar e clique em ↻ no cartão.
+  </li>
+</ol>
+<p>
+  Não precisa da loja do Chrome. A extensão fica no computador do professor e só
+  atua no portal da SEE-PB e neste caderno.
+</p>
