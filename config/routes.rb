@@ -135,9 +135,10 @@ Rails.application.routes.draw do
        to: "enrollments#import_list",
        as: :import_list_enrollments
 
-  get "/enrollments/modelo",
+  get "/enrollments/modelo(.:format)",
       to: "enrollments#import_template",
-      as: :import_enrollments_template
+      as: :import_enrollments_template,
+      defaults: { format: :xlsx }
 
   post "/enrollments/modelo",
        to: "enrollments#import_workbook",

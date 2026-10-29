@@ -23,9 +23,9 @@
       Não mude o cabeçalho da primeira linha.
     </p>
 
-    <%= form_with url: import_enrollments_template_path,
+    <%= form_with url: import_enrollments_template_path(format: :xlsx),
                   method: :get,
-                  local: true do |form| %>
+                  data: { turbo: false, skip_confirm: true } do |form| %>
       <div class="form-field">
         <%= form.label :classroom_id, "Turma" %>
         <%= form.select :classroom_id,

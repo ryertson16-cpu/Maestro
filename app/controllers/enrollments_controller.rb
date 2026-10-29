@@ -259,9 +259,11 @@ class EnrollmentsController < ApplicationController
     end
 
     remember_current_classroom(classroom)
+    filename = Enrollments::ClassroomWorkbook.filename(classroom)
     send_data Enrollments::ClassroomWorkbook.bytes(classroom),
-              filename: Enrollments::ClassroomWorkbook.filename(classroom),
-              type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              filename: filename,
+              type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              disposition: "attachment"
   end
 
   def import_workbook

@@ -24,7 +24,7 @@ module Enrollments
     end
 
     def to_xlsx
-      Zip::OutputStream.write_buffer do |zip|
+      buffer = Zip::OutputStream.write_buffer do |zip|
         zip.put_next_entry("[Content_Types].xml")
         zip.write(<<~XML)
           <?xml version="1.0" encoding="UTF-8"?>
@@ -60,7 +60,9 @@ module Enrollments
         XML
         zip.put_next_entry("xl/worksheets/sheet1.xml")
         zip.write(sheet_xml)
-      end.string
+      end
+      buffer.rewind
+      buffer.read.to_s.b
     end
 
     def rows_from_upload(uploaded)

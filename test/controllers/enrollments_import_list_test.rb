@@ -29,6 +29,9 @@ class EnrollmentsImportListTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", response.media_type
+    assert_match(/attachment/, response.headers["Content-Disposition"].to_s)
+    assert_match(/Maestro-alunos-2-f\.xlsx/, response.headers["Content-Disposition"].to_s)
+    assert_equal "PK", response.body.b[0, 2]
   end
 
   test "workbook csv enrolls names and generates missing registration" do
