@@ -20,16 +20,44 @@ class SchoolCalendarsController < ApplicationController
   end
 
   def create_day
-    day = current_professor.school_calendar_days.find_or_initialize_by(day: params[:day])
-    day.kind = params[:kind]
-    day.name = params[:name]
+    date = Date.parse(params[:day].to_s)
+    mark = SchoolCalendar::Marks.resolve(params[:kind], date: date, custom_name: params[:name])
+    location = { year: date.year, classroom_id: params[:classroom_id], day: date }
+
+    if mark[:clear]
+      current_professor.school_calendar_days.find_by(day: date)&.destroy
+      redirect_to school_calendar_path(location), notice: "Dia letivo sem marca extra."
+      return
+    end
+
+    day = current_professor.school_calendar_days.find_or_initialize_by(day: date)
+    day.kind = mark[:kind]
+    day.name = mark[:name]
 
     if day.save
-      redirect_to school_calendar_path(year: day.day.year, classroom_id: params[:classroom_id], day: day.day),
-                  notice: "Dia letivo atualizado."
+      redirect_to school_calendar_path(location), notice: "Dia letivo atualizado."
     else
-      redirect_to school_calendar_path(classroom_id: params[:classroom_id]),
+      redirect_to school_calendar_path(location),
                   alert: day.errors.full_messages.to_sentence
+    end
+  rescue Date::Error, ArgumentError => error
+    redirect_to school_calendar_path(classroom_id: params[:classroom_id]),
+                alert: error.message.presence || "Escolha o dia e a legenda."
+  end
+
+  def import_see
+    year = (params[:year].presence || Date.current.year).to_i
+    result = SchoolCalendar::SeeImporter.new(
+      professor: current_professor,
+      upload: params[:file]
+    ).call
+
+    if result[:ok]
+      redirect_to school_calendar_path(year: result[:year], classroom_id: params[:classroom_id]),
+                  notice: result[:message]
+    else
+      redirect_to school_calendar_path(year: year, classroom_id: params[:classroom_id]),
+                  alert: result[:error]
     end
   end
 

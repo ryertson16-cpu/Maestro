@@ -54,11 +54,26 @@
       <span class="section-eyebrow">Ano letivo</span>
       <h2>Calendário de <%= @year %></h2>
     </div>
-    <%= button_to "Aplicar calendário #{@year}",
-                  apply_school_calendar_holidays_path,
-                  method: :post,
-                  params: { year: @year, classroom_id: @classroom&.id, day: selected_iso },
-                  class: "button button-secondary" %>
+    <div class="classroom-show-actions">
+      <%= button_to "Aplicar calendário #{@year}",
+                    apply_school_calendar_holidays_path,
+                    method: :post,
+                    params: { year: @year, classroom_id: @classroom&.id, day: selected_iso },
+                    class: "button button-secondary" %>
+      <%= form_with url: import_school_calendar_see_path,
+                    method: :post,
+                    multipart: true,
+                    data: { turbo: false, skip_confirm: true },
+                    class: "year-mark-form" do |form| %>
+        <%= hidden_field_tag :year, @year %>
+        <%= hidden_field_tag :classroom_id, @classroom&.id %>
+        <%= form.file_field :file,
+                            accept: ".pdf,.xlsx,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            required: true,
+                            aria: { label: "Arquivo do calendário da SEE" } %>
+        <%= form.submit "Enviar calendário da SEE", class: "button button-secondary" %>
+      <% end %>
+    </div>
   </div>
 
   <div class="diary-workbar calendar-day-bar">
@@ -71,13 +86,9 @@
       </div>
       <div class="form-field">
         <%= label_tag :kind, "Marcar como" %>
-        <%= select_tag :kind, options_for_select([
-          ["Feriado", "holiday"],
-          ["Sábado letivo", "saturday_school"],
-          ["Recesso", "no_class"],
-          ["Planejamento", "planning"],
-          ["Marco letivo", "milestone"]
-        ], selected_cell&.kind), data: { calendar_kind: true } %>
+        <%= select_tag :kind,
+                       options_for_select(SchoolCalendar::Marks.select_options, selected_cell&.kind),
+                       data: { calendar_kind: true } %>
       </div>
       <div class="form-field">
         <%= label_tag :name, "Nome" %>

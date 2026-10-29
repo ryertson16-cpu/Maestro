@@ -352,6 +352,10 @@ Rails.application.routes.draw do
        to: "school_calendars#apply_holidays",
        as: :apply_school_calendar_holidays
 
+  post "/calendario/see",
+       to: "school_calendars#import_see",
+       as: :import_school_calendar_see
+
   post "/calendario/gerar-aulas",
        to: "school_calendars#generate_lessons",
        as: :generate_school_calendar_lessons

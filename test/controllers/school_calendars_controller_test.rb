@@ -86,4 +86,31 @@ class SchoolCalendarsControllerTest < ActionDispatch::IntegrationTest
     names = thursday.map { |lesson| lesson.classroom.name }.join
     %w[F H L M N K].each { |letter| assert_includes names, letter }
   end
+
+  test "imports the SEE calendar file onto the year grid" do
+    path = Rails.root.join("test/fixtures/files/see_calendario_pb_2026.pdf")
+
+    post import_school_calendar_see_path, params: {
+      file: Rack::Test::UploadedFile.new(path, "application/pdf")
+    }
+
+    assert_redirected_to school_calendar_path(year: 2026)
+    day = @professor.school_calendar_days.find_by(day: Date.new(2026, 2, 2))
+    assert_equal "planning", day.kind
+    assert_equal "Formação inicial", day.name
+  end
+
+  test "professor can mark a day with a SEE legend" do
+    post school_calendar_days_path, params: {
+      day: "2026-08-11",
+      kind: "JP",
+      name: ""
+    }
+
+    assert_redirected_to school_calendar_path(year: 2026, day: Date.new(2026, 8, 11))
+    day = @professor.school_calendar_days.find_by(day: Date.new(2026, 8, 11))
+    assert_equal "planning", day.kind
+    assert_equal "Jornada pedagógica", day.name
+  end
 end
+

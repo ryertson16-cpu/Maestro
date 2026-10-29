@@ -1,11 +1,12 @@
 class SchoolCalendarDay < ApplicationRecord
-  KINDS = %w[holiday saturday_school no_class planning milestone].freeze
+  KINDS = %w[holiday saturday_school no_class planning milestone letivo].freeze
   KIND_LABELS = {
     "holiday" => "Feriado",
     "saturday_school" => "Sábado letivo",
     "no_class" => "Recesso",
     "planning" => "Planejamento",
-    "milestone" => "Marco letivo"
+    "milestone" => "Marco letivo",
+    "letivo" => "Dia letivo"
   }.freeze
 
   belongs_to :professor
