@@ -47,6 +47,7 @@ class Professor < ApplicationRecord
   has_many :reminders, dependent: :destroy
   has_one :subscription, dependent: :destroy
   has_many :billing_events, dependent: :nullify
+  has_many :desk_messages, dependent: :nullify
 
   after_create :start_trial_subscription!
 

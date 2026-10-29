@@ -17,6 +17,7 @@ module Platform
       )
       @due_soon = desk.due_soon
       @recent_events = BillingEvent.order(created_at: :desc).limit(20)
+      @desk_inbox = DeskMessage.newest.limit(25)
       @asaas_on = Billing::Config.asaas_configured?
       @billing_on = Billing::Config.enforced?
     end

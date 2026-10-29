@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_29_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_29_220000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -304,6 +304,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_180000) do
     t.datetime "updated_at", null: false
     t.index ["knowledge_area"], name: "index_courses_on_knowledge_area"
     t.index ["professor_id"], name: "index_courses_on_professor_id"
+  end
+
+  create_table "desk_messages", force: :cascade do |t|
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.string "direction", default: "inbound", null: false
+    t.string "email"
+    t.string "external_id"
+    t.string "intent"
+    t.string "name"
+    t.integer "professor_id"
+    t.datetime "updated_at", null: false
+    t.string "whatsapp_number", null: false
+    t.index ["created_at"], name: "index_desk_messages_on_created_at"
+    t.index ["external_id"], name: "index_desk_messages_on_external_id", unique: true, where: "external_id IS NOT NULL"
+    t.index ["professor_id"], name: "index_desk_messages_on_professor_id"
+    t.index ["whatsapp_number"], name: "index_desk_messages_on_whatsapp_number"
   end
 
   create_table "enem_pending_cards", force: :cascade do |t|
@@ -884,6 +901,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_180000) do
   add_foreign_key "course_disciplines", "courses"
   add_foreign_key "course_disciplines", "school_courses"
   add_foreign_key "courses", "professors"
+  add_foreign_key "desk_messages", "professors"
   add_foreign_key "enem_pending_cards", "enem_simulados"
   add_foreign_key "enem_simulado_sheets", "classrooms"
   add_foreign_key "enem_simulado_sheets", "enem_simulados"

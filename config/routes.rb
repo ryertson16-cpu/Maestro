@@ -464,6 +464,15 @@ Rails.application.routes.draw do
 
   post "/webhooks/asaas", to: "billing/webhooks#create"
 
+  namespace :api do
+    namespace :v1 do
+      get "desk/health", to: "desk#health"
+      get "desk/product", to: "desk#product"
+      get "desk/professor", to: "desk#professor"
+      post "desk/messages", to: "desk#create_message"
+    end
+  end
+
   get "/empresa",
       to: "legal#home",
       as: :company

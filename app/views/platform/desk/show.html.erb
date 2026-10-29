@@ -86,6 +86,41 @@
   </article>
 </section>
 
+<% if @desk_inbox.any? %>
+  <section class="data-card">
+    <div class="section-heading">
+      <div>
+        <span class="section-eyebrow">WhatsApp comercial</span>
+        <h2>Conversas do agente</h2>
+        <p>Recados que o n8n gravou neste caderno. O agente fala com o professor; o diário continua na Lira.</p>
+      </div>
+    </div>
+    <div class="desk-due-list">
+      <% @desk_inbox.each do |message| %>
+        <div class="desk-due-item">
+          <div>
+            <strong><%= message.name.presence || message.whatsapp_number %></strong>
+            <div class="table-secondary-text">
+              <%= message.direction_label %>
+              · <%= message.whatsapp_number %>
+              <% if message.intent.present? %>
+                · <%= message.intent %>
+              <% end %>
+            </div>
+          </div>
+          <div><%= truncate(message.body, length: 140) %></div>
+          <div>
+            <%= l(message.created_at, format: :short) %>
+            <% if message.professor %>
+              · <%= link_to "Ficha", platform_desk_professor_path(message.professor) %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
 <section class="attendance-filter diary-context">
   <h2>Filtrar contas</h2>
   <%= form_with url: platform_desk_path, method: :get, local: true do |form| %>
