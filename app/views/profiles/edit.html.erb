@@ -40,7 +40,8 @@
     <%= form_with model: @professor,
                   url: profile_path,
                   method: :patch,
-                  multipart: true do |form| %>
+                  multipart: true,
+                  data: { turbo: false } do |form| %>
 
       <div class="profile-form-photo">
         <%= form.label :profile_photo, "Foto do professor" %>

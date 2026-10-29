@@ -35,7 +35,8 @@
     <%= form_with model: @school,
                   url: school_path,
                   method: :patch,
-                  multipart: true do |form| %>
+                  multipart: true,
+                  data: { turbo: false } do |form| %>
       <div class="profile-form-photo">
         <%= form.label :crest, "Brasão" %>
         <%= form.file_field :crest, accept: "image/png,image/jpeg,image/webp" %>

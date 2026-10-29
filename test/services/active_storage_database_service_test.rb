@@ -14,6 +14,15 @@ class ActiveStorageDatabaseServiceTest < ActiveSupport::TestCase
     ActiveStorageDatum.where("key LIKE ?", "maestro-test-%").delete_all
   end
 
+  test "rails can require the database adapter" do
+    service = ActiveStorage::Service.configure(
+      :database,
+      { database: { service: "Database" } }
+    )
+
+    assert_kind_of ActiveStorage::Service::DatabaseService, service
+  end
+
   test "stores bytes in postgres or sqlite" do
     @service.upload(@key, StringIO.new("brasao"))
 
