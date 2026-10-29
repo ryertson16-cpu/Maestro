@@ -3,7 +3,8 @@
     <%= maestro_icon :students, size: :lg %>
     <h1>Importar alunos</h1>
     <p>
-      Envie um arquivo CSV para criar alunos e vinculá-los às turmas.
+      Baixe o modelo da turma, preencha os nomes e envie o arquivo.
+      Sem matrícula, o Maestro gera uma. Também dá para colar a lista.
     </p>
   </div>
 
@@ -12,7 +13,100 @@
               class: "button button-secondary" %>
 </div>
 
+<% if @classrooms.any? %>
+  <section class="form-card">
+    <h2>Modelo Excel desta turma</h2>
+    <p class="form-help">
+      Coluna <strong>Nome</strong> é obrigatória.
+      <strong>Matrícula</strong> é opcional: se ficar vazia, o Maestro cria no formato
+      <code>MAE<%= @classroom&.school_year.presence || Date.current.year %>…</code>.
+      Não mude o cabeçalho da primeira linha.
+    </p>
+
+    <%= form_with url: import_enrollments_template_path,
+                  method: :get,
+                  local: true do |form| %>
+      <div class="form-field">
+        <%= form.label :classroom_id, "Turma" %>
+        <%= form.select :classroom_id,
+                        @classrooms.map { |classroom| [classroom.name, classroom.id] },
+                        { selected: @classroom&.id },
+                        required: true %>
+      </div>
+      <div class="form-actions">
+        <%= form.submit "Baixar modelo Excel", class: "button button-secondary" %>
+      </div>
+    <% end %>
+
+    <%= form_with url: import_enrollments_workbook_path,
+                  method: :post,
+                  multipart: true,
+                  local: true,
+                  html: { data: { turbo: false } } do |form| %>
+      <div class="form-field">
+        <%= form.label :classroom_id, "Turma do arquivo" %>
+        <%= form.select :classroom_id,
+                        @classrooms.map { |classroom| [classroom.name, classroom.id] },
+                        { selected: @classroom&.id },
+                        required: true %>
+      </div>
+      <div class="form-field">
+        <%= form.label :file, "Arquivo preenchido" %>
+        <%= form.file_field :file,
+                            accept: ".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv",
+                            required: true %>
+      </div>
+      <div class="form-actions">
+        <%= form.submit "Enviar modelo", class: "button button-primary" %>
+      </div>
+    <% end %>
+  </section>
+
+  <section class="form-card">
+    <h2>Colar lista desta turma</h2>
+    <p class="form-help">
+      Um nome por linha. Matrícula opcional: <code>Maria Silva, 2026001</code>.
+      Sem matrícula, o Maestro gera.
+    </p>
+
+    <%= form_with url: import_list_enrollments_path,
+                  method: :post,
+                  local: true do |form| %>
+      <div class="form-field">
+        <%= form.label :classroom_id, "Turma" %>
+        <%= form.select :classroom_id,
+                        @classrooms.map { |classroom| [classroom.name, classroom.id] },
+                        { selected: @classroom&.id },
+                        required: true %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :list, "Lista de alunos" %>
+        <%= form.text_area :list,
+                           rows: 10,
+                           required: true,
+                           placeholder: "Ana Beatriz Costa\nCarlos Eduardo Lima, 2026123\nFernanda Souza" %>
+      </div>
+
+      <div class="form-actions">
+        <%= form.submit "Matricular lista",
+                        class: "button button-primary" %>
+        <%= link_to "Cancelar",
+                    students_path,
+                    class: "button button-secondary" %>
+      </div>
+    <% end %>
+  </section>
+<% else %>
+  <section class="empty-state">
+    <strong>Cadastre uma turma primeiro.</strong>
+    <p>O modelo e a lista colada entram na turma escolhida.</p>
+    <%= link_to "Abrir turmas", classrooms_path, class: "button button-primary" %>
+  </section>
+<% end %>
+
 <section class="form-card">
+  <h2>Arquivo CSV (várias turmas)</h2>
   <%= form_with url: import_create_enrollments_path,
                 method: :post,
                 multipart: true,
@@ -26,17 +120,13 @@
     </div>
 
     <p class="form-help">
-      Colunas esperadas:
+      Colunas, separadas por ponto e vírgula:
       nome, matricula, turma, data_matricula e status.
     </p>
 
     <div class="form-actions">
       <%= form.submit "Importar arquivo",
-                      class: "button button-primary" %>
-
-      <%= link_to "Cancelar",
-                  students_path,
-                  class: "button button-secondary" %>
+                      class: "button button-secondary" %>
     </div>
   <% end %>
 </section>

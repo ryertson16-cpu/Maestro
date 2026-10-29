@@ -3,6 +3,7 @@ require "csv"
 class EnrollmentsController < ApplicationController
   before_action :authenticate_professor!
   before_action :set_enrollment, only: %i[show destroy]
+  before_action :load_import_page, only: %i[import import_create import_list import_template import_workbook]
 
   def index
     @enrollments = current_professor.enrollments
@@ -250,6 +251,79 @@ class EnrollmentsController < ApplicationController
     render :import, status: :unprocessable_entity
   end
 
+  def import_template
+    classroom = current_professor.classrooms.find_by(id: params[:classroom_id]) || @classroom
+    if classroom.blank?
+      redirect_to import_enrollments_path, alert: "Escolha a turma para baixar o modelo."
+      return
+    end
+
+    remember_current_classroom(classroom)
+    send_data Enrollments::ClassroomWorkbook.bytes(classroom),
+              filename: Enrollments::ClassroomWorkbook.filename(classroom),
+              type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  end
+
+  def import_workbook
+    classroom = current_professor.classrooms.find_by(id: params[:classroom_id])
+    if classroom.blank?
+      flash.now[:alert] = "Escolha a turma desta lista."
+      return render :import, status: :unprocessable_entity
+    end
+
+    remember_current_classroom(classroom)
+    rows = Enrollments::ClassroomWorkbook.rows_from(params[:file])
+    result = Enrollments::PasteList.new(
+      professor: current_professor,
+      classroom: classroom,
+      rows: rows
+    ).call
+
+    if result.errors.any?
+      flash.now[:alert] = result.errors.join(" ")
+      return render :import, status: :unprocessable_entity
+    end
+
+    @classroom = classroom
+    redirect_to classroom_path(classroom), notice: list_import_notice(result)
+  rescue ArgumentError => error
+    flash.now[:alert] = error.message
+    render :import, status: :unprocessable_entity
+  rescue Zip::Error, Nokogiri::XML::SyntaxError
+    flash.now[:alert] = "Não consegui ler o arquivo. Use o modelo Excel do Maestro ou um CSV com as colunas Nome e Matrícula."
+    render :import, status: :unprocessable_entity
+  rescue ActiveRecord::RecordInvalid => error
+    flash.now[:alert] = error.record.errors.full_messages.to_sentence
+    render :import, status: :unprocessable_entity
+  end
+
+  def import_list
+    @classroom = current_professor.classrooms.find_by(id: params[:classroom_id])
+
+    if @classroom.blank?
+      flash.now[:alert] = "Escolha a turma desta lista."
+      return render :import, status: :unprocessable_entity
+    end
+
+    remember_current_classroom(@classroom)
+    result = Enrollments::PasteList.new(
+      professor: current_professor,
+      classroom: @classroom,
+      text: params[:list]
+    ).call
+
+    if result.errors.any?
+      flash.now[:alert] = result.errors.join(" ")
+      return render :import, status: :unprocessable_entity
+    end
+
+    redirect_to classroom_path(@classroom),
+                notice: list_import_notice(result)
+  rescue ActiveRecord::RecordInvalid => error
+    flash.now[:alert] = error.record.errors.full_messages.to_sentence
+    render :import, status: :unprocessable_entity
+  end
+
   def move
     @enrollment = current_professor.enrollments
                                   .where(status: "active")
@@ -334,6 +408,22 @@ class EnrollmentsController < ApplicationController
       :enrolled_on,
       :status
     )
+  end
+
+  def load_import_page
+    @classrooms = current_professor.classrooms.order(:name)
+    @classroom = current_professor.classrooms.find_by(id: params[:classroom_id]) ||
+                 remembered_classroom
+  end
+
+  def list_import_notice(result)
+    parts = [
+      "#{result.imported} aluno(s) matriculado(s) em #{@classroom.name}."
+    ]
+    parts << "#{result.created_students} ficha(s) nova(s)." if result.created_students.positive?
+    parts << "#{result.reactivated} voltaram para a turma." if result.reactivated.positive?
+    parts << "#{result.skipped} já estavam na turma." if result.skipped.positive?
+    parts.join(" ")
   end
 
   def load_form_options

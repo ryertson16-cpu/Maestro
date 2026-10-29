@@ -98,8 +98,11 @@
       <%= maestro_icon :students, size: :sm %>
       Matrículas
     </h2>
-    <p>Inclua alunos nesta turma. O histórico permanece se alguém for removido.</p>
+    <p>Cole a lista de nomes desta turma, ou vincule alunos que já estão no caderno.</p>
     <div class="classroom-show-actions">
+      <%= link_to "Colar lista",
+                  import_enrollments_path(classroom_id: @classroom.id),
+                  class: "button button-primary" %>
       <%= link_to "Matricular alunos",
                   bulk_new_enrollments_path(classroom_id: @classroom.id),
                   class: "button button-secondary" %>

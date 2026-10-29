@@ -131,6 +131,18 @@ Rails.application.routes.draw do
        to: "enrollments#import_create",
        as: :import_create_enrollments
 
+  post "/enrollments/importar-lista",
+       to: "enrollments#import_list",
+       as: :import_list_enrollments
+
+  get "/enrollments/modelo",
+      to: "enrollments#import_template",
+      as: :import_enrollments_template
+
+  post "/enrollments/modelo",
+       to: "enrollments#import_workbook",
+       as: :import_enrollments_workbook
+
   resources :enrollments,
             only: %i[index new create show destroy] do
     member do
