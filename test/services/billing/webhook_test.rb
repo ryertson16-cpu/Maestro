@@ -27,6 +27,22 @@ class Billing::WebhookTest < ActiveSupport::TestCase
 
     subscription = @professor.subscription.reload
     assert_equal "active", subscription.status
+    assert_equal "pix", subscription.payment_method
     assert subscription.current_period_end > Time.current
+  end
+
+  test "pagamento no cartao grava a forma" do
+    Billing::Webhook.new(
+      "event" => "PAYMENT_RECEIVED",
+      "payment" => {
+        "id" => "pay_card",
+        "billingType" => "CREDIT_CARD",
+        "customer" => "cus_2",
+        "subscription" => "sub_2",
+        "externalReference" => @professor.id.to_s
+      }
+    ).process!
+
+    assert_equal "credit_card", @professor.subscription.reload.payment_method
   end
 end

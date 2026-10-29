@@ -4,9 +4,53 @@ class MonitoringController < ApplicationController
   before_action :authenticate_professor!
   before_action :load_report
   before_action :require_selected_classroom, only: :email_digest
-  skip_before_action :load_report, only: :activity_result
+  skip_before_action :load_report, only: %i[activity_result plan]
 
   def index
+  end
+
+  def plan
+    load_series_context!
+    unless @series_report
+      redirect_to monitoring_path, alert: "Escolha um nível de ensino para baixar o plano."
+      return
+    end
+
+    pdf = Documents::BimesterActionPlan.new(
+      professor: current_professor,
+      report: @series_report
+    ).render
+
+    send_data pdf,
+              filename: "plano-#{@selected_grade_level.name.parameterize}-#{@bimester}bim.pdf",
+              type: "application/pdf",
+              disposition: "attachment"
+  end
+
+  def update_series_goal
+    unless @series_report
+      redirect_to monitoring_path, alert: "Escolha um nível de ensino para gravar a meta."
+      return
+    end
+
+    raw = params[:target_average].to_s.strip
+    parsed = parse_goal(raw)
+    if raw.present? && parsed.nil?
+      redirect_to monitoring_path(series_redirect_params),
+                  alert: "A meta precisa ser uma nota entre 0 e 10."
+      return
+    end
+
+    setting = @series_report.setting
+    setting.professor = current_professor
+    setting.target_average = parsed
+    setting.save!
+
+    redirect_to monitoring_path(series_redirect_params),
+                notice: "Meta do bimestre atualizada."
+  rescue ActiveRecord::RecordInvalid
+    redirect_to monitoring_path(series_redirect_params),
+                alert: "A meta precisa ser uma nota entre 0 e 10."
   end
 
   def activity_result
@@ -407,6 +451,50 @@ class MonitoringController < ApplicationController
     @alert_summary = @report.summary
     @has_alerts = @report.has_alerts?
     @overdue_projects = Project.overdue_for(current_professor)
+    load_series_context!
+  end
+
+  def load_series_context!
+    @bimester =
+      if (1..4).cover?(params[:bimester].to_i)
+        params[:bimester].to_i
+      else
+        Siage.bimester_for_date(Date.current)
+      end
+
+    @grade_levels = current_professor.grade_levels.joins(:classrooms).distinct.order(:name)
+    @selected_grade_level =
+      current_professor.grade_levels.find_by(id: params[:grade_level_id]) ||
+      @selected_classroom&.grade_level ||
+      @grade_levels.first
+
+    @series_report =
+      if @selected_grade_level
+        Monitoring::SeriesReport.new(
+          professor: current_professor,
+          grade_level: @selected_grade_level,
+          bimester: @bimester
+        )
+      end
+  end
+
+  def series_redirect_params
+    {
+      classroom_id: @selected_classroom&.id,
+      grade_level_id: @selected_grade_level&.id,
+      bimester: @bimester,
+      month: @monitoring_month&.strftime("%Y-%m"),
+      filter: @alert_filter
+    }.compact
+  end
+
+  def parse_goal(value)
+    text = value.to_s.strip
+    return if text.blank?
+
+    Float(text.tr(",", "."))
+  rescue ArgumentError
+    nil
   end
 
   def import_fail(message)

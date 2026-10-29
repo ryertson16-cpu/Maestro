@@ -34,6 +34,27 @@ class Billing::DeskTest < ActiveSupport::TestCase
     subscription = @teacher.subscription.reload
     assert_equal "active", subscription.status
     assert_equal "monthly", subscription.plan
+    assert_equal "pix", subscription.payment_method
     assert subscription.last_payment_at.present?
+  end
+
+  test "activate with credit card stores payment method" do
+    Billing::Desk.new.apply!(
+      @teacher,
+      intent: "activate",
+      actor: @owner,
+      payment_method: "credit_card"
+    )
+
+    assert_equal "credit_card", @teacher.subscription.reload.payment_method
+  end
+
+  test "client segment returns only monthly accounts" do
+    Billing::Desk.new.apply!(@teacher, intent: "activate", actor: @owner)
+
+    accounts = Billing::Desk.new.accounts(segment: "client")
+
+    assert_includes accounts, @teacher
+    assert_not_includes accounts, @owner
   end
 end

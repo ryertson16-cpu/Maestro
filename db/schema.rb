@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_28_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_29_140000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -212,6 +212,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_180000) do
     t.index ["professor_id"], name: "index_billing_events_on_professor_id"
   end
 
+  create_table "bimester_actions", force: :cascade do |t|
+    t.string "audience"
+    t.integer "bimester", null: false
+    t.datetime "created_at", null: false
+    t.date "due_on"
+    t.integer "grade_level_id", null: false
+    t.integer "position", default: 1, null: false
+    t.integer "professor_id", null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["grade_level_id"], name: "index_bimester_actions_on_grade_level_id"
+    t.index ["professor_id", "grade_level_id", "bimester", "position"], name: "index_bimester_actions_on_series_and_position"
+    t.index ["professor_id"], name: "index_bimester_actions_on_professor_id"
+    t.check_constraint "bimester BETWEEN 1 AND 4", name: "bimester_actions_bimester_range"
+    t.check_constraint "position >= 1", name: "bimester_actions_position_positive"
+  end
+
   create_table "bimester_settings", force: :cascade do |t|
     t.integer "bimester", null: false
     t.integer "classroom_id", null: false
@@ -411,6 +428,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_180000) do
     t.datetime "created_at", null: false
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
+    t.text "management_note"
     t.string "name"
     t.string "phone"
     t.boolean "platform_admin", default: false, null: false
@@ -555,6 +573,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_180000) do
     t.string "regional_other"
     t.datetime "updated_at", null: false
     t.index ["professor_id"], name: "index_schools_on_professor_id", unique: true
+  end
+
+  create_table "series_bimester_settings", force: :cascade do |t|
+    t.integer "bimester", null: false
+    t.datetime "created_at", null: false
+    t.integer "grade_level_id", null: false
+    t.integer "professor_id", null: false
+    t.decimal "target_average", precision: 3, scale: 1
+    t.datetime "updated_at", null: false
+    t.index ["grade_level_id"], name: "index_series_bimester_settings_on_grade_level_id"
+    t.index ["professor_id", "grade_level_id", "bimester"], name: "index_series_bimester_settings_uniqueness", unique: true
+    t.index ["professor_id"], name: "index_series_bimester_settings_on_professor_id"
+    t.check_constraint "bimester BETWEEN 1 AND 4", name: "series_bimester_settings_bimester_range"
   end
 
   create_table "siage_shipments", force: :cascade do |t|
@@ -784,6 +815,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_180000) do
     t.datetime "created_at", null: false
     t.datetime "current_period_end"
     t.datetime "last_payment_at"
+    t.string "payment_method"
     t.string "plan", default: "monthly", null: false
     t.integer "professor_id", null: false
     t.string "status", default: "trialing", null: false
@@ -831,6 +863,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_180000) do
   add_foreign_key "automation_notices", "professors"
   add_foreign_key "automation_rules", "professors"
   add_foreign_key "billing_events", "professors"
+  add_foreign_key "bimester_actions", "grade_levels"
+  add_foreign_key "bimester_actions", "professors"
   add_foreign_key "bimester_settings", "classrooms"
   add_foreign_key "classrooms", "courses"
   add_foreign_key "classrooms", "grade_levels"
@@ -873,6 +907,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_180000) do
   add_foreign_key "school_calendar_days", "professors"
   add_foreign_key "school_courses", "professors"
   add_foreign_key "schools", "professors"
+  add_foreign_key "series_bimester_settings", "grade_levels"
+  add_foreign_key "series_bimester_settings", "professors"
   add_foreign_key "siage_shipments", "classrooms"
   add_foreign_key "siage_shipments", "lessons"
   add_foreign_key "siage_shipments", "professors"

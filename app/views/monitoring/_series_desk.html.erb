@@ -1,0 +1,220 @@
+<% report = @series_report %>
+<%
+  series_params = {
+    grade_level_id: @selected_grade_level.id,
+    bimester: @bimester,
+    classroom_id: @selected_classroom&.id,
+    month: @monitoring_month&.strftime("%Y-%m"),
+    filter: @alert_filter
+  }.compact
+%>
+
+<section class="data-card series-desk" aria-label="Série no bimestre">
+  <div class="section-heading">
+    <div>
+      <span class="section-eyebrow"><%= @selected_grade_level.name %></span>
+      <h2>As turmas neste bimestre</h2>
+      <p>
+        Média do <%= @bimester %>º bimestre com as notas já lançadas.
+        Atraso não entra como falta. Projetos não entram no SIAGE.
+        <% if report.bimester_end %>
+          O período vai até <%= l(report.bimester_end) %><% if report.days_left %> · faltam <%= report.days_left %> dia(s)<% end %>.
+        <% end %>
+      </p>
+    </div>
+    <%= link_to "Baixar plano em PDF",
+                monitoring_plan_path(series_params),
+                class: "button button-secondary" %>
+  </div>
+
+  <section class="attendance-filter diary-context">
+    <%= form_with url: monitoring_path, method: :get, local: true do |form| %>
+      <%= hidden_field_tag :classroom_id, @selected_classroom&.id %>
+      <%= hidden_field_tag :month, @monitoring_month&.strftime("%Y-%m") %>
+      <%= hidden_field_tag :filter, @alert_filter %>
+      <div>
+        <%= form.label :grade_level_id, "Nível" %>
+        <%= form.collection_select :grade_level_id,
+                                  @grade_levels,
+                                  :id,
+                                  :name,
+                                  { selected: @selected_grade_level.id } %>
+      </div>
+      <div>
+        <%= form.label :bimester, "Bimestre" %>
+        <%= form.select :bimester,
+                        (1..4).map { |number| ["#{number}º", number] },
+                        { selected: @bimester } %>
+      </div>
+      <div>
+        <%= form.submit "Abrir" %>
+      </div>
+    <% end %>
+  </section>
+
+  <section class="attendance-summary" aria-label="Síntese da série">
+    <article class="summary-card">
+      <span class="summary-label">Média das turmas</span>
+      <strong><%= series_score(report.series_average) %></strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-label">Meta</span>
+      <strong><%= series_score(report.target_average) %></strong>
+    </article>
+    <article class="summary-card summary-late">
+      <span class="summary-label">Abaixo do mínimo</span>
+      <strong><%= report.below_total %></strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-label">Alunos</span>
+      <strong><%= report.student_count %></strong>
+    </article>
+  </section>
+
+  <%= form_with url: monitoring_series_goal_path, method: :patch, local: true, class: "series-goal-form" do %>
+    <%= hidden_field_tag :grade_level_id, @selected_grade_level.id %>
+    <%= hidden_field_tag :bimester, @bimester %>
+    <%= hidden_field_tag :classroom_id, @selected_classroom&.id %>
+    <%= label_tag :target_average, "Meta do bimestre" %>
+    <%= text_field_tag :target_average,
+                       report.target_average && format("%.1f", report.target_average).tr(".", ","),
+                       placeholder: "7,5" %>
+    <%= submit_tag "Gravar meta", class: "button button-secondary button-small" %>
+  <% end %>
+
+  <% if report.classroom_cards.any? %>
+    <div class="series-classroom-grid">
+      <% report.classroom_cards.each do |card| %>
+        <%= link_to monitoring_path(series_params.merge(classroom_id: card.classroom.id)),
+                    class: [
+                      "monitoring-classroom-card",
+                      ("is-attention" if card.attention),
+                      ("selected" if @selected_classroom&.id == card.classroom.id)
+                    ].compact.join(" ") do %>
+          <div class="monitoring-classroom-card-top">
+            <div>
+              <h3><%= card.classroom.name %></h3>
+            </div>
+            <% if card.attention %>
+              <span class="monitoring-classroom-badge">Atenção</span>
+            <% end %>
+          </div>
+          <p class="table-secondary-text"><%= pluralize(card.student_count, "aluno", "alunos") %></p>
+          <p class="series-classroom-average">
+            <strong><%= series_score(card.average) %></strong>
+            <% if card.delta %>
+              <span class="series-delta <%= card.delta.negative? ? "is-down" : "is-up" %>">
+                <%= card.delta.positive? ? "+" : "" %><%= series_score(card.delta) %>
+              </span>
+            <% end %>
+          </p>
+          <p class="table-secondary-text">
+            <%= card.below_count %> abaixo do mínimo
+            <% if card.weakest_label.present? %>
+              · Mais fraco: <%= card.weakest_label %>
+            <% end %>
+          </p>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="table-secondary-text">Cadastre turmas neste nível para ver as médias.</p>
+  <% end %>
+</section>
+
+<% if report.attention_points.any? %>
+  <section class="data-card" aria-label="Onde agir primeiro">
+    <div class="section-heading">
+      <div>
+        <span class="section-eyebrow">Prioridade</span>
+        <h2>Onde agir primeiro</h2>
+        <p>Só o que já tem nota ou item de prova lançado neste bimestre.</p>
+      </div>
+    </div>
+    <ol class="series-attention-list">
+      <% report.attention_points.each do |point| %>
+        <li>
+          <strong><%= point.title %></strong>
+          <p><%= point.detail %></p>
+        </li>
+      <% end %>
+    </ol>
+  </section>
+<% end %>
+
+<% if report.students_in_need.any? %>
+  <section class="data-card" aria-label="Alunos abaixo do mínimo">
+    <div class="section-heading">
+      <div>
+        <span class="section-eyebrow">Acompanhamento</span>
+        <h2>Alunos que mais precisam de ajuda</h2>
+        <p>Menores médias já lançadas, abaixo do mínimo da turma.</p>
+      </div>
+    </div>
+    <ul class="series-need-list">
+      <% report.students_in_need.each do |row| %>
+        <li>
+          <div class="series-need-who">
+            <strong><%= row.student.name %></strong>
+            <span class="table-secondary-text"><%= row.classroom.name %></span>
+          </div>
+          <span class="series-need-score"><%= series_score(row.average) %></span>
+          <p class="series-need-meta table-secondary-text">
+            <%= row.scored_count %> de <%= row.activity_count %> atividades com nota neste bimestre.
+          </p>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>
+
+<section class="data-card" aria-label="Plano de ação">
+  <div class="section-heading">
+    <div>
+      <span class="section-eyebrow">Plano</span>
+      <h2>Plano de ação do bimestre</h2>
+      <p>Você registra o que vai fazer. O Maestro não inventa impacto na média.</p>
+    </div>
+  </div>
+
+  <% if report.actions.any? %>
+    <ol class="series-action-list">
+      <% report.actions.each do |action| %>
+        <li>
+          <div>
+            <strong><%= action.title %></strong>
+            <p class="table-secondary-text">
+              <%= [action.audience.presence, (l(action.due_on) if action.due_on)].compact.join(" · ") %>
+            </p>
+          </div>
+          <%= button_to "Remover",
+                        bimester_action_path(action),
+                        method: :delete,
+                        class: "button button-ghost button-small" %>
+        </li>
+      <% end %>
+    </ol>
+  <% else %>
+    <p class="table-secondary-text">Nenhuma ação neste bimestre. Inclua reforço, revisão ou plano individual.</p>
+  <% end %>
+
+  <%= form_with url: bimester_actions_path, method: :post, local: true, class: "series-action-form" do |form| %>
+    <%= hidden_field_tag :grade_level_id, @selected_grade_level.id %>
+    <%= hidden_field_tag :bimester, @bimester %>
+    <div>
+      <%= form.label :title, "Ação" %>
+      <%= text_field_tag "bimester_action[title]", nil, required: true, placeholder: "Aula de reforço na 3ª D" %>
+    </div>
+    <div>
+      <%= form.label :audience, "Para quem" %>
+      <%= text_field_tag "bimester_action[audience]", nil, placeholder: "Turma, série ou alunos abaixo de 6" %>
+    </div>
+    <div>
+      <%= form.label :due_on, "Até" %>
+      <%= date_field_tag "bimester_action[due_on]" %>
+    </div>
+    <div>
+      <%= form.submit "Incluir no plano", class: "button button-primary" %>
+    </div>
+  <% end %>
+</section>

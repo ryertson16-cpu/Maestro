@@ -255,6 +255,16 @@ Rails.application.routes.draw do
       to: "monitoring#index",
       as: :monitoring
 
+  get "/monitoring/plano",
+      to: "monitoring#plan",
+      as: :monitoring_plan
+
+  patch "/monitoring/serie",
+        to: "monitoring#update_series_goal",
+        as: :monitoring_series_goal
+
+  resources :bimester_actions, only: %i[create destroy]
+
   post "/monitoring/email_digest",
        to: "monitoring#email_digest",
        as: :email_digest_monitoring
@@ -413,6 +423,11 @@ Rails.application.routes.draw do
   get "/baixar", to: "marketing#download", as: :download_maestro
 
   get "/gestao", to: "platform/desk#show", as: :platform_desk
+  get "/gestao/exportar", to: "platform/desk#export", as: :platform_desk_export
+  get "/gestao/professores/:id", to: "platform/desk#account", as: :platform_desk_professor
+  patch "/gestao/professores/:id/nota",
+        to: "platform/desk#update_note",
+        as: :platform_desk_professor_note
   patch "/gestao/:professor_id",
         to: "platform/desk#update",
         as: :platform_desk_account

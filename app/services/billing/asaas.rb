@@ -4,12 +4,14 @@ require "uri"
 
 module Billing
   class Asaas
-    def ensure_monthly_subscription!(professor, subscription)
+    def ensure_monthly_subscription!(professor, subscription, payment_method: "pix")
       customer_id = subscription.asaas_customer_id.presence || create_customer(professor)
-      result = create_subscription(professor, customer_id)
+      billing_type = Payment.asaas_type(payment_method)
+      result = create_subscription(professor, customer_id, billing_type)
 
       subscription.assign_attributes(
         status: "past_due",
+        payment_method: Payment.normalize(payment_method) || "pix",
         asaas_customer_id: customer_id,
         asaas_subscription_id: result["id"],
         asaas_checkout_url: result["invoiceUrl"] || result["paymentLink"]
@@ -30,13 +32,13 @@ module Billing
       payload.fetch("id")
     end
 
-    def create_subscription(professor, customer_id)
+    def create_subscription(professor, customer_id, billing_type)
       request(
         :post,
         "/v3/subscriptions",
         {
           customer: customer_id,
-          billingType: "PIX",
+          billingType: billing_type,
           value: Config::MONTHLY_PRICE.to_f,
           cycle: "MONTHLY",
           description: "Maestro — assinatura mensal",

@@ -73,6 +73,21 @@ module ApplicationHelper
               alt: "Maestro"
   end
 
+  def series_score(value)
+    return "—" unless NumericScore.recorded?(value)
+
+    format("%.1f", value.to_f).tr(".", ",")
+  end
+
+  def desk_filter_params
+    {
+      segment: @segment,
+      status: @status,
+      q: @query,
+      payment_method: @payment_method
+    }.compact_blank
+  end
+
   def desk_status_badge(status)
     case status.to_s
     when "active", "complimentary" then "verified"

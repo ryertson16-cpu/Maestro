@@ -1,0 +1,27 @@
+<% filters = desk_filter_params %>
+<div class="desk-row-actions">
+  <%= button_to "Cortesia",
+                platform_desk_account_path(professor, filters.merge(intent: "complimentary")),
+                method: :patch,
+                class: "button button-secondary button-small desk-pill#{" is-current" if subscription&.complimentary?}" %>
+  <%= button_to "Teste",
+                platform_desk_account_path(professor, filters.merge(intent: "trial")),
+                method: :patch,
+                class: "button button-secondary button-small desk-pill#{" is-current" if subscription&.trialing?}" %>
+  <%= button_to "Mensal PIX",
+                platform_desk_account_path(professor, filters.merge(intent: "activate", payment_method: "pix")),
+                method: :patch,
+                class: "button button-primary button-small desk-pill#{" is-current" if subscription&.active? && subscription.payment_method == "pix"}" %>
+  <%= button_to "Mensal cartão",
+                platform_desk_account_path(professor, filters.merge(intent: "activate", payment_method: "credit_card")),
+                method: :patch,
+                class: "button button-primary button-small desk-pill#{" is-current" if subscription&.active? && subscription.payment_method == "credit_card"}" %>
+  <%= button_to "Atrasado",
+                platform_desk_account_path(professor, filters.merge(intent: "past_due")),
+                method: :patch,
+                class: "button button-secondary button-small desk-pill#{" is-current" if subscription&.past_due?}" %>
+  <%= button_to "Encerrar",
+                platform_desk_account_path(professor, filters.merge(intent: "cancel")),
+                method: :patch,
+                class: "button button-ghost button-small desk-pill#{" is-current" if subscription&.canceled?}" %>
+</div>

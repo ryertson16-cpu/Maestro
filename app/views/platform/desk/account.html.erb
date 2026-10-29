@@ -1,0 +1,138 @@
+<% content_for :title, "Conta · #{@professor.name.presence || @professor.email} | Maestro" %>
+
+<div class="page-header">
+  <div>
+    <span class="section-eyebrow">Gestão</span>
+    <h1><%= @professor.name.presence || @professor.email %></h1>
+    <p>
+      <%= @professor.email %>
+      <% if @professor.platform_operator? %>
+        · gestor da plataforma
+      <% end %>
+    </p>
+  </div>
+  <div class="page-header-actions">
+    <%= link_to "Voltar à mesa", platform_desk_path, class: "button button-secondary" %>
+  </div>
+</div>
+
+<section class="data-card">
+  <div class="section-heading">
+    <div>
+      <span class="section-eyebrow">Plano</span>
+      <h2>
+        <% if @subscription %>
+          <%= @subscription.label %>
+          · <%= @subscription.payment_label %>
+        <% else %>
+          Sem assinatura
+        <% end %>
+      </h2>
+      <p>
+        <% if @professor.maestro_full_access? %>
+          Caderno pleno.
+        <% else %>
+          Caderno bloqueado quando a cobrança estiver ligada.
+        <% end %>
+        <% if @subscription&.current_period_end.present? %>
+          Válido até <%= l(@subscription.current_period_end, format: :long) %>.
+        <% end %>
+      </p>
+    </div>
+  </div>
+
+  <%= render "platform/desk/actions", professor: @professor, subscription: @subscription %>
+</section>
+
+<section class="data-card">
+  <div class="section-heading">
+    <div>
+      <span class="section-eyebrow">Uso</span>
+      <h2>O que esta conta já tem no Maestro</h2>
+    </div>
+  </div>
+
+  <div class="desk-account-grid">
+    <article class="summary-card">
+      <span class="summary-label">Escola</span>
+      <strong><%= @professor.school&.name.presence || "—" %></strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-label">Turmas</span>
+      <strong><%= @usage[:classrooms] %></strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-label">Alunos</span>
+      <strong><%= @usage[:students] %></strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-label">Provas</span>
+      <strong><%= @usage[:provas] %></strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-label">Última aula</span>
+      <strong>
+        <% if @usage[:last_lesson_on] %>
+          <%= l(@usage[:last_lesson_on], format: :short) %>
+        <% else %>
+          —
+        <% end %>
+      </strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-label">SIAGE</span>
+      <strong><%= @usage[:siage] ? "Com login" : "Sem login" %></strong>
+    </article>
+    <article class="summary-card">
+      <span class="summary-label">WhatsApp</span>
+      <strong><%= @usage[:whatsapp].presence || "—" %></strong>
+    </article>
+  </div>
+</section>
+
+<section class="data-card desk-note-form">
+  <div class="section-heading">
+    <div>
+      <span class="section-eyebrow">Anotação</span>
+      <h2>Nota interna da conta</h2>
+      <p>Só gestores veem. Use para combinado, PIX recebido fora do Asaas, escola, telefone.</p>
+    </div>
+  </div>
+
+  <%= form_with url: platform_desk_professor_note_path(@professor), method: :patch, local: true do |form| %>
+    <%= form.text_area :management_note, value: @professor.management_note, rows: 5 %>
+    <%= form.submit "Salvar nota", class: "button button-primary" %>
+  <% end %>
+</section>
+
+<section class="data-card">
+  <div class="section-heading">
+    <div>
+      <span class="section-eyebrow">Histórico</span>
+      <h2>Movimentos desta conta</h2>
+    </div>
+  </div>
+
+  <% if @recent_events.any? %>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Quando</th>
+            <th>Tipo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @recent_events.each do |event| %>
+            <tr>
+              <td><%= l(event.created_at, format: :short) %></td>
+              <td><%= event.event_type %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="table-secondary-text">Ainda não há eventos nesta conta.</p>
+  <% end %>
+</section>

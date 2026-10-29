@@ -79,4 +79,37 @@ class Platform::DeskControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "canceled", @teacher.subscription.reload.status
   end
+
+  test "mensal cartao na mesa" do
+    sign_in @owner
+
+    patch platform_desk_account_path(@teacher, intent: "activate", payment_method: "credit_card")
+
+    assert_equal "active", @teacher.subscription.reload.status
+    assert_equal "credit_card", @teacher.subscription.payment_method
+  end
+
+  test "ficha da conta e nota interna" do
+    sign_in @owner
+
+    get platform_desk_professor_path(@teacher)
+
+    assert_response :success
+    assert_includes response.body, @teacher.email
+
+    patch platform_desk_professor_note_path(@teacher), params: { management_note: "PIX na escola" }
+
+    assert_redirected_to platform_desk_professor_path(@teacher)
+    assert_equal "PIX na escola", @teacher.reload.management_note
+  end
+
+  test "csv da mesa" do
+    sign_in @owner
+
+    get platform_desk_export_path
+
+    assert_response :success
+    assert_includes response.body, "email"
+    assert_includes response.body, @teacher.email
+  end
 end

@@ -38,6 +38,8 @@ class Professor < ApplicationRecord
   has_many :school_calendar_days, dependent: :destroy
   has_many :timetable_entries, dependent: :destroy
   has_many :council_notes, dependent: :destroy
+  has_many :bimester_actions, dependent: :destroy
+  has_many :series_bimester_settings, dependent: :destroy
   has_many :lesson_plan_templates, dependent: :destroy
   has_many :projects, dependent: :destroy
   has_many :automation_rules, dependent: :destroy

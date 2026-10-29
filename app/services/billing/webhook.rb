@@ -22,11 +22,14 @@ module Billing
 
       subscription = professor.subscription || professor.build_subscription(plan: "monthly")
 
+      method = Payment.from_asaas(payment["billingType"] || subscription_data["billingType"])
+
       case event_type
       when "PAYMENT_CONFIRMED", "PAYMENT_RECEIVED"
         subscription.assign_attributes(
           status: "active",
           plan: "monthly",
+          payment_method: method || subscription.payment_method || "pix",
           last_payment_at: Time.current,
           current_period_end: 1.month.from_now,
           asaas_customer_id: payment["customer"].presence || subscription.asaas_customer_id,

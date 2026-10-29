@@ -37,4 +37,12 @@ class Subscription < ApplicationRecord
     else status
     end
   end
+
+  def payment_label
+    Billing::Payment.label(payment_method)
+  end
+
+  def client?
+    status == "active"
+  end
 end

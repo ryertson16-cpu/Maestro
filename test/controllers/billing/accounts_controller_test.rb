@@ -43,5 +43,7 @@ class Billing::AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "R$"
+    assert_includes response.body, "Assinar com PIX"
+    assert_includes response.body, "Assinar com cartão"
   end
 end

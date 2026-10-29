@@ -12,47 +12,74 @@
         A cobrança do caderno está <strong>desligada</strong> neste servidor — todo mundo entra, e esta mesa registra o plano na mão.
       <% end %>
       <% if @asaas_on %>
-        PIX Asaas configurado.
+        PIX e cartão Asaas configurados.
       <% else %>
-        PIX Asaas ainda não está ligado; libere ou encerre o plano aqui.
+        Asaas ainda não está ligado; libere ou encerre o plano aqui e marque PIX ou cartão na mão.
       <% end %>
     </p>
+  </div>
+  <div class="page-header-actions">
+    <%= link_to "Exportar CSV",
+                platform_desk_export_path(desk_filter_params),
+                class: "button button-secondary" %>
   </div>
 </div>
 
 <section class="attendance-summary" aria-label="Resumo das contas">
-  <article class="summary-card">
-    <span class="summary-label">Professores</span>
-    <strong><%= @summary[:professors] %></strong>
-  </article>
-  <article class="summary-card summary-present">
-    <span class="summary-label">Caderno pleno</span>
-    <strong><%= @summary[:full_access] %></strong>
-  </article>
-  <article class="summary-card summary-justified">
-    <span class="summary-label">Teste</span>
-    <strong><%= @summary[:trialing] %></strong>
-  </article>
-  <article class="summary-card summary-green">
-    <span class="summary-label">Mensal</span>
-    <strong><%= @summary[:active] %></strong>
-  </article>
-  <article class="summary-card">
-    <span class="summary-label">Cortesia</span>
-    <strong><%= @summary[:complimentary] %></strong>
-  </article>
-  <article class="summary-card summary-late">
-    <span class="summary-label">Atrasado</span>
-    <strong><%= @summary[:past_due] %></strong>
-  </article>
-  <article class="summary-card summary-absent">
-    <span class="summary-label">Encerrado</span>
-    <strong><%= @summary[:canceled] %></strong>
-  </article>
-  <article class="summary-card summary-blue">
-    <span class="summary-label">Novos (7 dias)</span>
-    <strong><%= @summary[:new_week] %></strong>
-  </article>
+  <%= link_to platform_desk_path, class: "desk-kpi-link" do %>
+    <article class="summary-card">
+      <span class="summary-label">Professores</span>
+      <strong><%= @summary[:professors] %></strong>
+    </article>
+  <% end %>
+  <%= link_to platform_desk_path(segment: "client"), class: "desk-kpi-link" do %>
+    <article class="summary-card summary-green">
+      <span class="summary-label">Clientes</span>
+      <strong><%= @summary[:clients] %></strong>
+    </article>
+  <% end %>
+  <%= link_to platform_desk_path(segment: "trial"), class: "desk-kpi-link" do %>
+    <article class="summary-card summary-justified">
+      <span class="summary-label">Teste</span>
+      <strong><%= @summary[:trialing] %></strong>
+    </article>
+  <% end %>
+  <%= link_to platform_desk_path(segment: "complimentary"), class: "desk-kpi-link" do %>
+    <article class="summary-card">
+      <span class="summary-label">Cortesia</span>
+      <strong><%= @summary[:complimentary] %></strong>
+    </article>
+  <% end %>
+  <%= link_to platform_desk_path(segment: "past_due"), class: "desk-kpi-link" do %>
+    <article class="summary-card summary-late">
+      <span class="summary-label">Atrasado</span>
+      <strong><%= @summary[:past_due] %></strong>
+    </article>
+  <% end %>
+  <%= link_to platform_desk_path(segment: "canceled"), class: "desk-kpi-link" do %>
+    <article class="summary-card summary-absent">
+      <span class="summary-label">Encerrado</span>
+      <strong><%= @summary[:canceled] %></strong>
+    </article>
+  <% end %>
+  <%= link_to platform_desk_path(segment: "due_soon"), class: "desk-kpi-link" do %>
+    <article class="summary-card summary-blue">
+      <span class="summary-label">Vence em 7 dias</span>
+      <strong><%= @summary[:due_soon] %></strong>
+    </article>
+  <% end %>
+  <%= link_to platform_desk_path(payment_method: "pix"), class: "desk-kpi-link" do %>
+    <article class="summary-card">
+      <span class="summary-label">PIX ativo</span>
+      <strong><%= @summary[:pix] %></strong>
+    </article>
+  <% end %>
+  <%= link_to platform_desk_path(payment_method: "credit_card"), class: "desk-kpi-link" do %>
+    <article class="summary-card">
+      <span class="summary-label">Cartão ativo</span>
+      <strong><%= @summary[:credit_card] %></strong>
+    </article>
+  <% end %>
   <article class="summary-card">
     <span class="summary-label">Estimativa mensal</span>
     <strong>R$ <%= number_with_precision(@summary[:monthly_estimate], precision: 2) %></strong>
@@ -67,17 +94,28 @@
       <%= form.search_field :q, value: @query, placeholder: "Buscar professor" %>
     </div>
     <div>
-      <%= form.label :status, "Situação" %>
-      <%= form.select :status,
+      <%= form.label :segment, "Grupo" %>
+      <%= form.select :segment,
                       [
                         ["Todas", ""],
-                        ["Período de teste", "trialing"],
-                        ["Mensal", "active"],
+                        ["Cliente (mensal)", "client"],
+                        ["Período de teste", "trial"],
                         ["Cortesia", "complimentary"],
                         ["Pagamento atrasado", "past_due"],
-                        ["Encerrada", "canceled"]
+                        ["Encerrada", "canceled"],
+                        ["Vence em 7 dias", "due_soon"]
                       ],
-                      { selected: @status } %>
+                      { selected: @segment } %>
+    </div>
+    <div>
+      <%= form.label :payment_method, "Pagamento" %>
+      <%= form.select :payment_method,
+                      [
+                        ["Todos", ""],
+                        ["PIX", "pix"],
+                        ["Cartão", "credit_card"]
+                      ],
+                      { selected: @payment_method } %>
     </div>
     <div>
       <%= form.submit "Abrir" %>
@@ -85,12 +123,43 @@
   <% end %>
 </section>
 
+<% if @due_soon.any? && @segment != "due_soon" %>
+  <section class="data-card">
+    <div class="section-heading">
+      <div>
+        <span class="section-eyebrow">Caixa</span>
+        <h2>Vencimentos desta semana</h2>
+        <p>Contas ativas, em teste ou atrasadas que vencem em até 7 dias.</p>
+      </div>
+    </div>
+    <div class="desk-due-list">
+      <% @due_soon.each do |professor| %>
+        <% subscription = professor.subscription %>
+        <div class="desk-due-item">
+          <div>
+            <strong><%= professor.name.presence || professor.email %></strong>
+            <div class="table-secondary-text"><%= professor.school&.name.presence || professor.email %></div>
+          </div>
+          <div>
+            <%= subscription.label %>
+            · <%= subscription.payment_label %>
+          </div>
+          <div>
+            <%= l(subscription.current_period_end, format: :short) if subscription.current_period_end %>
+            · <%= link_to "Ficha", platform_desk_professor_path(professor) %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
 <section class="data-card">
   <div class="section-heading">
     <div>
       <span class="section-eyebrow">Contas</span>
       <h2>Professores</h2>
-      <p>Cortesia libera o caderno sem PIX. Mensal marca pagamento recebido. Encerrar bloqueia quando a cobrança estiver ligada.</p>
+      <p>Pílulas compactas. Mensal PIX e Mensal cartão marcam o pagamento recebido. A ficha guarda a nota da conta.</p>
     </div>
   </div>
 
@@ -112,10 +181,13 @@
             <% subscription = professor.subscription %>
             <tr>
               <td>
-                <strong><%= professor.name.presence || professor.email %></strong>
+                <strong><%= link_to professor.name.presence || professor.email, platform_desk_professor_path(professor) %></strong>
                 <div class="table-secondary-text"><%= professor.email %></div>
                 <% if professor.platform_operator? %>
                   <span class="status-badge status-verified">Gestor</span>
+                <% end %>
+                <% if professor.management_note.present? %>
+                  <div class="table-secondary-text"><%= truncate(professor.management_note, length: 80) %></div>
                 <% end %>
               </td>
               <td><%= professor.school&.name.presence || "—" %></td>
@@ -128,11 +200,14 @@
                   <span class="status-badge status-<%= desk_status_badge(subscription.status) %>">
                     <%= subscription.label %>
                   </span>
-                  <% if professor.maestro_full_access? %>
-                    <div class="table-secondary-text">caderno pleno</div>
-                  <% else %>
-                    <div class="table-secondary-text">caderno bloqueado</div>
-                  <% end %>
+                  <div class="table-secondary-text">
+                    <%= subscription.payment_label %>
+                    <% if professor.maestro_full_access? %>
+                      · caderno pleno
+                    <% else %>
+                      · caderno bloqueado
+                    <% end %>
+                  </div>
                 <% else %>
                   —
                 <% end %>
@@ -145,28 +220,7 @@
                 <% end %>
               </td>
               <td>
-                <div class="desk-row-actions">
-                  <%= button_to "Cortesia",
-                                platform_desk_account_path(professor, status: @status, q: @query, intent: "complimentary"),
-                                method: :patch,
-                                class: "button button-secondary button-small" %>
-                  <%= button_to "Teste",
-                                platform_desk_account_path(professor, status: @status, q: @query, intent: "trial"),
-                                method: :patch,
-                                class: "button button-secondary button-small" %>
-                  <%= button_to "Mensal",
-                                platform_desk_account_path(professor, status: @status, q: @query, intent: "activate"),
-                                method: :patch,
-                                class: "button button-primary button-small" %>
-                  <%= button_to "Atrasado",
-                                platform_desk_account_path(professor, status: @status, q: @query, intent: "past_due"),
-                                method: :patch,
-                                class: "button button-secondary button-small" %>
-                  <%= button_to "Encerrar",
-                                platform_desk_account_path(professor, status: @status, q: @query, intent: "cancel"),
-                                method: :patch,
-                                class: "button button-ghost button-small" %>
-                </div>
+                <%= render "platform/desk/actions", professor: professor, subscription: subscription %>
               </td>
             </tr>
           <% end %>
@@ -186,7 +240,7 @@
     <div>
       <span class="section-eyebrow">Histórico</span>
       <h2>Últimos movimentos</h2>
-      <p>PIX do Asaas e alterações feitas nesta mesa.</p>
+      <p>PIX e cartão do Asaas e alterações feitas nesta mesa.</p>
     </div>
   </div>
 

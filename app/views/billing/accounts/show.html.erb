@@ -28,17 +28,28 @@
     <% end %>
   </p>
 
+  <% if @subscription&.payment_method.present? %>
+    <p class="table-secondary-text">Forma: <%= @subscription.payment_label %></p>
+  <% end %>
+
   <% unless @subscription&.complimentary? || @subscription&.active? %>
-    <%= button_to "Assinar com PIX",
-                  assinatura_path,
-                  method: :post,
-                  class: "button button-primary",
-                  form: { data: { skip_confirm: true } } %>
+    <div class="desk-row-actions">
+      <%= button_to "Assinar com PIX",
+                    assinatura_path(payment_method: "pix"),
+                    method: :post,
+                    class: "button button-primary",
+                    form: { data: { skip_confirm: true } } %>
+      <%= button_to "Assinar com cartão",
+                    assinatura_path(payment_method: "credit_card"),
+                    method: :post,
+                    class: "button button-secondary",
+                    form: { data: { skip_confirm: true } } %>
+    </div>
   <% end %>
 
   <% if @subscription&.asaas_checkout_url.present? && !@full_access %>
     <p>
-      <%= link_to "Concluir PIX no Asaas",
+      <%= link_to "Concluir pagamento no Asaas",
                   @subscription.asaas_checkout_url,
                   class: "button button-secondary",
                   target: "_blank",

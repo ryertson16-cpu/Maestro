@@ -6,7 +6,9 @@
       classroom_id: @selected_classroom&.id,
       month: @monitoring_month.strftime("%Y-%m"),
       filter: @alert_filter,
-      activity_id: @selected_activity&.id
+      activity_id: @selected_activity&.id,
+      grade_level_id: @selected_grade_level&.id,
+      bimester: @bimester
     }.merge(overrides).compact
   }
 %>
@@ -16,7 +18,7 @@
     <%= maestro_icon :monitoring, size: :lg %>
     <span class="section-eyebrow">Monitoramento</span>
     <h1>Monitoramento</h1>
-    <p>Quem precisa de ajuda neste mês: atividades, notas e frequência. Atraso não é falta. Projetos não entram no SIAGE.</p>
+    <p>Quem precisa de ajuda neste bimestre e neste mês: atividades, notas e frequência. Atraso não é falta. Projetos não entram no SIAGE.</p>
   </div>
 
   <% if @selected_classroom.present? %>
@@ -42,6 +44,10 @@
   </section>
 <% end %>
 
+<% if @series_report && @selected_grade_level %>
+  <%= render "monitoring/series_desk" %>
+<% end %>
+
 <% if @classrooms.blank? %>
   <section class="empty-state">
     <%= maestro_icon :classrooms %>
@@ -55,6 +61,8 @@
 
     <%= form_with url: monitoring_path, method: :get, local: true do |form| %>
       <%= hidden_field_tag :filter, @alert_filter %>
+      <%= hidden_field_tag :bimester, @bimester %>
+      <%= hidden_field_tag :grade_level_id, @selected_grade_level&.id %>
       <% if @selected_activity.present? %>
         <%= hidden_field_tag :activity_id, @selected_activity.id %>
       <% end %>
