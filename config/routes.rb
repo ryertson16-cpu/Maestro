@@ -1,6 +1,13 @@
 Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
+  get "/rails/active_storage/database/:encoded_key/*filename",
+      to: "active_storage_database#show",
+      as: :rails_database_service
+  put "/rails/active_storage/database/:encoded_key",
+      to: "active_storage_database#update",
+      as: :update_rails_database_service
+
   devise_for :professors,
              controllers: {
                sessions: "professors/sessions",
