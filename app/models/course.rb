@@ -54,9 +54,13 @@ class Course < ApplicationRecord
 
   def self.technical_base_available_for?(professor)
     professor.grade_levels.where(active: true).any? do |level|
-      normalized = level.name.to_s.unicode_normalize(:nfd).gsub(/\p{Mn}/, "").downcase
-      normalized.include?("integral") && normalized.include?("tecnica")
+      technical_level_name?(level.name)
     end
+  end
+
+  def self.technical_level_name?(name)
+    normalized = name.to_s.unicode_normalize(:nfd).gsub(/\p{Mn}/, "").downcase
+    normalized.match?(/\btecnic[oa]s?\b/)
   end
 
   def self.available_knowledge_areas_for(professor)

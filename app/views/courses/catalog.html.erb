@@ -10,8 +10,8 @@
       <h1>Catálogo de disciplinas</h1>
       <p>
         Marque as disciplinas que você leciona. Elas entram no seu cadastro já
-        ligadas à área do conhecimento. A Base Técnica só aparece se o nível
-        Integral Técnica estiver ativo.
+        ligadas à área do conhecimento. A Base Técnica só aparece se um nível
+        ativo tiver técnico ou técnica no nome.
       </p>
     </div>
   </div>
@@ -19,8 +19,9 @@
 
 <% unless @technical_base_available %>
   <p class="today-briefing-note">
-    Para ver a área <strong>Base Técnica</strong>, cadastre o nível de ensino
-    <%= link_to "Integral Técnica", new_grade_level_path %>.
+    Para ver a área <strong>Base Técnica</strong>, cadastre um
+    <%= link_to "nível de ensino", new_grade_level_path %>
+    ativo com técnico ou técnica no nome.
   </p>
 <% end %>
 

@@ -32,7 +32,7 @@ class CoursesController < ApplicationController
 
     if knowledge_area == "base_tecnica" && !Course.technical_base_available_for?(current_professor)
       redirect_to courses_path,
-                  alert: "A área Base Técnica só está disponível para o nível Integral Técnica."
+                  alert: "A área Base Técnica só aparece quando um nível de ensino ativo tem técnico ou técnica no nome."
       return
     end
 
