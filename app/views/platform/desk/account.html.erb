@@ -41,7 +41,11 @@
     </div>
   </div>
 
-  <%= render "platform/desk/actions", professor: @professor, subscription: @subscription %>
+  <% if @professor.platform_operator? %>
+    <p class="table-secondary-text">Acesso permanente de gestor, sem período de teste.</p>
+  <% else %>
+    <%= render "platform/desk/actions", professor: @professor, subscription: @subscription %>
+  <% end %>
 </section>
 
 <section class="data-card">

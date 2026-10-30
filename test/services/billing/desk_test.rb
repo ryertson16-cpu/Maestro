@@ -28,6 +28,15 @@ class Billing::DeskTest < ActiveSupport::TestCase
     assert summary[:trialing] >= 1
   end
 
+  test "gestor is not on a trial" do
+    subscription = @owner.subscription
+
+    assert_equal "complimentary", subscription.status
+    assert_nil subscription.current_period_end
+    assert_nil subscription.trial_ends_at
+    assert_equal "Gestor", subscription.label
+  end
+
   test "activate marks monthly locally" do
     Billing::Desk.new.apply!(@teacher, intent: "activate", actor: @owner)
 

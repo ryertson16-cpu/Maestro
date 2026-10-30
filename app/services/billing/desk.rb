@@ -47,6 +47,7 @@ module Billing
     end
 
     def apply!(professor, intent:, actor:, payment_method: nil)
+      raise ArgumentError, "A conta do gestor não entra em período de teste nem em cobrança." if professor.platform_operator?
       raise ArgumentError, "Ação inválida." unless INTENTS.include?(intent.to_s)
 
       subscription = professor.subscription || professor.build_subscription

@@ -255,7 +255,11 @@
                 <% end %>
               </td>
               <td>
-                <%= render "platform/desk/actions", professor: professor, subscription: subscription %>
+                <% if professor.platform_operator? %>
+                  <span class="table-secondary-text">Acesso permanente</span>
+                <% else %>
+                  <%= render "platform/desk/actions", professor: professor, subscription: subscription %>
+                <% end %>
               </td>
             </tr>
           <% end %>

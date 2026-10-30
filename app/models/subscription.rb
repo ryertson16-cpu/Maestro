@@ -28,6 +28,8 @@ class Subscription < ApplicationRecord
   end
 
   def label
+    return "Gestor" if professor&.platform_operator?
+
     case status
     when "complimentary" then "Cortesia"
     when "trialing" then "Período de teste"

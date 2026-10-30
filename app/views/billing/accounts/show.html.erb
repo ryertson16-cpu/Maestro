@@ -9,7 +9,13 @@
 
 <section class="data-card">
   <span class="section-eyebrow">Plano</span>
-  <h2>Maestro mensal — R$ <%= number_with_precision(Billing::Config::MONTHLY_PRICE, precision: 2) %></h2>
+  <h2>
+    <% if current_professor.platform_operator? %>
+      Gestor — acesso permanente
+    <% else %>
+      Maestro mensal — R$ <%= number_with_precision(Billing::Config::MONTHLY_PRICE, precision: 2) %>
+    <% end %>
+  </h2>
   <p>
     <% if @subscription %>
       Situação: <strong><%= @subscription.label %></strong>
@@ -21,7 +27,9 @@
     <% end %>
   </p>
   <p>
-    <% if @full_access %>
+    <% if current_professor.platform_operator? %>
+      Conta de gestor: acesso pleno por tempo indeterminado, sem período de teste.
+    <% elsif @full_access %>
       Você está usando o Maestro em sua forma plena.
     <% else %>
       Sem assinatura ativa o caderno, o WhatsApp e o atalho do PC ficam bloqueados.

@@ -49,7 +49,7 @@ class Professor < ApplicationRecord
   has_many :billing_events, dependent: :nullify
   has_many :desk_messages, dependent: :nullify
 
-  after_create :start_trial_subscription!
+  after_create :start_maestro_subscription!
 
   SEXES = %w[male female].freeze
 
@@ -117,6 +117,27 @@ class Professor < ApplicationRecord
     platform_admin? || Billing::Operator.owns?(email)
   end
 
+  def grant_operator_subscription!
+    return unless platform_operator?
+
+    record = subscription || build_subscription
+    already_open = record.persisted? &&
+                   record.complimentary? &&
+                   record.current_period_end.blank? &&
+                   record.trial_ends_at.blank?
+    return record if already_open
+
+    record.assign_attributes(
+      status: "complimentary",
+      plan: "complimentary",
+      trial_ends_at: nil,
+      current_period_end: nil,
+      asaas_checkout_url: nil
+    )
+    record.save!
+    record
+  end
+
   def initials
     parts = name.to_s.split
     letters = parts.first(2).map { |part| part[0] }.join
@@ -125,8 +146,13 @@ class Professor < ApplicationRecord
 
   private
 
-  def start_trial_subscription!
+  def start_maestro_subscription!
     return if subscription.present?
+
+    if platform_operator?
+      grant_operator_subscription!
+      return
+    end
 
     ends = Billing::Config::TRIAL_DAYS.days.from_now
     create_subscription!(

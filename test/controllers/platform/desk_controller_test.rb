@@ -37,6 +37,8 @@ class Platform::DeskControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Gestão do Maestro"
     assert_includes response.body, @teacher.email
     assert_includes response.body, "Período de teste"
+    assert_includes response.body, "Gestor"
+    assert_includes response.body, "Acesso permanente"
   end
 
   test "professor comum nao ve a gestao" do
