@@ -103,6 +103,27 @@ class Platform::DeskControllerTest < ActionDispatch::IntegrationTest
     assert_equal "PIX na escola", @teacher.reload.management_note
   end
 
+  test "menu gestao mostra aviso de professor novo ate abrir a mesa" do
+    sign_in @owner
+    get root_path
+    assert_response :success
+    refute_includes response.body, "professor novo"
+
+    Professor.create!(
+      name: "Novo",
+      email: "novo-#{SecureRandom.hex(4)}@maestro.test",
+      password: "password123",
+      password_confirmation: "password123"
+    )
+
+    get root_path
+    assert_includes response.body, "professor novo"
+
+    get platform_desk_path
+    get root_path
+    refute_includes response.body, "professor novo"
+  end
+
   test "csv da mesa" do
     sign_in @owner
 

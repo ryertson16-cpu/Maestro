@@ -14,8 +14,10 @@ class ApplicationController < ActionController::Base
   before_action :tick_local_automations
   before_action :tick_due_reminders
   before_action :require_maestro_subscription
+  before_action :baseline_desk_seen_at
 
-  helper_method :automation_unread_count, :automation_header_notices, :platform_operator?
+  helper_method :automation_unread_count, :automation_header_notices, :platform_operator?,
+                :desk_new_professor_count
 
   private
 
@@ -57,6 +59,25 @@ class ApplicationController < ActionController::Base
 
   def platform_operator?
     professor_signed_in? && current_professor.platform_operator?
+  end
+
+  def desk_new_professor_count
+    return 0 unless platform_operator?
+
+    seen = current_professor.desk_seen_at
+    return 0 if seen.blank?
+
+    @desk_new_professor_count ||= Professor.where.not(id: current_professor.id)
+                                           .where("created_at > ?", seen)
+                                           .count
+  end
+
+  def baseline_desk_seen_at
+    return unless platform_operator?
+    return unless request.get? && request.format.html?
+    return if current_professor.desk_seen_at.present?
+
+    current_professor.update_column(:desk_seen_at, Time.current)
   end
 
   def require_maestro_subscription

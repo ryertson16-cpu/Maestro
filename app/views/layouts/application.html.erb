@@ -88,10 +88,16 @@
 
             <% if platform_operator? %>
               <%= link_to platform_desk_path,
-                          class: "header-lira#{' is-active' if controller_path == 'platform/desk'}",
+                          class: "header-lira header-siage#{' is-active' if controller_path == 'platform/desk'}",
                           title: "Gestão do Maestro" do %>
                 <%= maestro_icon :check, size: :sm %>
                 <span>Gestão</span>
+                <% if desk_new_professor_count.positive? %>
+                  <span class="pending-count-badge"
+                        aria-label="<%= pluralize(desk_new_professor_count, "professor novo", "professores novos") %>">
+                    <%= desk_new_professor_count %>
+                  </span>
+                <% end %>
               <% end %>
             <% end %>
 

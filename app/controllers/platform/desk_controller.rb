@@ -6,6 +6,8 @@ module Platform
     before_action :require_platform_operator!
 
     def show
+      current_professor.update_column(:desk_seen_at, Time.current)
+      @desk_new_professor_count = 0
       desk = Billing::Desk.new
       load_filters
       @summary = desk.summary
