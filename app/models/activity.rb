@@ -55,6 +55,7 @@ class Activity < ApplicationRecord
   has_one :enem_simulado, dependent: :nullify
 
   before_validation :ensure_correction_token, on: :create
+  before_validation :assign_bimester_from_creation_date, on: :create
 
   validates :title,
             presence: true
@@ -100,6 +101,11 @@ class Activity < ApplicationRecord
 
   scope :regular, -> { where(adapted: false) }
   scope :adapted, -> { where(adapted: true) }
+
+  def bimester=(value)
+    @bimester_assigned_explicitly = true
+    super
+  end
 
   def bimester_label
     BIMESTERS.fetch(bimester)
@@ -207,6 +213,15 @@ class Activity < ApplicationRecord
 
   def ensure_correction_token
     self.correction_token = SecureRandom.base58(24) if correction_token.blank?
+  end
+
+  def assign_bimester_from_creation_date
+    return if @bimester_assigned_explicitly
+
+    number = Siage.bimester_for_date(Time.zone.today).to_i
+    return unless BIMESTERS.key?(number)
+
+    self.bimester = number
   end
 
   def due_date_cannot_be_before_lesson_date
