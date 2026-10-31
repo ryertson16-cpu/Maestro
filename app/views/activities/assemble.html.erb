@@ -1,5 +1,5 @@
 <% content_for :title, "Prova | Maestro" %>
-<% if insecure_phone_qr? && Corrections::PhoneLink.starting?(port: request.port) %>
+<% if @correction_url.blank? && !Corrections::PhoneLink.failed? %>
   <% content_for :head do %>
     <meta http-equiv="refresh" content="4">
   <% end %>
@@ -30,8 +30,9 @@
 <section class="data-card">
   <h2>QR do gabarito</h2>
   <p class="activity-type-hint">
-    Uma ficha: montar as questões, gerar a folha e corrigir. O endereço fica só no QR.
+    Uma ficha: montar as questões, gerar a folha e corrigir.
     No celular, a Câmera avisa se o gabarito foi lido ou corrigido.
+    Use só o QR HTTPS — o IP local deixa a câmera preta.
   </p>
   <% unless @lira_ready %>
     <p class="correction-flash is-warn">
@@ -39,27 +40,30 @@
       mas as bolhas você marca na tela. Para ler o cartão sozinho, ligue a chave em .env.
     </p>
   <% end %>
-  <% if phone_unreachable_correction_host? %>
+  <% if @correction_url.blank? %>
     <p class="correction-flash is-warn">
-      Recarregue esta página para o Maestro renovar o QR do celular.
-    </p>
-  <% elsif insecure_phone_qr? %>
-    <p class="correction-flash is-warn">
-      Este QR ainda aponta para o computador na rede local. A câmera do celular
-      abre uma tela preta nesse endereço. Toque em Atualizar QR para o Maestro
-      gerar o link HTTPS. Se a tela preta já apareceu, no celular toque nos dois
-      quadrados e abra no navegador — a câmera da correção só liga em HTTPS.
+      <% if Corrections::PhoneLink.failed? %>
+        Não consegui gerar o link HTTPS do celular. Toque em Atualizar QR e espere
+        o código aparecer. Enquanto o QR for o IP do computador, a câmera fica preta.
+      <% else %>
+        O Maestro está gerando o link HTTPS. Espere o QR aparecer — não aponte a
+        câmera ainda. Se apontar para o IP local, a tela fica preta.
+      <% end %>
     </p>
   <% end %>
   <p>
     <%= link_to "Atualizar QR",
-                assemble_activity_path(@activity),
+                assemble_activity_path(@activity, refresh_phone_link: 1),
                 class: "button button-secondary" %>
   </p>
-  <% if @correction_url.present? %>
+  <% if @correction_url.present? && https_correction_host? %>
     <div class="gabarito-qr">
       <%= raw RQRCode::QRCode.new(@correction_url).as_svg(module_size: 4, viewbox: true) %>
     </div>
+    <p class="activity-type-hint">
+      Se a câmera nativa ficar preta, abra o Chrome ou o Safari no celular e cole o link:
+    </p>
+    <code><%= @correction_url %></code>
   <% end %>
 </section>
 

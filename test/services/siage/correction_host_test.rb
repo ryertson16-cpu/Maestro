@@ -46,6 +46,17 @@ class CorrectionHostIpTest < ActiveSupport::TestCase
     assert_equal "https://gabarito.trycloudflare.com", chosen
   end
 
+  test "http lan address is not used for the phone qr" do
+    probe = Probe.new
+    chosen = probe.pick_correction_host(
+      tunnel: "",
+      remembered: "http://10.25.151.233:3000",
+      lan: "http://10.25.151.233:3000"
+    )
+
+    assert_nil chosen
+  end
+
   test "virtual ips are not offered to the phone" do
     probe = Probe.new
 

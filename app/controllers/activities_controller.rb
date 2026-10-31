@@ -39,6 +39,10 @@ class ActivitiesController < ApplicationController
 
   def assemble
     @activity.ensure_correction_token!
+    if params[:refresh_phone_link].present?
+      session.delete(:correction_host)
+      Corrections::PhoneLink.restart!(port: request.port)
+    end
     store_correction_host
     @correction_url = gabarito_public_url(@activity)
     @items = @activity.activity_questions.with_attached_image.includes(:question)
@@ -66,7 +70,14 @@ class ActivitiesController < ApplicationController
   def open_gabarito
     @activity.ensure_correction_token!
     store_correction_host
-    redirect_to gabarito_public_url(@activity), allow_other_host: true
+    url = gabarito_public_url(@activity)
+    if url.blank?
+      redirect_to assemble_activity_path(@activity),
+                  alert: "O link HTTPS do celular ainda não ficou pronto. Toque em Atualizar QR."
+      return
+    end
+
+    redirect_to url, allow_other_host: true
   end
 
   def build_exam

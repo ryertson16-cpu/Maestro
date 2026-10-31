@@ -34,8 +34,9 @@ module CorrectionHost
   def pick_correction_host(tunnel:, remembered:, lan:)
     return tunnel if tunnel.present?
     return remembered if remembered.present? && https_url?(remembered) && usable_correction_host?(remembered)
+    return lan if lan.present? && https_url?(lan)
 
-    lan
+    nil
   end
 
   def store_correction_host
@@ -63,11 +64,17 @@ module CorrectionHost
 
   def gabarito_public_url(activity)
     activity.ensure_correction_token!
-    "#{correction_host}/g/#{activity.correction_token}"
+    host = correction_host.to_s.sub(%r{/\z}, "")
+    return if host.blank?
+
+    "#{host}/g/#{activity.correction_token}"
   end
 
   def gabarito_student_url(activity, student)
-    "#{gabarito_public_url(activity)}/a/#{student.id}"
+    base = gabarito_public_url(activity)
+    return if base.blank?
+
+    "#{base}/a/#{student.id}"
   end
 
   def localhost_correction_host?
