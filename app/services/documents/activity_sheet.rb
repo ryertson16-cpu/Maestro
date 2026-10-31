@@ -380,13 +380,14 @@ module Documents
       pdf.stroke_bounds
 
       crest = @letterhead.crest_file
-      mark = @letterhead.maestro_mark_path
       if crest
         pdf.image crest.path, at: [ 6, pdf.bounds.height - 6 ], fit: [ 22, 22 ]
       end
-      if mark
-        pdf.image mark, at: [ pdf.bounds.width - 28, pdf.bounds.height - 6 ], fit: [ 22, 22 ]
-      end
+      @letterhead.draw_maestro_mark(
+        pdf,
+        at: [ pdf.bounds.width - 28, pdf.bounds.height - 6 ],
+        size: 22
+      )
 
       pdf.fill_color "1F4E79"
       pdf.text_box(
@@ -428,7 +429,7 @@ module Documents
       )
 
       url = omr_qr_url(student)
-      layout = { columns: 2, qr_size: 40, row_h: 11, radius: 3.4, fiducial: 6 }
+      layout = { columns: 2, qr_size: 52, row_h: 11, radius: 3.4, fiducial: 6 }
       grid_top = pdf.bounds.height - 56
       qr_size = url.present? ? layout[:qr_size] : 0
       grid_left = 8

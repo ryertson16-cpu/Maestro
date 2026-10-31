@@ -10819,7 +10819,13 @@ html[data-theme="night"] .vitrine-extension-steps {
 }
 
 .gabarito-qr {
-  max-width: 240px;
+  max-width: 280px;
+}
+
+.gabarito-qr svg {
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
 }
 
 .gabarito-qr.is-desk {

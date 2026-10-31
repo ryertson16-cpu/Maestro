@@ -33,15 +33,15 @@ module Documents
 
       png = RQRCode::QRCode.new(@url, level: :l).as_png(
         bit_depth: 1,
-        border_modules: 4,
+        border_modules: 3,
         color_mode: ChunkyPNG::COLOR_GRAYSCALE,
         color: "000000",
         file: nil,
         fill: "ffffff",
-        module_px_size: 8,
+        module_px_size: 16,
         resize_exactly_to: false,
         resize_gte_to: false,
-        size: 360
+        size: 512
       )
 
       tempfile = Tempfile.new(["maestro-qr", ".png"])

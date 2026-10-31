@@ -63,7 +63,7 @@
   </p>
   <% if @correction_url.present? && https_correction_host? %>
     <div class="gabarito-qr">
-      <%= raw RQRCode::QRCode.new(@correction_url).as_svg(module_size: 4, viewbox: true) %>
+      <%= raw RQRCode::QRCode.new(@correction_url).as_svg(module_size: 8, viewbox: true) %>
     </div>
     <p class="activity-type-hint">
       No celular, abra o Chrome ou o Safari e cole este link. Depois toque em Fotografar cartão.

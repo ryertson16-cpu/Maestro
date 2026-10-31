@@ -27,6 +27,22 @@ module Documents
       path if File.file?(path)
     end
 
+    def draw_maestro_mark(pdf, at:, size: 22)
+      path = maestro_mark_path
+      return unless path
+
+      x, y = at
+      pad = 2
+      pdf.fill_color "FFFFFF"
+      pdf.fill_rectangle [ x, y ], size, size
+      pdf.image path, at: [ x + pad, y - pad ], fit: [ size - (pad * 2), size - (pad * 2) ]
+      pdf.stroke_color "E8E6F4"
+      pdf.line_width 0.4
+      pdf.stroke_rectangle [ x, y ], size, size
+      pdf.fill_color "000000"
+      pdf.stroke_color "000000"
+    end
+
     def cleanup
       @tempfiles.each do |file|
         file.close
