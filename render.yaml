@@ -27,7 +27,9 @@ services:
       - key: WEB_CONCURRENCY
         value: "0"
       - key: RAILS_MAX_THREADS
-        value: "3"
+        value: "2"
+      - key: MAESTRO_PHONE_LINK
+        value: "0"
       - key: MAESTRO_BILLING_ENFORCED
         value: "false"
       - key: MAESTRO_OWNER_EMAILS

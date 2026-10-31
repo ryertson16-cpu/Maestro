@@ -76,6 +76,16 @@ class CorrectionHostIpTest < ActiveSupport::TestCase
     assert probe.public_correction_url?("https://cadernomaestro.com.br")
   end
 
+  test "configured public host wins over a lan address" do
+    previous = ENV["MAESTRO_PUBLIC_HOST"]
+    ENV["MAESTRO_PUBLIC_HOST"] = "https://cadernomaestro.com.br"
+    probe = Probe.new
+
+    assert_equal "https://cadernomaestro.com.br", probe.public_site_host
+  ensure
+    ENV["MAESTRO_PUBLIC_HOST"] = previous
+  end
+
   test "virtual ips are not offered to the phone" do
     probe = Probe.new
 

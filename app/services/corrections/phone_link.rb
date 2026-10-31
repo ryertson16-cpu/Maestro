@@ -35,9 +35,20 @@ module Corrections
       @port = port.to_i
     end
 
+    def self.skip_tunnel?
+      ENV["MAESTRO_PHONE_LINK"] == "0" ||
+        ENV["RENDER"].present? ||
+        ENV["MAESTRO_PUBLIC_HOST"].present? ||
+        Rails.env.production?
+    end
+
+    def skip_tunnel?
+      self.class.skip_tunnel?
+    end
+
     def url(wait: false)
       return if Rails.env.test?
-      return if ENV["MAESTRO_PHONE_LINK"] == "0"
+      return if skip_tunnel?
 
       configured = ENV["MAESTRO_PHONE_HOST"].to_s.strip.sub(%r{/\z}, "")
       if configured.present?
@@ -56,20 +67,20 @@ module Corrections
     end
 
     def starting?
-      return false if Rails.env.test?
+      return false if Rails.env.test? || skip_tunnel?
 
       state = read_state
       running?(state) && live_url_from(state).blank? && !log_shows_dead_tunnel?
     end
 
     def failed?
-      return false if Rails.env.test?
+      return false if Rails.env.test? || skip_tunnel?
 
       recently_failed?(read_state)
     end
 
     def restart!
-      return if Rails.env.test?
+      return if Rails.env.test? || skip_tunnel?
 
       stop!(read_state)
       write_state({})

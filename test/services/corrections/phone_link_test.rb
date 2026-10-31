@@ -15,4 +15,13 @@ class CorrectionsPhoneLinkTest < ActiveSupport::TestCase
     assert link.log_shows_dead_tunnel?(text)
     refute link.log_shows_dead_tunnel?("INF Registered tunnel connection connIndex=0")
   end
+
+  test "public maestro host never starts a cloudflare tunnel" do
+    previous = ENV["MAESTRO_PUBLIC_HOST"]
+    ENV["MAESTRO_PUBLIC_HOST"] = "https://cadernomaestro.com.br"
+
+    assert Corrections::PhoneLink.skip_tunnel?
+  ensure
+    ENV["MAESTRO_PUBLIC_HOST"] = previous
+  end
 end

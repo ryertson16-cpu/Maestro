@@ -24,14 +24,14 @@ module CorrectionHost
 
   def correction_host
     public = public_site_host
-    tunnel = if public.present?
-      ""
-    else
-      Corrections::PhoneLink.url(port: request.port).to_s.sub(%r{/\z}, "")
+    if public.present?
+      session[:correction_host] = public
+      return public
     end
+
     host = pick_correction_host(
-      public: public,
-      tunnel: tunnel,
+      public: nil,
+      tunnel: Corrections::PhoneLink.url(port: request.port).to_s.sub(%r{/\z}, ""),
       remembered: session[:correction_host].to_s.sub(%r{/\z}, ""),
       lan: lan_reachable_host.to_s.sub(%r{/\z}, "")
     )
@@ -49,6 +49,9 @@ module CorrectionHost
   end
 
   def public_site_host
+    configured = ENV["MAESTRO_PUBLIC_HOST"].to_s.strip.sub(%r{/\z}, "")
+    return configured if public_correction_url?(configured)
+
     req = request if respond_to?(:request)
     return if req.nil?
 

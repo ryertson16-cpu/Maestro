@@ -6,7 +6,6 @@ class ActivitiesController < ApplicationController
 
   def sheet
     @activity.ensure_correction_pin!
-    Corrections::PhoneLink.url(port: request.port) unless Rails.env.test?
     students = @classroom.students.order(:name)
     Activities::ExamAssigner.new(@activity).ensure!(students)
     pdf = Documents::ActivitySheet.new(
