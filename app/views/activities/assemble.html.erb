@@ -1,5 +1,5 @@
 <% content_for :title, "Prova | Maestro" %>
-<% if @correction_url.blank? && !Corrections::PhoneLink.failed? %>
+<% if @correction_url.blank? && !phone_uses_this_site? && !Corrections::PhoneLink.failed? %>
   <% content_for :head do %>
     <meta http-equiv="refresh" content="4">
   <% end %>
@@ -23,7 +23,7 @@
                 results_activity_path(@activity),
                 class: "button button-secondary" %>
     <%= link_to "Corrigir no celular",
-                open_gabarito_activity_path(@activity),
+                gabarito_path(@activity.correction_token),
                 class: "button button-primary",
                 target: "_blank",
                 rel: "noopener" %>
@@ -34,18 +34,25 @@
 
 <section class="data-card">
   <h2>Corrigir no celular</h2>
-  <p class="activity-type-hint">
-    Não aponte a Câmera do iPhone para nenhum QR do Maestro — ela abre o site
-    por fora e a tela fica preta. Abra o Chrome ou o Safari, cole o link ou
-    digite o código. A câmera da correção só liga depois, já dentro da página.
-  </p>
+  <% if phone_uses_this_site? %>
+    <p class="activity-type-hint">
+      O celular usa o mesmo site deste computador. Abra
+      <strong><%= request.host %></strong> no Chrome ou no Safari, entre na prova
+      e toque em Corrigir no celular — ou cole o link abaixo.
+    </p>
+  <% else %>
+    <p class="activity-type-hint">
+      Não aponte a Câmera do iPhone para o Maestro. Abra o Chrome ou o Safari,
+      cole o link HTTPS ou digite o código. A câmera só liga já dentro da página.
+    </p>
+  <% end %>
   <% unless @lira_ready %>
     <p class="correction-flash is-warn">
       O Maestro está sem OpenAI/Gemini neste caderno. O celular abre a correção,
       mas as bolhas você marca na tela. Para ler o cartão sozinho, ligue a chave em .env.
     </p>
   <% end %>
-  <% if @correction_url.blank? %>
+  <% if @correction_url.blank? && !phone_uses_this_site? %>
     <p class="correction-flash is-warn">
       <% if Corrections::PhoneLink.failed? %>
         Ainda não tenho o link HTTPS do celular. Toque em Atualizar link e espere
@@ -55,16 +62,17 @@
         não use a Câmera do sistema.
       <% end %>
     </p>
+    <p>
+      <%= link_to "Atualizar link",
+                  assemble_activity_path(@activity, refresh_phone_link: 1),
+                  class: "button button-secondary" %>
+    </p>
   <% end %>
-  <p>
-    <%= link_to "Atualizar link",
-                assemble_activity_path(@activity, refresh_phone_link: 1),
-                class: "button button-secondary" %>
-  </p>
   <% if @correction_pin.present? %>
     <p class="correction-pin" aria-label="Código da correção"><%= @correction_pin.chars.each_slice(3).map(&:join).join(" ") %></p>
     <p class="activity-type-hint">
-      No celular, abra <strong>/c</strong> no Chrome ou no Safari e digite estes 6 números.
+      No celular, abra <strong><%= phone_uses_this_site? ? "#{request.host}/c" : "/c" %></strong>
+      e digite estes 6 números.
     </p>
   <% end %>
   <% if @correction_url.present? && https_correction_host? %>
@@ -72,19 +80,16 @@
       <input class="visually-hidden" data-clipboard-target="source" readonly value="<%= @correction_url %>">
       <button type="button" class="button button-primary" data-action="clipboard#copy">Copiar link</button>
       <%= link_to "Enviar no WhatsApp",
-                  "https://api.whatsapp.com/send?text=#{ERB::Util.url_encode("Abrir a correção no Chrome ou Safari (não na Câmera):\n#{@correction_url}\nCódigo: #{@correction_pin}")}",
+                  "https://api.whatsapp.com/send?text=#{ERB::Util.url_encode("Abrir a correção no Chrome ou Safari:\n#{@correction_url}\nCódigo: #{@correction_pin}")}",
                   class: "button button-secondary",
                   target: "_blank",
                   rel: "noopener" %>
     </div>
     <p class="activity-type-hint">
-      Cole o link no Chrome ou no Safari do celular. Depois aponte a câmera da
-      página para o QR pequeno do cartão-resposta — não para este código da tela.
+      Cole este link no Chrome ou no Safari do celular. Depois aponte a câmera da
+      página para o QR pequeno do cartão-resposta.
     </p>
     <code><%= @correction_url %></code>
-    <% if @correction_gate_url.present? %>
-      <p class="activity-type-hint">Página do código: <%= @correction_gate_url %></p>
-    <% end %>
   <% end %>
 </section>
 

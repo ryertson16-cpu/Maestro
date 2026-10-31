@@ -40,7 +40,7 @@ class ActivitiesController < ApplicationController
 
   def assemble
     @activity.ensure_correction_token!
-    if params[:refresh_phone_link].present?
+    if params[:refresh_phone_link].present? && public_site_host.blank?
       session.delete(:correction_host)
       Corrections::PhoneLink.restart!(port: request.port)
     end
@@ -79,6 +79,11 @@ class ActivitiesController < ApplicationController
   def open_gabarito
     @activity.ensure_correction_token!
     store_correction_host
+    if public_site_host.present?
+      redirect_to gabarito_path(@activity.correction_token)
+      return
+    end
+
     url = gabarito_public_url(@activity)
     if url.blank?
       redirect_to assemble_activity_path(@activity),

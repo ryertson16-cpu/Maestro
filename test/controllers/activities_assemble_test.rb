@@ -111,12 +111,25 @@ class ActivitiesAssembleTest < ActionDispatch::IntegrationTest
     token = @activity.reload.correction_token
 
     assert_response :success
-    refute_includes response.body, "/g/#{token}"
     refute_match %r{trycloudflare|192\.168\.}, response.body
-    assert_includes response.body, "abrir-gabarito"
+    assert_includes response.body, "/g/#{token}"
     assert_match(/Atualizar link/i, response.body)
     assert_match(/\d{3} \d{3}/, response.body)
-    refute_match %r{http://10\.}, response.body
+    refute_match %r{https?://10\.}, response.body
+  end
+
+  test "public https site copies its own host instead of a lan ip" do
+    https!
+    host! "cadernomaestro.com.br"
+    @activity.ensure_correction_token!
+
+    get assemble_activity_path(@activity)
+    token = @activity.reload.correction_token
+
+    assert_response :success
+    assert_includes response.body, "https://cadernomaestro.com.br/g/#{token}"
+    refute_match %r{10\.\d+\.\d+\.\d+}, response.body
+    refute_includes response.body, "Atualizar link"
   end
 
   test "opens correction from scanned token" do

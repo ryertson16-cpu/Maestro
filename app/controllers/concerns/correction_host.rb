@@ -17,26 +17,63 @@ module CorrectionHost
                     :phone_unreachable_correction_host?,
                     :automatic_phone_link?,
                     :https_correction_host?,
-                    :insecure_phone_qr?
+                    :insecure_phone_qr?,
+                    :phone_uses_this_site?
     end
   end
 
   def correction_host
+    public = public_site_host
+    tunnel = if public.present?
+      ""
+    else
+      Corrections::PhoneLink.url(port: request.port).to_s.sub(%r{/\z}, "")
+    end
     host = pick_correction_host(
-      tunnel: Corrections::PhoneLink.url(port: request.port).to_s.sub(%r{/\z}, ""),
+      public: public,
+      tunnel: tunnel,
       remembered: session[:correction_host].to_s.sub(%r{/\z}, ""),
       lan: lan_reachable_host.to_s.sub(%r{/\z}, "")
     )
-    session[:correction_host] = host if host.present?
+    session[:correction_host] = host if host.present? && public_correction_url?(host)
     host
   end
 
-  def pick_correction_host(tunnel:, remembered:, lan:)
+  def pick_correction_host(tunnel:, remembered:, lan:, public: nil)
+    return public if public.present?
     return tunnel if tunnel.present?
-    return remembered if remembered.present? && https_url?(remembered) && usable_correction_host?(remembered)
-    return lan if lan.present? && https_url?(lan)
+    return remembered if remembered.present? && public_correction_url?(remembered) && usable_correction_host?(remembered)
+    return lan if lan.present? && public_correction_url?(lan)
 
     nil
+  end
+
+  def public_site_host
+    req = request if respond_to?(:request)
+    return if req.nil?
+
+    url = req.base_url.to_s.sub(%r{/\z}, "")
+    return unless public_correction_url?(url)
+
+    url
+  end
+
+  def phone_uses_this_site?
+    public_site_host.present?
+  end
+
+  def public_correction_url?(url)
+    uri = URI.parse(url.to_s)
+    return false unless uri.scheme == "https"
+
+    host = uri.host.to_s.downcase
+    return false if host.blank?
+    return false if %w[localhost 127.0.0.1 0.0.0.0 ::1].include?(host)
+    return false if dotted_ip?(host) && private_network_ip?(host)
+
+    true
+  rescue URI::InvalidURIError
+    false
   end
 
   def store_correction_host
@@ -104,7 +141,7 @@ module CorrectionHost
   end
 
   def https_correction_host?
-    https_url?(correction_host)
+    public_correction_url?(correction_host)
   end
 
   def insecure_phone_qr?
@@ -213,6 +250,17 @@ module CorrectionHost
     ip.start_with?("127.", "169.254.", "10.255.255.") ||
       ip.match?(/\A172\.(1[6-9]|2\d|3[0-1])\./) ||
       %w[localhost 0.0.0.0].include?(ip)
+  end
+
+  def private_network_ip?(ip)
+    ip = ip.to_s
+    ip.start_with?("10.", "127.", "169.254.") ||
+      ip.match?(/\A192\.168\./) ||
+      ip.match?(/\A172\.(1[6-9]|2\d|3[0-1])\./)
+  end
+
+  def dotted_ip?(host)
+    host.to_s.match?(/\A\d{1,3}(?:\.\d{1,3}){3}\z/)
   end
 
   def ip_rank(ip)

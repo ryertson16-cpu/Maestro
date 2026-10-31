@@ -57,6 +57,25 @@ class CorrectionHostIpTest < ActiveSupport::TestCase
     assert_nil chosen
   end
 
+  test "https lan ip is not used when the professor is already on the public site" do
+    probe = Probe.new
+    chosen = probe.pick_correction_host(
+      public: "https://cadernomaestro.com.br",
+      tunnel: "",
+      remembered: "https://10.28.209.137",
+      lan: "https://10.28.209.137"
+    )
+
+    assert_equal "https://cadernomaestro.com.br", chosen
+  end
+
+  test "https private ip is not a phone correction host" do
+    probe = Probe.new
+
+    refute probe.public_correction_url?("https://10.28.209.137/g/token")
+    assert probe.public_correction_url?("https://cadernomaestro.com.br")
+  end
+
   test "virtual ips are not offered to the phone" do
     probe = Probe.new
 
