@@ -128,6 +128,7 @@ class ActivitiesAssembleTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "https://cadernomaestro.com.br/g/#{token}"
+    assert_includes response.body, "<svg"
     refute_match %r{10\.\d+\.\d+\.\d+}, response.body
     refute_includes response.body, "Atualizar link"
   end

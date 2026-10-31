@@ -47,8 +47,8 @@
       <p class="correction-kicker">Correção automática</p>
       <h2>Apontar para o cartão</h2>
       <p>
-        Aponte para o QR pequeno impresso no cartão. O Maestro fotografa sozinho,
-        lê as bolhas e guarda a foto só no caderno. Folha <%= @assignment&.slot || "—" %>.
+        Aponte para o QR grande do cartão. O Maestro reconhece o aluno, fotografa
+        e lê as bolhas. Folha <%= @assignment&.slot || "—" %>.
       </p>
       <div class="qr-scanner-card"
            data-qr-scanner
@@ -75,8 +75,11 @@
           Usar câmera na tela
         </button>
         <video data-qr-video playsinline webkit-playsinline muted hidden></video>
+        <button type="button" class="button button-secondary button-block" data-qr-capture>
+          Não leu o QR? Corrigir este aluno
+        </button>
         <p class="correction-scan-banner is-wait" data-qr-status role="status">
-          Toque em Fotografar cartão. A Câmera do celular tira a foto e o Maestro lê as bolhas.
+          Aponte para o QR do cartão. O Maestro identifica o aluno sozinho.
         </p>
       </div>
     </section>
@@ -138,8 +141,8 @@
     <h2>Quem é o aluno?</h2>
     <p>
       <% if @lira_ready %>
-        Abra esta página no Chrome ou no Safari (não na Câmera do sistema).
-        Aponte para o QR pequeno do cartão-resposta; o Maestro tira a foto sozinho.
+        Aponte para o QR grande impresso no cartão. O Maestro reconhece o aluno
+        e tira a foto sozinho.
       <% else %>
         O QR escolhe o aluno. Sem OpenAI/Gemini, as bolhas você marca na tela seguinte.
       <% end %>
@@ -170,7 +173,7 @@
       </button>
       <video data-qr-video playsinline webkit-playsinline muted hidden></video>
       <p class="correction-scan-banner is-wait" data-qr-status role="status">
-        Fotografe o cartão inteiro (QR + bolhas). Não use a Câmera do iPhone para abrir o site.
+        Aponte para o QR do cartão. O Maestro identifica o aluno e lê as bolhas.
       </p>
       <input type="url"
              class="correction-search"

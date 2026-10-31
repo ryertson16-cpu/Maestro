@@ -135,7 +135,7 @@ function grabRegion(video, canvas, left, top, width, height) {
   const sy = Math.floor(vh * top)
   const sw = Math.max(1, Math.floor(vw * width))
   const sh = Math.max(1, Math.floor(vh * height))
-  const outW = 480
+  const outW = Math.min(800, Math.max(320, sw))
   const outH = Math.max(1, Math.round(outW * (sh / sw)))
   canvas.width = outW
   canvas.height = outH
@@ -149,18 +149,29 @@ async function readRaw(video, canvas, detector, jsQR) {
   let raw = ""
   if (detector) {
     try {
-      const codes = await detector.detect(video)
-      raw = codes[0]?.rawValue || ""
-    } catch (_error) {}
+      const frame = grabRegion(video, canvas, 0, 0, 1, 1)
+      if (frame) {
+        const bitmap = await createImageBitmap(frame)
+        const codes = await detector.detect(bitmap)
+        raw = codes[0]?.rawValue || ""
+        bitmap.close?.()
+      }
+    } catch (_error) {
+      try {
+        const codes = await detector.detect(video)
+        raw = codes[0]?.rawValue || ""
+      } catch (_ignored) {}
+    }
   }
   if (raw) return raw
 
   const regions = [
     [0, 0, 1, 1],
-    [0, 0, 0.42, 1],
-    [0, 0, 0.5, 0.5],
-    [0, 0.15, 0.4, 0.55],
-    [0.02, 0.25, 0.38, 0.5]
+    [0, 0, 0.5, 1],
+    [0, 0, 0.35, 0.7],
+    [0, 0.1, 0.45, 0.7],
+    [0.05, 0.2, 0.4, 0.55],
+    [0.15, 0.15, 0.7, 0.7]
   ]
   for (const region of regions) {
     raw = decodeJsQr(jsQR, grabRegion(video, canvas, ...region))
@@ -236,7 +247,7 @@ async function startScanner(root) {
     video.hidden = false
     video.srcObject = stream
     await video.play()
-    setBanner(root, "Procurando o QR do aluno… aponte para o cartão.", "wait")
+    setBanner(root, "Procurando o QR do aluno no cartão…", "wait")
   } catch (_error) {
     setBanner(root, "Não foi possível abrir a câmera. Toque no nome do aluno na lista.", "warn")
     return
@@ -255,7 +266,7 @@ async function startScanner(root) {
   let lastToken = ""
 
   const tick = async (now) => {
-    if (locked) return
+    if (locked || root.dataset.qrLocked) return
     if (video.readyState < 2 || now - lastTry < 180) {
       requestAnimationFrame(tick)
       return
@@ -287,35 +298,33 @@ async function startScanner(root) {
         return
       }
 
-      hits = token === lastToken ? hits + 1 : 1
-      lastToken = token
       const scannedStudent = studentIdFromToken(token)
-      const name = studentName(scannedStudent || knownStudent)
-      if (hits === 1) {
-        setBanner(
-          root,
-          name
-            ? `QR de ${name} encontrado. Enquadre o cartão inteiro…`
-            : "QR encontrado. Enquadre o cartão inteiro (QR + bolhas)…",
-          "wait"
-        )
-      }
-      if (hits < 2) {
+      if (!scannedStudent) {
+        hits = 0
+        lastToken = ""
+        setBanner(root, "Esse QR abre o site. Aponte para o QR grande do cartão do aluno.", "wait")
         requestAnimationFrame(tick)
         return
       }
 
-      const studentId = scannedStudent || knownStudent
+      hits = token === lastToken ? hits + 1 : 1
+      lastToken = token
+      const name = studentName(scannedStudent)
+      if (hits === 1) {
+        setBanner(root, name ? `É ${name}. Capturando o cartão…` : "QR do aluno lido. Capturando…", "ok")
+      }
 
-      if (grade && studentId) {
+      if (grade && scannedStudent) {
         locked = true
+        root.dataset.qrLocked = "true"
         setBanner(root, name ? `Capturando o cartão de ${name}…` : "Capturando o cartão…", "wait")
         const stream = video.srcObject
-        const sent = await sendCard(root, studentId, canvas).catch(() => false)
+        const sent = await sendCard(root, scannedStudent, canvas).catch(() => false)
         if (!sent) {
           locked = false
+          delete root.dataset.qrLocked
           hits = 0
-          setBanner(root, "Não consegui corrigir. Enquadre o cartão inteiro (QR + bolhas).", "warn")
+          setBanner(root, "Não consegui corrigir. Aproxime o QR grande do cartão.", "warn")
           requestAnimationFrame(tick)
           return
         }
@@ -370,6 +379,20 @@ function bindFileCapture(root) {
 
     const form = input.closest("form")
     const knownStudent = root.getAttribute("data-student-id") || ""
+    if (form && root.hasAttribute("data-qr-grade") && knownStudent) {
+      let hidden = form.querySelector('input[name="student_id"]')
+      if (!hidden) {
+        hidden = document.createElement("input")
+        hidden.type = "hidden"
+        hidden.name = "student_id"
+        form.appendChild(hidden)
+      }
+      hidden.value = knownStudent
+      setBanner(root, "Enviando o cartão…", "wait")
+      form.submit()
+      return
+    }
+
     setBanner(root, "Lendo o QR da foto…", "wait")
 
     let token = ""
@@ -423,11 +446,46 @@ function bindPaste(root) {
   })
 }
 
+function bindCaptureNow(root) {
+  const button = root.querySelector("[data-qr-capture]")
+  if (!button) return
+
+  button.addEventListener("click", async () => {
+    const studentId = root.getAttribute("data-student-id") || ""
+    if (!studentId) {
+      setBanner(root, "Escolha o aluno na lista antes de fotografar o cartão.", "warn")
+      return
+    }
+    if (root.dataset.qrLocked) return
+
+    const video = root.querySelector("[data-qr-video]")
+    if (!root.dataset.qrLive) {
+      await startScanner(root)
+    }
+    if (!video?.srcObject) {
+      setBanner(root, "A câmera ainda não ligou. Toque de novo em Corrigir agora.", "warn")
+      return
+    }
+
+    root.dataset.qrLocked = "true"
+    const canvas = document.createElement("canvas")
+    const sent = await sendCard(root, studentId, canvas).catch(() => false)
+    if (!sent) {
+      delete root.dataset.qrLocked
+      setBanner(root, "Não consegui corrigir. Enquadre o cartão inteiro e toque de novo.", "warn")
+      return
+    }
+    const stream = video.srcObject
+    if (stream) stream.getTracks().forEach((track) => track.stop())
+  })
+}
+
 function bindScanner(root) {
   if (!root || root.dataset.qrBound) return
   root.dataset.qrBound = "true"
   bindPaste(root)
   bindFileCapture(root)
+  bindCaptureNow(root)
 
   const phone = window.matchMedia("(pointer: coarse)").matches
   const start = root.querySelector("[data-qr-start]")
@@ -442,12 +500,14 @@ function bindScanner(root) {
       "wait"
     )
     if (start) start.hidden = true
+    const capture = root.querySelector("[data-qr-capture]")
+    if (capture) capture.hidden = true
     return
   }
 
   if (phone && grade) {
     if (start) start.hidden = true
-    setBanner(root, "Aponte para o QR pequeno do cartão. O Maestro fotografa sozinho, sem gravar na galeria.", "wait")
+    setBanner(root, "Aponte para o QR grande do cartão. O Maestro reconhece o aluno sozinho.", "wait")
     startScanner(root)
     return
   }

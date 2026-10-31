@@ -31,9 +31,9 @@ module Documents
     def png_file
       return if @url.blank?
 
-      png = RQRCode::QRCode.new(@url, level: :m).as_png(
+      png = RQRCode::QRCode.new(@url, level: :l).as_png(
         bit_depth: 1,
-        border_modules: 3,
+        border_modules: 4,
         color_mode: ChunkyPNG::COLOR_GRAYSCALE,
         color: "000000",
         file: nil,

@@ -10840,7 +10840,10 @@ html[data-theme="night"] .vitrine-extension-steps {
 }
 
 .gabarito-qr {
-  max-width: 280px;
+  max-width: 320px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 16px;
 }
 
 .gabarito-qr svg {

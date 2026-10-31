@@ -367,7 +367,7 @@ module Documents
       count = assembled_items.count(&:objective?)
       header = 58
       rows = (count / 2.0).ceil
-      [ 128, header + 36 + (rows * 12) ].max
+      [ 220, header + 120 + (rows * 12) ].max
     end
 
     def draw_compact_omr_card(pdf, student)
@@ -429,12 +429,14 @@ module Documents
       )
 
       url = omr_qr_url(student)
-      layout = { columns: 2, qr_size: 52, row_h: 11, radius: 3.4, fiducial: 6 }
-      grid_top = pdf.bounds.height - 56
+      layout = { columns: 2, qr_size: 112, row_h: 11, radius: 3.4, fiducial: 6 }
+      grid_top = pdf.bounds.height - 52
       qr_size = url.present? ? layout[:qr_size] : 0
       grid_left = 8
       grid_width = pdf.bounds.width - 16
       if qr_size.positive?
+        pdf.fill_color "FFFFFF"
+        pdf.fill_rectangle [ 4, grid_top + 2 ], qr_size + 4, qr_size + 4
         @qr.draw(pdf, size: qr_size, url: url, at: [ 6, grid_top ])
         grid_left = 8 + qr_size + 6
         grid_width = pdf.bounds.width - grid_left - 8
