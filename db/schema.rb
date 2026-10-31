@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_30_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_31_120000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -52,6 +52,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_120000) do
     t.string "adaptation_kind"
     t.boolean "adapted", default: false, null: false
     t.integer "bimester", default: 1, null: false
+    t.string "correction_pin"
     t.string "correction_token"
     t.datetime "created_at", null: false
     t.text "description"
@@ -65,6 +66,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_120000) do
     t.datetime "updated_at", null: false
     t.decimal "weight", precision: 5, scale: 2, default: "1.0", null: false
     t.index ["adapted"], name: "index_activities_on_adapted"
+    t.index ["correction_pin"], name: "index_activities_on_correction_pin", unique: true
     t.index ["correction_token"], name: "index_activities_on_correction_token", unique: true
     t.index ["lesson_id"], name: "index_activities_on_lesson_id"
     t.index ["parent_activity_id"], name: "index_activities_on_parent_activity_id"

@@ -10818,6 +10818,27 @@ html[data-theme="night"] .vitrine-extension-steps {
   }
 }
 
+.correction-pin {
+  margin: 8px 0 12px;
+  font-size: 2.4rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: #1f4e79;
+}
+
+.correction-pin-input {
+  display: block;
+  width: 100%;
+  margin: 12px 0 16px;
+  padding: 14px 12px;
+  border: 2px solid #cfd6ea;
+  border-radius: 12px;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-align: center;
+}
+
 .gabarito-qr {
   max-width: 280px;
 }

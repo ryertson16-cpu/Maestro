@@ -1,0 +1,24 @@
+<% content_for :title, "Código da correção | Maestro" %>
+
+<section class="correction-card">
+  <p class="correction-kicker">Gabarito</p>
+  <h1>Digite o código da prova</h1>
+  <p>
+    Use o Chrome ou o Safari. Os 6 números estão na tela do computador, em
+    <strong>Corrigir no celular</strong>. Não use a Câmera do iPhone.
+  </p>
+  <%= form_with url: correction_gate_path, method: :post, local: true do %>
+    <label class="visually-hidden" for="correction-pin">Código</label>
+    <input id="correction-pin"
+           class="correction-pin-input"
+           type="text"
+           name="pin"
+           inputmode="numeric"
+           pattern="[0-9]*"
+           maxlength="6"
+           autocomplete="one-time-code"
+           required
+           autofocus>
+    <%= submit_tag "Abrir correção", class: "button button-primary button-block" %>
+  <% end %>
+</section>

@@ -184,6 +184,15 @@ Rails.application.routes.draw do
       to: "corrections#index",
       as: :corrections
 
+  get "/c",
+      to: "public_corrections#gate",
+      as: :correction_gate
+  post "/c",
+       to: "public_corrections#enter"
+  get "/c/:pin",
+      to: "public_corrections#enter",
+      as: :correction_pin
+
   get "/g/:token",
       to: "public_corrections#show",
       as: :gabarito

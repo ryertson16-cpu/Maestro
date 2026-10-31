@@ -547,6 +547,8 @@ module Documents
     end
 
     def omr_qr_url(student)
+      return Corrections::CardCode.payload(@activity, student) if @activity
+
       return @student_url.call(student).to_s if student && @student_url
 
       @correction_url.to_s

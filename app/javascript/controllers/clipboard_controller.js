@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["source"]
+  static values = { copied: { type: String, default: "Recado copiado" } }
 
   async copy(event) {
     event.preventDefault()
@@ -12,8 +13,8 @@ export default class extends Controller {
 
     try {
       await navigator.clipboard.writeText(text)
-      button.textContent = "Recado copiado"
-      window.MaestroToast?.show({ kind: "success", message: "Recado copiado." })
+      button.textContent = this.copiedValue
+      window.MaestroToast?.show({ kind: "success", message: this.copiedValue })
     } catch {
       this.sourceTarget.focus()
       this.sourceTarget.select()

@@ -1,6 +1,16 @@
+function cardCodeFromText(text) {
+  const compact = (text || "").toUpperCase().replace(/[^A-Z0-9]/g, "")
+  const match = compact.match(/M(\d{6})(?:A(\d+))?/)
+  if (!match) return null
+  return { pin: match[1], studentId: match[2] || "", token: match[0] }
+}
+
 function tokenFromText(text) {
   const raw = (text || "").trim()
   if (!raw) return ""
+
+  const card = cardCodeFromText(raw)
+  if (card) return card.token
 
   try {
     const url = new URL(raw, window.location.origin)
@@ -16,6 +26,8 @@ function tokenFromText(text) {
 }
 
 function studentIdFromToken(token) {
+  const card = cardCodeFromText(token)
+  if (card?.studentId) return card.studentId
   const match = (token || "").match(/\/a\/(\d+)/)
   return match ? match[1] : ""
 }
@@ -30,6 +42,16 @@ function studentName(id) {
 
 function openToken(token) {
   if (!token) return
+  const card = cardCodeFromText(token)
+  if (card?.studentId) {
+    const base = window.location.pathname.replace(/\/a\/\d+.*$/, "")
+    if (base.startsWith("/g/")) {
+      window.location.href = `${base}/a/${card.studentId}`
+      return
+    }
+    window.location.href = `/c/${card.pin}`
+    return
+  }
   if (token.startsWith("/g/")) {
     window.location.href = token
     return
@@ -95,6 +117,34 @@ function frameBlob(canvas) {
   })
 }
 
+function decodeJsQr(jsQR, image) {
+  if (!jsQR || !image) return ""
+  try {
+    return jsQR(image.data, image.width, image.height, { inversionAttempts: "attemptBoth" })?.data || ""
+  } catch (_error) {
+    return ""
+  }
+}
+
+function grabRegion(video, canvas, left, top, width, height) {
+  const vw = video.videoWidth
+  const vh = video.videoHeight
+  if (!vw || !vh) return null
+
+  const sx = Math.floor(vw * left)
+  const sy = Math.floor(vh * top)
+  const sw = Math.max(1, Math.floor(vw * width))
+  const sh = Math.max(1, Math.floor(vh * height))
+  const outW = 480
+  const outH = Math.max(1, Math.round(outW * (sh / sw)))
+  canvas.width = outW
+  canvas.height = outH
+  const context = canvas.getContext("2d", { willReadFrequently: true })
+  context.imageSmoothingEnabled = false
+  context.drawImage(video, sx, sy, sw, sh, 0, 0, outW, outH)
+  return context.getImageData(0, 0, outW, outH)
+}
+
 async function readRaw(video, canvas, detector, jsQR) {
   let raw = ""
   if (detector) {
@@ -103,14 +153,20 @@ async function readRaw(video, canvas, detector, jsQR) {
       raw = codes[0]?.rawValue || ""
     } catch (_error) {}
   }
-  if (!raw && jsQR) {
-    const image = grabFrame(video, canvas)
-    if (image) {
-      const code = jsQR(image.data, image.width, image.height)
-      raw = code?.data || ""
-    }
+  if (raw) return raw
+
+  const regions = [
+    [0, 0, 1, 1],
+    [0, 0, 0.42, 1],
+    [0, 0, 0.5, 0.5],
+    [0, 0.15, 0.4, 0.55],
+    [0.02, 0.25, 0.38, 0.5]
+  ]
+  for (const region of regions) {
+    raw = decodeJsQr(jsQR, grabRegion(video, canvas, ...region))
+    if (raw) return raw
   }
-  return raw
+  return ""
 }
 
 async function sendCard(root, studentId, canvas) {
@@ -213,7 +269,17 @@ async function startScanner(root) {
     }
 
     try {
-      const token = tokenFromText(await readRaw(video, canvas, detector, jsQR))
+      const raw = await readRaw(video, canvas, detector, jsQR)
+      const parsed = cardCodeFromText(raw)
+      const expectedPin = root.getAttribute("data-correction-pin") || ""
+      if (parsed?.pin && expectedPin && parsed.pin !== expectedPin) {
+        hits = 0
+        lastToken = ""
+        setBanner(root, "Este cartão é de outra prova. Use o código da tela do computador.", "warn")
+        requestAnimationFrame(tick)
+        return
+      }
+      const token = tokenFromText(raw)
       if (!token) {
         hits = 0
         lastToken = ""
@@ -234,7 +300,7 @@ async function startScanner(root) {
           "wait"
         )
       }
-      if (hits < 3) {
+      if (hits < 2) {
         requestAnimationFrame(tick)
         return
       }
@@ -311,7 +377,7 @@ function bindFileCapture(root) {
       const jsQR = await loadJsQr().catch(() => window.jsQR)
       if (jsQR) {
         const image = await fileImageData(file)
-        token = tokenFromText(jsQR(image.data, image.width, image.height)?.data || "")
+        token = tokenFromText(decodeJsQr(jsQR, image))
       }
     } catch (_error) {}
 
@@ -381,7 +447,7 @@ function bindScanner(root) {
 
   if (phone && grade) {
     if (start) start.hidden = true
-    setBanner(root, "Aponte para o QR. O Maestro fotografa o cartão sozinho, sem gravar na galeria.", "wait")
+    setBanner(root, "Aponte para o QR pequeno do cartão. O Maestro fotografa sozinho, sem gravar na galeria.", "wait")
     startScanner(root)
     return
   }

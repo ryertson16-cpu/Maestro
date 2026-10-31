@@ -5,16 +5,8 @@ class ActivitiesController < ApplicationController
   before_action :set_activity, except: :create
 
   def sheet
-    @activity.ensure_correction_token!
-    unless Rails.env.test?
-      Corrections::PhoneLink.url(port: request.port, wait: true)
-      phone_url = gabarito_public_url(@activity)
-      unless phone_url.present? && https_url?(phone_url)
-        redirect_to assemble_activity_path(@activity),
-                    alert: "A folha só sai com QR HTTPS. Toque em Atualizar QR, espere o link https:// aparecer e gere a prova de novo."
-        return
-      end
-    end
+    @activity.ensure_correction_pin!
+    Corrections::PhoneLink.url(port: request.port) unless Rails.env.test?
     students = @classroom.students.order(:name)
     Activities::ExamAssigner.new(@activity).ensure!(students)
     pdf = Documents::ActivitySheet.new(
@@ -53,7 +45,9 @@ class ActivitiesController < ApplicationController
       Corrections::PhoneLink.restart!(port: request.port)
     end
     store_correction_host
+    @correction_pin = @activity.ensure_correction_pin!
     @correction_url = gabarito_public_url(@activity)
+    @correction_gate_url = correction_gate_public_url
     @items = @activity.activity_questions.with_attached_image.includes(:question)
     @exam_assignments = Activities::ExamAssigner.new(@activity).ensure!(@classroom.students.order(:name))
     @courses = current_professor.courses.order(:name)
@@ -88,7 +82,7 @@ class ActivitiesController < ApplicationController
     url = gabarito_public_url(@activity)
     if url.blank?
       redirect_to assemble_activity_path(@activity),
-                  alert: "O link HTTPS do celular ainda não ficou pronto. Toque em Atualizar QR."
+                  alert: "O link HTTPS do celular ainda não ficou pronto. Toque em Atualizar link."
       return
     end
 

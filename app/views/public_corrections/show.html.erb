@@ -8,8 +8,8 @@
 
 <% unless request.ssl? || %w[localhost 127.0.0.1 ::1].include?(request.host) %>
   <p class="correction-flash is-warn">
-    Esta página está em HTTP. A câmera do celular não liga assim — escolha o aluno
-    na lista e marque as letras, ou volte ao computador e atualize o QR HTTPS.
+    Esta página está em HTTP. A câmera do celular não liga assim — volte ao
+    computador, copie o link HTTPS e cole no Chrome ou no Safari.
   </p>
 <% end %>
 
@@ -47,13 +47,14 @@
       <p class="correction-kicker">Correção automática</p>
       <h2>Apontar para o cartão</h2>
       <p>
-        Aponte o QR. O Maestro fotografa o cartão sozinho, lê as bolhas e guarda
-        a foto só no caderno. Folha <%= @assignment&.slot || "—" %>.
+        Aponte para o QR pequeno impresso no cartão. O Maestro fotografa sozinho,
+        lê as bolhas e guarda a foto só no caderno. Folha <%= @assignment&.slot || "—" %>.
       </p>
       <div class="qr-scanner-card"
            data-qr-scanner
            data-qr-grade
            data-scan-url="<%= gabarito_scan_path(@activity.correction_token) %>"
+           data-correction-pin="<%= @activity.ensure_correction_pin! %>"
            data-student-id="<%= @student.id %>">
         <%= form_with url: gabarito_scan_path(@activity.correction_token),
                       method: :post,
@@ -138,13 +139,14 @@
     <p>
       <% if @lira_ready %>
         Abra esta página no Chrome ou no Safari (não na Câmera do sistema).
-        Toque em Fotografar cartão e aponte para o QR e as bolhas.
+        Aponte para o QR pequeno do cartão-resposta; o Maestro tira a foto sozinho.
       <% else %>
         O QR escolhe o aluno. Sem OpenAI/Gemini, as bolhas você marca na tela seguinte.
       <% end %>
     </p>
     <div class="qr-scanner-card"
          data-qr-scanner
+         data-correction-pin="<%= @activity.ensure_correction_pin! %>"
          <% if @lira_ready %>
            data-qr-grade
            data-scan-url="<%= gabarito_scan_path(@activity.correction_token) %>"

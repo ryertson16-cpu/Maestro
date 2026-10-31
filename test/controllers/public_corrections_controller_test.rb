@@ -122,4 +122,18 @@ class PublicCorrectionsControllerTest < ActionDispatch::IntegrationTest
     get gabarito_path("token-inexistente")
     assert_response :not_found
   end
+
+  test "six-digit pin opens the gabarito without scanning a url" do
+    pin = @activity.ensure_correction_pin!
+
+    get correction_gate_path
+    assert_response :success
+    assert_match(/Digite o código da prova/, response.body)
+
+    post correction_gate_path, params: { pin: pin }
+    assert_redirected_to gabarito_path(@activity.correction_token)
+
+    get correction_pin_path(pin)
+    assert_redirected_to gabarito_path(@activity.correction_token)
+  end
 end

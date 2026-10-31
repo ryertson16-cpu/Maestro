@@ -70,6 +70,13 @@ module CorrectionHost
     "#{host}/g/#{activity.correction_token}"
   end
 
+  def correction_gate_public_url
+    host = correction_host.to_s.sub(%r{/\z}, "")
+    return if host.blank?
+
+    "#{host}/c"
+  end
+
   def gabarito_student_url(activity, student)
     base = gabarito_public_url(activity)
     return if base.blank?

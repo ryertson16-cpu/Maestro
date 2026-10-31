@@ -114,7 +114,8 @@ class ActivitiesAssembleTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "/g/#{token}"
     refute_match %r{trycloudflare|192\.168\.}, response.body
     assert_includes response.body, "abrir-gabarito"
-    assert_match(/gerando o link HTTPS|Atualizar QR/i, response.body)
+    assert_match(/Atualizar link/i, response.body)
+    assert_match(/\d{3} \d{3}/, response.body)
     refute_match %r{http://10\.}, response.body
   end
 

@@ -1,7 +1,21 @@
 class PublicCorrectionsController < ApplicationController
   skip_before_action :require_maestro_subscription
-  before_action :set_activity
+  before_action :set_activity, except: %i[gate enter]
   layout "correction"
+
+  def gate
+  end
+
+  def enter
+    pin = params[:pin].to_s.gsub(/\D/, "")
+    activity = Activity.find_by(correction_pin: pin)
+    if activity
+      redirect_to gabarito_path(activity.correction_token)
+      return
+    end
+
+    redirect_to correction_gate_path, alert: "Este código não confere. Digite os 6 números da tela do computador."
+  end
 
   def show
     @items = @activity.activity_questions.with_attached_image

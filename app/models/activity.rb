@@ -188,6 +188,20 @@ class Activity < ApplicationRecord
     correction_token
   end
 
+  def ensure_correction_pin!
+    ensure_correction_token
+    if correction_pin.blank?
+      loop do
+        self.correction_pin = format("%06d", SecureRandom.random_number(1_000_000))
+        clash = self.class.where(correction_pin: correction_pin)
+        clash = clash.where.not(id: id) if persisted?
+        break unless clash.exists?
+      end
+    end
+    save! if (correction_token_changed? || correction_pin_changed?) && persisted?
+    correction_pin
+  end
+
   def correction_path_token
     ensure_correction_token!
   end
