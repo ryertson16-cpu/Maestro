@@ -114,6 +114,7 @@ class ActivitiesAssembleTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "/g/#{token}"
     refute_match %r{trycloudflare|192\.168\.}, response.body
     assert_includes response.body, "abrir-gabarito"
+    assert_match(/tela preta/i, response.body)
   end
 
   test "opens correction from scanned token" do

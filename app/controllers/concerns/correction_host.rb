@@ -15,19 +15,27 @@ module CorrectionHost
                     :lan_reachable_host,
                     :reachable_correction_hosts,
                     :phone_unreachable_correction_host?,
-                    :automatic_phone_link?
+                    :automatic_phone_link?,
+                    :https_correction_host?,
+                    :insecure_phone_qr?
     end
   end
 
   def correction_host
-    remembered = session[:correction_host].to_s.sub(%r{/\z}, "")
-    if remembered.present? && usable_correction_host?(remembered)
-      return remembered
-    end
-
-    host = (Corrections::PhoneLink.url(port: request.port) || lan_reachable_host).to_s.sub(%r{/\z}, "")
+    host = pick_correction_host(
+      tunnel: Corrections::PhoneLink.url(port: request.port).to_s.sub(%r{/\z}, ""),
+      remembered: session[:correction_host].to_s.sub(%r{/\z}, ""),
+      lan: lan_reachable_host.to_s.sub(%r{/\z}, "")
+    )
     session[:correction_host] = host if host.present?
     host
+  end
+
+  def pick_correction_host(tunnel:, remembered:, lan:)
+    return tunnel if tunnel.present?
+    return remembered if remembered.present? && https_url?(remembered) && usable_correction_host?(remembered)
+
+    lan
   end
 
   def store_correction_host
@@ -77,6 +85,20 @@ module CorrectionHost
 
   def automatic_phone_link?
     trycloudflare_host?(URI.parse(correction_host.to_s).host.to_s)
+  rescue URI::InvalidURIError
+    false
+  end
+
+  def https_correction_host?
+    https_url?(correction_host)
+  end
+
+  def insecure_phone_qr?
+    !https_correction_host?
+  end
+
+  def https_url?(url)
+    URI.parse(url.to_s).scheme == "https"
   rescue URI::InvalidURIError
     false
   end

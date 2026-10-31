@@ -35,6 +35,17 @@ class CorrectionHostIpTest < ActiveSupport::TestCase
     assert probe.usable_correction_host?("http://192.168.0.20:3000")
   end
 
+  test "https tunnel replaces a remembered lan address" do
+    probe = Probe.new
+    chosen = probe.pick_correction_host(
+      tunnel: "https://gabarito.trycloudflare.com",
+      remembered: "http://10.25.151.233:3000",
+      lan: "http://10.25.151.233:3000"
+    )
+
+    assert_equal "https://gabarito.trycloudflare.com", chosen
+  end
+
   test "virtual ips are not offered to the phone" do
     probe = Probe.new
 

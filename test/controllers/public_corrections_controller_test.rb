@@ -66,6 +66,7 @@ class PublicCorrectionsControllerTest < ActionDispatch::IntegrationTest
     refute_includes response.body, 'capture="environment"'
     refute_match(/variante/i, response.body)
     refute_match "Aguardando a câmera deste celular", response.body
+    assert_match(/câmera do celular não liga/i, response.body)
   end
 
   test "student qr opens that pupil and posts the grade" do

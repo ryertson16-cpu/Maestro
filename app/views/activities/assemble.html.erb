@@ -1,4 +1,9 @@
 <% content_for :title, "Prova | Maestro" %>
+<% if insecure_phone_qr? && Corrections::PhoneLink.starting?(port: request.port) %>
+  <% content_for :head do %>
+    <meta http-equiv="refresh" content="4">
+  <% end %>
+<% end %>
 
 <div class="page-header page-header-with-action">
   <div>
@@ -35,8 +40,15 @@
     </p>
   <% end %>
   <% if phone_unreachable_correction_host? %>
-    <p class="activity-type-hint">
+    <p class="correction-flash is-warn">
       Recarregue esta página para o Maestro renovar o QR do celular.
+    </p>
+  <% elsif insecure_phone_qr? %>
+    <p class="correction-flash is-warn">
+      Este QR ainda aponta para o computador na rede local. A câmera do celular
+      abre uma tela preta nesse endereço. Toque em Atualizar QR para o Maestro
+      gerar o link HTTPS. Se a tela preta já apareceu, no celular toque nos dois
+      quadrados e abra no navegador — a câmera da correção só liga em HTTPS.
     </p>
   <% end %>
   <p>

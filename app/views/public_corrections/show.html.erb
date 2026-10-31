@@ -6,6 +6,13 @@
   <p><%= @activity.activity_type %> · <%= @activity.bimester_label %></p>
 </section>
 
+<% unless request.ssl? || %w[localhost 127.0.0.1 ::1].include?(request.host) %>
+  <p class="correction-flash is-warn">
+    Esta página está em HTTP. A câmera do celular não liga assim — escolha o aluno
+    na lista e marque as letras, ou volte ao computador e atualize o QR HTTPS.
+  </p>
+<% end %>
+
 <% if @just_graded && @student && @score.present? %>
   <section class="correction-score" aria-live="polite">
     <p class="correction-kicker">Gabarito corrigido</p>
