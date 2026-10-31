@@ -18,6 +18,15 @@ module Documents
       Rails.logger.warn("[PDF] letterhead: #{error.class} #{error.message}")
     end
 
+    def crest_file
+      image_file(@professor.school&.crest)
+    end
+
+    def maestro_mark_path
+      path = Rails.root.join("public/icon.png")
+      path if File.file?(path)
+    end
+
     def cleanup
       @tempfiles.each do |file|
         file.close

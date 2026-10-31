@@ -6,6 +6,15 @@ class ActivitiesController < ApplicationController
 
   def sheet
     @activity.ensure_correction_token!
+    unless Rails.env.test?
+      Corrections::PhoneLink.url(port: request.port, wait: true)
+      phone_url = gabarito_public_url(@activity)
+      unless phone_url.present? && https_url?(phone_url)
+        redirect_to assemble_activity_path(@activity),
+                    alert: "A folha só sai com QR HTTPS. Toque em Atualizar QR, espere o link https:// aparecer e gere a prova de novo."
+        return
+      end
+    end
     students = @classroom.students.order(:name)
     Activities::ExamAssigner.new(@activity).ensure!(students)
     pdf = Documents::ActivitySheet.new(
@@ -65,6 +74,12 @@ class ActivitiesController < ApplicationController
     @lira_ready = Lira.llm_enabled?
     @pending_cards = @activity.pending_cards.includes(:student)
     @students = @classroom.students.order(:name)
+    @card_readings = @activity
+                    .activity_submissions
+                    .with_attached_marked_photo
+                    .with_attached_card_photo
+                    .includes(:student)
+                    .order(updated_at: :desc)
   end
 
   def open_gabarito
@@ -146,8 +161,26 @@ class ActivitiesController < ApplicationController
     end
 
     result = Activities::AnswerCardIntake.new(@activity, professor: current_professor).ingest!(uploads)
-    redirect_to assemble_activity_path(@activity),
+    redirect_to results_activity_path(@activity),
                 notice: scan_notice(result)
+  end
+
+  def results
+    @result = Activities::ExamResult.new(@activity)
+  end
+
+  def grades_export
+    result = Activities::ExamResult.new(@activity)
+    pdf = Documents::ExamGradesReport.new(
+      professor: current_professor,
+      activity: @activity,
+      result: result
+    ).render
+
+    send_data pdf,
+              filename: sheet_filename(prefix: "notas-"),
+              type: "application/pdf",
+              disposition: "attachment"
   end
 
   def adapt

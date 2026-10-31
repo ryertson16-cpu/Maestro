@@ -217,6 +217,8 @@ Rails.application.routes.draw do
       get :correct, path: "corrigir"
       post :grade, path: "corrigir"
       post :scan_cards, path: "cartoes"
+      get :results, path: "resultado"
+      get :grades_export, path: "resultado/notas", defaults: { format: :pdf }
     end
 
     resources :pending_cards,

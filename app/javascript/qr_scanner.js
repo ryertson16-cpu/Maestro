@@ -226,9 +226,15 @@ async function startScanner(root) {
       const scannedStudent = studentIdFromToken(token)
       const name = studentName(scannedStudent || knownStudent)
       if (hits === 1) {
-        setBanner(root, name ? `QR de ${name} encontrado…` : "QR do aluno encontrado…", "wait")
+        setBanner(
+          root,
+          name
+            ? `QR de ${name} encontrado. Enquadre o cartão inteiro…`
+            : "QR encontrado. Enquadre o cartão inteiro (QR + bolhas)…",
+          "wait"
+        )
       }
-      if (hits < 2) {
+      if (hits < 3) {
         requestAnimationFrame(tick)
         return
       }
@@ -237,6 +243,7 @@ async function startScanner(root) {
 
       if (grade && studentId) {
         locked = true
+        setBanner(root, name ? `Capturando o cartão de ${name}…` : "Capturando o cartão…", "wait")
         const stream = video.srcObject
         const sent = await sendCard(root, studentId, canvas).catch(() => false)
         if (!sent) {
@@ -264,6 +271,74 @@ async function startScanner(root) {
   requestAnimationFrame(tick)
 }
 
+function fileImageData(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    const url = URL.createObjectURL(file)
+    image.onload = () => {
+      const canvas = document.createElement("canvas")
+      const maxSide = 1600
+      const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight))
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale))
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale))
+      const context = canvas.getContext("2d", { willReadFrequently: true })
+      context.drawImage(image, 0, 0, canvas.width, canvas.height)
+      URL.revokeObjectURL(url)
+      resolve(context.getImageData(0, 0, canvas.width, canvas.height))
+    }
+    image.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error("foto"))
+    }
+    image.src = url
+  })
+}
+
+function bindFileCapture(root) {
+  const input = root.querySelector("[data-qr-file]")
+  if (!input) return
+
+  input.addEventListener("change", async () => {
+    const file = input.files && input.files[0]
+    if (!file) return
+
+    const form = input.closest("form")
+    const knownStudent = root.getAttribute("data-student-id") || ""
+    setBanner(root, "Lendo o QR da foto…", "wait")
+
+    let token = ""
+    try {
+      const jsQR = await loadJsQr().catch(() => window.jsQR)
+      if (jsQR) {
+        const image = await fileImageData(file)
+        token = tokenFromText(jsQR(image.data, image.width, image.height)?.data || "")
+      }
+    } catch (_error) {}
+
+    const studentId = studentIdFromToken(token) || knownStudent
+    if (form && root.hasAttribute("data-qr-grade") && studentId) {
+      let hidden = form.querySelector('input[name="student_id"]')
+      if (!hidden) {
+        hidden = document.createElement("input")
+        hidden.type = "hidden"
+        hidden.name = "student_id"
+        form.appendChild(hidden)
+      }
+      hidden.value = studentId
+      form.submit()
+      return
+    }
+
+    if (token) {
+      openToken(token)
+      return
+    }
+
+    setBanner(root, "Não li o QR nesta foto. Enquadre o cartão inteiro (QR + bolhas).", "warn")
+    input.value = ""
+  })
+}
+
 function bindPaste(root) {
   const paste = root.querySelector("[data-qr-paste]")
   if (!paste) return
@@ -286,6 +361,7 @@ function bindScanner(root) {
   if (!root || root.dataset.qrBound) return
   root.dataset.qrBound = "true"
   bindPaste(root)
+  bindFileCapture(root)
 
   const phone = window.matchMedia("(pointer: coarse)").matches
   const start = root.querySelector("[data-qr-start]")
@@ -300,6 +376,13 @@ function bindScanner(root) {
       "wait"
     )
     if (start) start.hidden = true
+    return
+  }
+
+  if (phone && grade) {
+    if (start) start.hidden = true
+    setBanner(root, "Aponte para o QR. O Maestro fotografa o cartão sozinho, sem gravar na galeria.", "wait")
+    startScanner(root)
     return
   }
 

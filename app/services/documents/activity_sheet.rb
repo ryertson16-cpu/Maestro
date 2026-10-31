@@ -335,8 +335,127 @@ module Documents
           pdf.start_new_page if pdf.cursor < 72
           draw_presented_item(pdf, row, show_key: false)
         end
-        draw_omr_card(pdf, student: student, presented: presented)
       end
+      draw_packed_omr_cards(pdf)
+    end
+
+    def draw_packed_omr_cards(pdf)
+      pack = @students.select { |student| omr_rows(@assigner.presented_for(student)).any? }
+      return if pack.empty?
+
+      pdf.start_new_page
+      columns = 2
+      gap = 8
+      card_w = (pdf.bounds.width - gap) / columns.to_f
+      card_h = packed_card_height
+      rows_per_page = [ (pdf.bounds.height / (card_h + gap)).floor, 1 ].max
+      per_page = rows_per_page * columns
+
+      pack.each_with_index do |student, index|
+        pdf.start_new_page if index.positive? && (index % per_page).zero?
+        col = index % columns
+        row = (index % per_page) / columns
+        left = col * (card_w + gap)
+        top = pdf.bounds.top - (row * (card_h + gap))
+        pdf.bounding_box([ left, top ], width: card_w, height: card_h) do
+          draw_compact_omr_card(pdf, student)
+        end
+      end
+    end
+
+    def packed_card_height
+      count = assembled_items.count(&:objective?)
+      header = 58
+      rows = (count / 2.0).ceil
+      [ 128, header + 36 + (rows * 12) ].max
+    end
+
+    def draw_compact_omr_card(pdf, student)
+      presented = @assigner.presented_for(student)
+      rows = omr_rows(presented)
+      return if rows.empty?
+
+      pdf.stroke_color "1F4E79"
+      pdf.line_width 0.9
+      pdf.stroke_bounds
+
+      crest = @letterhead.crest_file
+      mark = @letterhead.maestro_mark_path
+      if crest
+        pdf.image crest.path, at: [ 6, pdf.bounds.height - 6 ], fit: [ 22, 22 ]
+      end
+      if mark
+        pdf.image mark, at: [ pdf.bounds.width - 28, pdf.bounds.height - 6 ], fit: [ 22, 22 ]
+      end
+
+      pdf.fill_color "1F4E79"
+      pdf.text_box(
+        (@professor.school&.name.presence || "Maestro").to_s,
+        at: [ 32, pdf.bounds.height - 6 ],
+        width: pdf.bounds.width - 64,
+        height: 12,
+        size: 7,
+        style: :bold,
+        align: :center
+      )
+      pdf.fill_color "20263D"
+      pdf.text_box(
+        "CARTÃO-RESPOSTA",
+        at: [ 32, pdf.bounds.height - 18 ],
+        width: pdf.bounds.width - 64,
+        height: 11,
+        size: 8,
+        style: :bold,
+        align: :center
+      )
+      pdf.text_box(
+        [ @classroom.name, @lesson.course&.name, @activity.title ].compact.join(" · "),
+        at: [ 6, pdf.bounds.height - 30 ],
+        width: pdf.bounds.width - 12,
+        height: 10,
+        size: 6,
+        align: :center
+      )
+      pdf.fill_color "1F4E79"
+      pdf.text_box(
+        student.name.to_s,
+        at: [ 6, pdf.bounds.height - 42 ],
+        width: pdf.bounds.width - 12,
+        height: 12,
+        size: 8,
+        style: :bold,
+        align: :center
+      )
+
+      url = omr_qr_url(student)
+      layout = { columns: 2, qr_size: 40, row_h: 11, radius: 3.4, fiducial: 6 }
+      grid_top = pdf.bounds.height - 56
+      qr_size = url.present? ? layout[:qr_size] : 0
+      grid_left = 8
+      grid_width = pdf.bounds.width - 16
+      if qr_size.positive?
+        @qr.draw(pdf, size: qr_size, url: url, at: [ 6, grid_top ])
+        grid_left = 8 + qr_size + 6
+        grid_width = pdf.bounds.width - grid_left - 8
+      end
+
+      draw_omr_grid(
+        pdf,
+        rows,
+        left: grid_left,
+        top: grid_top,
+        width: grid_width,
+        layout: layout
+      )
+      pdf.fill_color "707891"
+      pdf.text_box(
+        "Pinte uma bolha por questão.",
+        at: [ 6, 12 ],
+        width: pdf.bounds.width - 12,
+        height: 10,
+        size: 6,
+        align: :center
+      )
     end
 
     def draw_professor_keys(pdf)
@@ -456,7 +575,7 @@ module Documents
 
     def omr_layout_for(count)
       if count <= 16
-        { columns: 1, qr_size: 210, row_h: 22, radius: 7, fiducial: 12 }
+        { columns: 1, qr_size: 240, row_h: 22, radius: 7, fiducial: 12 }
       elsif count <= 36
         { columns: 2, qr_size: 88, row_h: 18, radius: 6, fiducial: 11 }
       else

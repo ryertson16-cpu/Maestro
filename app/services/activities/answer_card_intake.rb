@@ -41,7 +41,13 @@ module Activities
       mapped = answers_for_grader(answers, student: student)
 
       if confident?(filled) && !mixed_exam?
-        result = apply!(ActivityPendingCard.new(answers: answers), student: student, overwrite: overwrite)
+        result = apply!(
+          ActivityPendingCard.new(answers: answers),
+          student: student,
+          overwrite: overwrite,
+          photo_path: path,
+          scan: scan
+        )
         score = ActivitySubmission.find_by(activity: @activity, student: student)&.score
         return PhoneScan.new(status: result, score: score, answers: mapped)
       end
@@ -52,7 +58,7 @@ module Activities
       File.delete(path) if path && File.exist?(path)
     end
 
-    def apply!(card, student: card.student, overwrite: false)
+    def apply!(card, student: card.student, overwrite: false, photo_path: nil, scan: nil)
       return :missing_student if student.blank?
       return :already_scored if !overwrite && already_scored?(student)
 
@@ -65,6 +71,13 @@ module Activities
       submission.score = score
       submission.submitted_on ||= Date.current
       submission.save!
+      stamp_photos!(
+        submission,
+        student: student,
+        path: photo_path,
+        scan: scan,
+        card: card
+      )
       card.destroy! if card.persisted?
       :launched
     end
@@ -82,7 +95,12 @@ module Activities
       return :skipped if student && already_scored?(student)
 
       if student && confident?(filled)
-        result = apply!(ActivityPendingCard.new(answers: answers), student: student)
+        result = apply!(
+          ActivityPendingCard.new(answers: answers),
+          student: student,
+          photo_path: path,
+          scan: scan
+        )
         return :launched if result == :launched
       end
 
@@ -140,6 +158,59 @@ module Activities
         )
       end
       card
+    end
+
+    def stamp_photos!(submission, student:, path:, scan:, card:)
+      overlay = nil
+      source = path.to_s
+      if source.blank? || !File.file?(source)
+        source = blob_to_temp(card)
+      end
+      return if source.blank? || !File.file?(source)
+
+      File.open(source, "rb") do |io|
+        submission.card_photo.attach(
+          io: io,
+          filename: "cartao-#{student.id}.png",
+          content_type: "image/png"
+        )
+      end
+
+      marks = CardMark.marks(
+        activity: @activity,
+        student: student,
+        position_answers: scan&.answers || card.answers,
+        bubbles: scan&.bubbles
+      )
+      overlay = CardMarkOverlay.render(source, marks)
+      return unless overlay
+
+      File.open(overlay.path, "rb") do |io|
+        submission.marked_photo.attach(
+          io: io,
+          filename: "cartao-marcado-#{student.id}.png",
+          content_type: "image/png"
+        )
+      end
+    ensure
+      overlay&.close
+      overlay&.unlink
+      if source.present? && source != path.to_s && source.start_with?(Dir.tmpdir)
+        File.delete(source) if File.exist?(source)
+      end
+    end
+
+    def blob_to_temp(card)
+      return unless card.respond_to?(:card) && card.card&.attached?
+
+      file = Tempfile.new(["cartao", ".png"])
+      file.binmode
+      file.write(card.card.download)
+      file.flush
+      file.close
+      file.path
+    rescue StandardError
+      nil
     end
 
     def answers_for_grader(position_map, student: nil)

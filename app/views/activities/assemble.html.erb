@@ -19,6 +19,9 @@
   </div>
   <div class="page-header-actions">
     <%= render "activities/sheet_buttons", activity: @activity %>
+    <%= link_to "Resultado",
+                results_activity_path(@activity),
+                class: "button button-secondary" %>
     <%= link_to "Corrigir no celular",
                 open_gabarito_activity_path(@activity),
                 class: "button button-primary",
@@ -27,12 +30,14 @@
   </div>
 </div>
 
+<%= render "activities/exam_tabs", activity: @activity, current: :prova %>
+
 <section class="data-card">
   <h2>QR do gabarito</h2>
   <p class="activity-type-hint">
-    Uma ficha: montar as questões, gerar a folha e corrigir.
-    No celular, a Câmera avisa se o gabarito foi lido ou corrigido.
-    Use só o QR HTTPS — o IP local deixa a câmera preta.
+    A correção no celular funciona como nas plataformas de gabarito por foto:
+    o professor abre o link HTTPS no Chrome ou no Safari e fotografa o cartão.
+    A Câmera do iPhone não serve para abrir o site — ela trava em tela preta no IP local.
   </p>
   <% unless @lira_ready %>
     <p class="correction-flash is-warn">
@@ -61,7 +66,7 @@
       <%= raw RQRCode::QRCode.new(@correction_url).as_svg(module_size: 4, viewbox: true) %>
     </div>
     <p class="activity-type-hint">
-      Se a câmera nativa ficar preta, abra o Chrome ou o Safari no celular e cole o link:
+      No celular, abra o Chrome ou o Safari e cole este link. Depois toque em Fotografar cartão.
     </p>
     <code><%= @correction_url %></code>
   <% end %>
@@ -214,6 +219,29 @@
     <p>Não há questões disponíveis neste filtro.</p>
   <% end %>
 </section>
+
+<% if @card_readings&.any? { |row| row.marked_photo.attached? || row.card_photo.attached? } %>
+  <section class="data-card">
+    <h2>Cartões lidos</h2>
+    <p class="activity-type-hint card-reading-legend">
+      Verde: pintou a certa. Vermelho: a certa ficou vazia. Azul: questão em branco.
+      A foto fica no caderno, não no celular.
+    </p>
+    <div class="card-readings">
+      <% @card_readings.each do |row| %>
+        <% next unless row.marked_photo.attached? || row.card_photo.attached? %>
+        <article>
+          <strong><%= row.student.name %></strong>
+          <span class="activity-type-hint">nota <%= format("%.1f", row.score.to_f).tr(".", ",") %></span>
+          <div class="card-reading-photo">
+            <%= image_tag url_for(row.marked_photo.attached? ? row.marked_photo : row.card_photo),
+                          alt: "Cartão de #{row.student.name}" %>
+          </div>
+        </article>
+      <% end %>
+    </div>
+  </section>
+<% end %>
 
 <%= render "activities/card_intake",
            activity: @activity,

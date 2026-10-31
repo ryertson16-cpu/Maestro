@@ -1,8 +1,8 @@
 module Activities
   class AnswerCardVision
-    Result = Struct.new(:name, :answers, :source, keyword_init: true) do
+    Result = Struct.new(:name, :answers, :source, :bubbles, keyword_init: true) do
       def filled_count
-        answers.values.count { |letter| Question::LETTERS.include?(letter) }
+        (answers || {}).values.count { |letter| Question::LETTERS.include?(letter) }
       end
     end
 
@@ -23,7 +23,8 @@ module Activities
       Result.new(
         name: clean_name(parsed["name"] || parsed["nome"]),
         answers: letters_from(parsed["answers"] || parsed["gabarito"] || parsed["letters"], question_count),
-        source: "lira"
+        source: "lira",
+        bubbles: bubbles_from(parsed["bubbles"] || parsed["bolhas"])
       )
     rescue StandardError => error
       Rails.logger.warn("[exam-vision] #{error.class}: #{error.message}")
@@ -38,7 +39,8 @@ module Activities
         2) Leia só as bolhas preenchidas.
 
         Responda só JSON:
-        {"name":"nome do aluno ou null","answers":{"1":"A","2":"B"}}
+        {"name":"nome do aluno ou null","answers":{"1":"A","2":"B"},"bubbles":{"1":{"A":[0.62,0.31],"B":[0.70,0.31]}}}
+        Em bubbles, o centro de cada bolha visível em fração da largura e da altura (0 a 1).
         Omita questão sem bolha nítida.
       PROMPT
     end
@@ -72,6 +74,10 @@ module Activities
       JSON.parse(content[/\{.*\}/m].to_s)
     rescue JSON::ParserError
       nil
+    end
+
+    def self.bubbles_from(raw)
+      CardMark.normalize_bubbles(raw)
     end
 
     def self.clean_name(value)

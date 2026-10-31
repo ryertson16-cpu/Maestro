@@ -1,0 +1,8 @@
+<nav class="exam-tabs" aria-label="Prova">
+  <%= link_to "Prova",
+              assemble_activity_path(activity),
+              class: [ "exam-tab", ("is-active" if current == :prova) ].compact.join(" ") %>
+  <%= link_to "Resultado",
+              results_activity_path(activity),
+              class: [ "exam-tab", ("is-active" if current == :resultado) ].compact.join(" ") %>
+</nav>

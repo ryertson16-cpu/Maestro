@@ -18,7 +18,16 @@
     <p class="correction-kicker">Gabarito corrigido</p>
     <p>Nota de <%= @student.name %></p>
     <strong><%= format("%.1f", @score).tr(".", ",") %></strong>
-    <p>A nota já está no caderno.</p>
+    <p>A nota já está no caderno. A foto ficou no Maestro, não na galeria do celular.</p>
+    <% if @submission&.marked_photo&.attached? || @submission&.card_photo&.attached? %>
+      <figure class="correction-marked-card">
+        <%= image_tag url_for(@submission.marked_photo.attached? ? @submission.marked_photo : @submission.card_photo),
+                      alt: "Cartão de #{@student.name} com acertos e erros" %>
+        <figcaption>
+          Verde: pintou a certa. Vermelho: a certa ficou vazia. Azul: questão em branco.
+        </figcaption>
+      </figure>
+    <% end %>
     <%= link_to "Corrigir próximo aluno",
                 gabarito_path(@activity.correction_token),
                 class: "button button-primary button-block" %>
@@ -38,20 +47,35 @@
       <p class="correction-kicker">Correção automática</p>
       <h2>Apontar para o cartão</h2>
       <p>
-        A câmera lê o QR e as bolhas na hora e manda as respostas ao Maestro.
-        Nada é gravado na galeria. Folha <%= @assignment&.slot || "—" %>.
+        Aponte o QR. O Maestro fotografa o cartão sozinho, lê as bolhas e guarda
+        a foto só no caderno. Folha <%= @assignment&.slot || "—" %>.
       </p>
       <div class="qr-scanner-card"
            data-qr-scanner
            data-qr-grade
            data-scan-url="<%= gabarito_scan_path(@activity.correction_token) %>"
            data-student-id="<%= @student.id %>">
-        <button type="button" class="button button-primary button-block" data-qr-start>
-          Abrir câmera e ler cartão
+        <%= form_with url: gabarito_scan_path(@activity.correction_token),
+                      method: :post,
+                      local: true,
+                      html: { multipart: true, class: "qr-photo-form" } do %>
+          <%= hidden_field_tag :student_id, @student.id %>
+          <label class="button button-primary button-block">
+            Fotografar cartão
+            <input class="visually-hidden"
+                   type="file"
+                   name="card"
+                   accept="image/*"
+                   capture="environment"
+                   data-qr-file>
+          </label>
+        <% end %>
+        <button type="button" class="button button-secondary button-block" data-qr-start>
+          Usar câmera na tela
         </button>
-        <video data-qr-video playsinline muted hidden></video>
+        <video data-qr-video playsinline webkit-playsinline muted hidden></video>
         <p class="correction-scan-banner is-wait" data-qr-status role="status">
-          Toque para apontar o cartão.
+          Toque em Fotografar cartão. A Câmera do celular tira a foto e o Maestro lê as bolhas.
         </p>
       </div>
     </section>
@@ -113,8 +137,8 @@
     <h2>Quem é o aluno?</h2>
     <p>
       <% if @lira_ready %>
-        Aponte a câmera para o cartão pintado: o Maestro identifica o aluno,
-        lê as bolhas e lança a nota, sem salvar foto na galeria.
+        Abra esta página no Chrome ou no Safari (não na Câmera do sistema).
+        Toque em Fotografar cartão e aponte para o QR e as bolhas.
       <% else %>
         O QR escolhe o aluno. Sem OpenAI/Gemini, as bolhas você marca na tela seguinte.
       <% end %>
@@ -125,12 +149,26 @@
            data-qr-grade
            data-scan-url="<%= gabarito_scan_path(@activity.correction_token) %>"
          <% end %>>
+      <%= form_with url: gabarito_scan_path(@activity.correction_token),
+                    method: :post,
+                    local: true,
+                    html: { multipart: true, class: "qr-photo-form" } do %>
+        <label class="button button-primary button-block">
+          Fotografar cartão
+          <input class="visually-hidden"
+                 type="file"
+                 name="card"
+                 accept="image/*"
+                 capture="environment"
+                 data-qr-file>
+        </label>
+      <% end %>
       <button type="button" class="button button-secondary button-block" data-qr-start>
-        <%= @lira_ready ? "Abrir câmera e ler cartão" : "Ler QR da folha do aluno" %>
+        <%= @lira_ready ? "Usar câmera na tela" : "Ler QR da folha do aluno" %>
       </button>
-      <video data-qr-video playsinline muted hidden></video>
+      <video data-qr-video playsinline webkit-playsinline muted hidden></video>
       <p class="correction-scan-banner is-wait" data-qr-status role="status">
-        Toque no botão e aponte para o QR do aluno.
+        Fotografe o cartão inteiro (QR + bolhas). Não use a Câmera do iPhone para abrir o site.
       </p>
       <input type="url"
              class="correction-search"

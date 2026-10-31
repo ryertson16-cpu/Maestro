@@ -1,4 +1,5 @@
 require "test_helper"
+require "chunky_png"
 
 class Activities::AnswerCardIntakeTest < ActiveSupport::TestCase
   def load_fixtures(_config = ActiveRecord::Base)
@@ -70,6 +71,33 @@ class Activities::AnswerCardIntakeTest < ActiveSupport::TestCase
     submission = ActivitySubmission.find_by!(activity: @activity, student: @maria)
     assert_equal 10.0, submission.score
     assert_equal "A", submission.answers[@item.id.to_s]
+    assert submission.card_photo.attached?
+  end
+
+  test "keeps a marked photo with a green ball on the correct bubble" do
+    path = Rails.root.join("tmp/intake-card-#{SecureRandom.hex(4)}.png").to_s
+    ChunkyPNG::Image.new(80, 80, ChunkyPNG::Color::WHITE).save(path)
+
+    intake = Activities::AnswerCardIntake.new(
+      @activity,
+      professor: @professor,
+      vision: ->(_file) {
+        Activities::AnswerCardVision::Result.new(
+          name: "Maria Silva",
+          answers: { "1" => "A" },
+          source: "lira",
+          bubbles: { "1" => { "A" => [ 0.5, 0.5 ], "B" => [ 0.8, 0.5 ] } }
+        )
+      }
+    )
+
+    upload = Rack::Test::UploadedFile.new(path, "image/png")
+    intake.ingest!([ upload ])
+    submission = ActivitySubmission.find_by!(activity: @activity, student: @maria)
+
+    assert submission.marked_photo.attached?
+  ensure
+    File.delete(path) if path && File.exist?(path)
   end
 
   test "keeps an uncertain card as pending" do

@@ -63,7 +63,7 @@ class PublicCorrectionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "João", response.body
     assert_match "Ler QR da folha do aluno", response.body
-    refute_includes response.body, 'capture="environment"'
+    assert_includes response.body, 'capture="environment"'
     refute_match(/variante/i, response.body)
     refute_match "Aguardando a câmera deste celular", response.body
     assert_match(/câmera do celular não liga/i, response.body)
@@ -111,6 +111,7 @@ class PublicCorrectionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to gabarito_aluno_path(@activity.correction_token, @student, ok: 1)
     submission = ActivitySubmission.find_by!(activity: @activity, student: @student)
     assert_equal 10.0, submission.score
+    assert submission.card_photo.attached?
   ensure
     Lira.define_singleton_method(:llm_enabled?, lira) if lira
     Activities::AnswerCardVision.define_singleton_method(:scan, scan) if scan

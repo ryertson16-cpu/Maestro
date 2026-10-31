@@ -3,6 +3,9 @@ class ActivitySubmission < ApplicationRecord
   belongs_to :student
   belongs_to :professor
 
+  has_one_attached :card_photo
+  has_one_attached :marked_photo
+
   validates :activity_id,
             uniqueness: {
               scope: :student_id,

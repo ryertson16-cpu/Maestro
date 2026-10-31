@@ -1,0 +1,123 @@
+<% content_for :title, "Resultado | Maestro" %>
+
+<div class="page-header page-header-with-action">
+  <div>
+    <h1>Resultado</h1>
+    <p>
+      <%= @activity.title %>
+      —
+      <%= @activity.lesson.classroom.name %>
+      <% if @activity.lesson.course %>
+        · <%= @activity.lesson.course.name %>
+      <% end %>
+      · <%= @result.objective_items.size %> questões
+    </p>
+  </div>
+  <div class="page-header-actions">
+    <%= link_to "Gabarito do professor",
+                key_sheet_activity_path(@activity, format: :pdf),
+                class: "button button-secondary",
+                data: { turbo: false } %>
+    <%= link_to "Exportar notas",
+                grades_export_activity_path(@activity, format: :pdf),
+                class: "button button-primary",
+                data: { turbo: false } %>
+  </div>
+</div>
+
+<%= render "activities/exam_tabs", activity: @activity, current: :resultado %>
+
+<section class="exam-stat-grid">
+  <article class="exam-stat-card">
+    <p>Média da turma</p>
+    <strong><%= format("%.1f", @result.average).tr(".", ",") %></strong>
+  </article>
+  <article class="exam-stat-card">
+    <p>Nota 7 ou mais</p>
+    <strong><%= @result.pass_percent %>%</strong>
+    <span><%= @result.pass_count %> de <%= @result.students.size %> alunos</span>
+  </article>
+  <article class="exam-stat-card">
+    <p>Maior e menor</p>
+    <strong>
+      <%= @result.high_reading ? format("%.1f", @result.high_reading.submission.score).tr(".", ",") : "—" %>
+      ·
+      <%= @result.low_reading ? format("%.1f", @result.low_reading.submission.score).tr(".", ",") : "—" %>
+    </strong>
+    <span>
+      <%= [ @result.high_reading&.student&.name, @result.low_reading&.student&.name ].compact.join(" e ") %>
+    </span>
+  </article>
+  <article class="exam-stat-card">
+    <p>Mais errada</p>
+    <% if (hard = @result.hardest) %>
+      <strong><%= hard.label %></strong>
+      <span><%= hard.rate %>% acertaram</span>
+    <% else %>
+      <strong>—</strong>
+    <% end %>
+  </article>
+</section>
+
+<section class="data-card">
+  <h2>Alunos identificados</h2>
+  <p class="activity-type-hint">
+    Verde na foto: pintou a certa. Vermelho: a certa ficou vazia. Azul: questão em branco.
+  </p>
+  <% if @result.identified.any? %>
+    <div class="exam-identified">
+      <% @result.identified.each do |row| %>
+        <article class="exam-identified-row">
+          <div class="exam-identified-thumb">
+            <% if row.submission&.marked_photo&.attached? %>
+              <%= image_tag url_for(row.submission.marked_photo), alt: "Cartão de #{row.student.name}" %>
+            <% elsif row.submission&.card_photo&.attached? %>
+              <%= image_tag url_for(row.submission.card_photo), alt: "Cartão de #{row.student.name}" %>
+            <% else %>
+              <span>Cartão</span>
+            <% end %>
+          </div>
+          <div>
+            <strong><%= row.student.name %></strong>
+            <p class="exam-identified-status">Identificado · <%= row.hits %> de <%= row.objective_count %></p>
+          </div>
+          <div class="exam-identified-score">
+            <%= row.submission&.score.present? ? format("%.1f", row.submission.score).tr(".", ",") : "—" %>
+          </div>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <p>Ainda não há cartão lido. Abra a correção no celular e aponte para o QR.</p>
+  <% end %>
+</section>
+
+<section class="data-card">
+  <h2>Resultado por questão</h2>
+  <p class="activity-type-hint">
+    O número é o da questão no banco desta prova, não a ordem impressa na folha de cada aluno.
+  </p>
+  <% if @result.item_stats.any? %>
+    <div class="exam-item-grid">
+      <% @result.item_stats.each do |stat| %>
+        <article class="exam-item-stat <%= "is-low" if stat.rate < 50 %>">
+          <strong><%= stat.label %></strong>
+          <span><%= stat.rate %>%</span>
+          <div class="exam-item-bar" style="--rate: <%= stat.rate %>%"></div>
+        </article>
+      <% end %>
+    </div>
+    <% if (hard = @result.hardest) %>
+      <p class="activity-type-hint">
+        <%= hard.label %> · <%= truncate(hard.prompt, length: 120) %>
+        Gabarito <%= hard.item.correct_letter %>.
+        <% if hard.wrong_letter.present? %>
+          <%= hard.rate %>% acertaram.
+          Entre quem errou, a mais marcada foi <%= hard.wrong_letter %>.
+        <% end %>
+      </p>
+    <% end %>
+  <% else %>
+    <p>Monte as questões objetivas para ver o índice de acertos.</p>
+  <% end %>
+</section>

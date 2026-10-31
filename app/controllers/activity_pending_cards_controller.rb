@@ -15,7 +15,7 @@ class ActivityPendingCardsController < ApplicationController
       student: student
     )
 
-    redirect_to assemble_activity_path(@activity),
+    redirect_to results_activity_path(@activity),
                 notice: assign_notice(result, student)
   end
 
