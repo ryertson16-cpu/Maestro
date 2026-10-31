@@ -48,7 +48,8 @@ Rails.application.configure do
   config.active_support.report_deprecations = false
 
   # Replace the default in-process memory cache store with a durable alternative.
-  config.cache_store = :solid_cache_store
+  # No Render free, Solid Cache no Postgres compete com o Puma e derruba a instância no wake.
+  config.cache_store = ENV["RENDER"].present? ? :memory_store : :solid_cache_store
 
   # Replace the default in-process and non-durable queuing backend for Active Job.
   config.active_job.queue_adapter = :solid_queue

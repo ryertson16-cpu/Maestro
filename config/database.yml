@@ -31,6 +31,12 @@ production:
     encoding: unicode
     pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
     url: <%= ENV["DATABASE_URL"] %>
+    connect_timeout: 8
+    checkout_timeout: 8
+    keepalives: 1
+    keepalives_idle: 30
+    keepalives_interval: 10
+    keepalives_count: 3
     <% else %>
     <<: *default
     database: storage/production.sqlite3

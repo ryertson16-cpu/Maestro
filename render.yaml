@@ -30,6 +30,10 @@ services:
         value: "2"
       - key: MAESTRO_PHONE_LINK
         value: "0"
+      - key: RUBY_YJIT_ENABLE
+        value: "0"
+      - key: MALLOC_ARENA_MAX
+        value: "2"
       - key: MAESTRO_BILLING_ENFORCED
         value: "false"
       - key: MAESTRO_OWNER_EMAILS
