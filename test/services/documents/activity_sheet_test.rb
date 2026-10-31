@@ -106,8 +106,9 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
     assert_operator reader.page_count, :>=, 2
     assert_includes last, "MARIA SILVA"
     assert_includes last, "CARTÃO-RESPOSTA"
-    assert_includes last, "Q.1"
+    assert_includes last, "NOME DO ALUNO"
     assert_includes last, "3ª O"
+    assert_includes last, "3º ano"
     refute_match(/\bNota\b/, last)
   end
 end

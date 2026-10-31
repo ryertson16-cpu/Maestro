@@ -345,11 +345,11 @@ module Documents
 
       pdf.start_new_page
       columns = 2
-      gap = 8
+      rows_on_page = 2
+      gap = 10
       card_w = (pdf.bounds.width - gap) / columns.to_f
-      card_h = packed_card_height
-      rows_per_page = [ (pdf.bounds.height / (card_h + gap)).floor, 1 ].max
-      per_page = rows_per_page * columns
+      card_h = (pdf.bounds.height - gap) / rows_on_page.to_f
+      per_page = columns * rows_on_page
 
       pack.each_with_index do |student, index|
         pdf.start_new_page if index.positive? && (index % per_page).zero?
@@ -358,107 +358,152 @@ module Documents
         left = col * (card_w + gap)
         top = pdf.bounds.top - (row * (card_h + gap))
         pdf.bounding_box([ left, top ], width: card_w, height: card_h) do
-          draw_compact_omr_card(pdf, student)
+          draw_compact_omr_card(pdf, student, number: index + 1)
         end
       end
     end
 
-    def packed_card_height
-      count = assembled_items.count(&:objective?)
-      header = 58
-      rows = (count / 2.0).ceil
-      [ 220, header + 120 + (rows * 12) ].max
-    end
-
-    def draw_compact_omr_card(pdf, student)
+    def draw_compact_omr_card(pdf, student, number:)
       presented = @assigner.presented_for(student)
       rows = omr_rows(presented)
       return if rows.empty?
 
       pdf.stroke_color "1F4E79"
-      pdf.line_width 0.9
+      pdf.line_width 1
       pdf.stroke_bounds
+      draw_card_fiducials(pdf)
 
+      inset = 18
+      width = pdf.bounds.width
+      height = pdf.bounds.height
       crest = @letterhead.crest_file
       if crest
-        pdf.image crest.path, at: [ 6, pdf.bounds.height - 6 ], fit: [ 22, 22 ]
+        pdf.image crest.path, at: [ inset, height - 8 ], fit: [ 28, 28 ]
       end
-      @letterhead.draw_maestro_mark(
-        pdf,
-        at: [ pdf.bounds.width - 28, pdf.bounds.height - 6 ],
-        size: 22
-      )
+      @letterhead.draw_maestro_mark(pdf, at: [ width - inset - 28, height - 8 ], size: 28)
 
       pdf.fill_color "1F4E79"
       pdf.text_box(
         (@professor.school&.name.presence || "Maestro").to_s,
-        at: [ 32, pdf.bounds.height - 6 ],
-        width: pdf.bounds.width - 64,
-        height: 12,
-        size: 7,
-        style: :bold,
-        align: :center
+        at: [ inset + 32, height - 8 ],
+        width: width - inset - 68,
+        height: 11,
+        size: 8,
+        style: :bold
       )
       pdf.fill_color "20263D"
       pdf.text_box(
         "CARTÃO-RESPOSTA",
-        at: [ 32, pdf.bounds.height - 18 ],
-        width: pdf.bounds.width - 64,
+        at: [ inset + 32, height - 19 ],
+        width: width - inset - 68,
         height: 11,
-        size: 8,
-        style: :bold,
-        align: :center
+        size: 9,
+        style: :bold
       )
+      pdf.fill_color "707891"
       pdf.text_box(
-        [ @classroom.name, @lesson.course&.name, @activity.title ].compact.join(" · "),
-        at: [ 6, pdf.bounds.height - 30 ],
-        width: pdf.bounds.width - 12,
+        [ @activity.title, @lesson.course&.name, series_label ].compact.join("  ·  "),
+        at: [ inset + 32, height - 31 ],
+        width: width - inset - 68,
         height: 10,
-        size: 6,
-        align: :center
-      )
-      pdf.fill_color "1F4E79"
-      pdf.text_box(
-        student.name.to_s,
-        at: [ 6, pdf.bounds.height - 42 ],
-        width: pdf.bounds.width - 12,
-        height: 12,
-        size: 8,
-        style: :bold,
-        align: :center
+        size: 7
       )
 
-      url = omr_qr_url(student)
-      layout = { columns: 2, qr_size: 112, row_h: 11, radius: 3.4, fiducial: 6 }
-      grid_top = pdf.bounds.height - 52
-      qr_size = url.present? ? layout[:qr_size] : 0
-      grid_left = 8
-      grid_width = pdf.bounds.width - 16
-      if qr_size.positive?
-        pdf.fill_color "FFFFFF"
-        pdf.fill_rectangle [ 4, grid_top + 2 ], qr_size + 4, qr_size + 4
-        @qr.draw(pdf, size: qr_size, url: url, at: [ 6, grid_top ])
-        grid_left = 8 + qr_size + 6
-        grid_width = pdf.bounds.width - grid_left - 8
-      end
+      draw_student_fields(pdf, student, number: number, top: height - 44, left: inset, width: width - (inset * 2))
+
+      qr_size = 58
+      grid_top = height - 88
+      grid_bottom = qr_size + 22
+      grid_height = grid_top - grid_bottom
+      per_col = (rows.size / 2.0).ceil
+      row_h = [ grid_height / [ per_col + 1, 1 ].max, 9 ].max
+      row_h = [ row_h, 13 ].min
 
       draw_omr_grid(
         pdf,
         rows,
-        left: grid_left,
+        left: inset,
         top: grid_top,
-        width: grid_width,
-        layout: layout
+        width: width - (inset * 2),
+        layout: {
+          columns: 2,
+          row_h: row_h,
+          radius: [ row_h / 2.6, 3.8 ].min,
+          fiducial: 0,
+          question_prefix: false
+        }
       )
+
       pdf.fill_color "707891"
       pdf.text_box(
-        "Pinte uma bolha por questão.",
-        at: [ 6, 12 ],
-        width: pdf.bounds.width - 12,
-        height: 10,
+        "Preencha toda a bolha. Uma alternativa por questão.",
+        at: [ inset, qr_size + 16 ],
+        width: width - (inset * 2),
+        height: 9,
         size: 6,
         align: :center
       )
+
+      url = omr_qr_url(student)
+      if url.present?
+        pdf.fill_color "FFFFFF"
+        pdf.fill_rectangle [ (width - qr_size) / 2.0 - 2, qr_size + 4 ], qr_size + 4, qr_size + 4
+        @qr.draw(pdf, size: qr_size, url: url, at: [ (width - qr_size) / 2.0, qr_size + 2 ])
+      end
+    end
+
+    def draw_card_fiducials(pdf, size: 12, inset: 4)
+      pdf.fill_color "000000"
+      width = pdf.bounds.width
+      height = pdf.bounds.height
+      pdf.fill_rectangle [ inset, height - inset ], size, size
+      pdf.fill_rectangle [ width - inset - size, height - inset ], size, size
+      pdf.fill_rectangle [ inset, inset + size ], size, size
+      pdf.fill_rectangle [ width - inset - size, inset + size ], size, size
+    end
+
+    def draw_student_fields(pdf, student, number:, top:, left:, width:)
+      name_w = width * 0.62
+      turma_w = width * 0.22
+      num_w = width * 0.14
+      box_h = 22
+
+      pdf.fill_color "707891"
+      pdf.text_box "NOME DO ALUNO", at: [ left, top ], width: name_w, height: 8, size: 5.5, style: :bold
+      pdf.text_box "TURMA", at: [ left + name_w + 4, top ], width: turma_w - 4, height: 8, size: 5.5, style: :bold
+      pdf.text_box "Nº", at: [ left + name_w + turma_w, top ], width: num_w, height: 8, size: 5.5, style: :bold
+
+      y = top - 9
+      pdf.stroke_color "C5CDD8"
+      pdf.line_width 0.8
+      pdf.stroke_rounded_rectangle [ left, y ], name_w - 4, box_h, 3
+      pdf.stroke_rounded_rectangle [ left + name_w, y ], turma_w - 4, box_h, 3
+      pdf.stroke_rounded_rectangle [ left + name_w + turma_w, y ], num_w, box_h, 3
+
+      pdf.fill_color "1F4E79"
+      pdf.text_box student.name.to_s,
+                   at: [ left + 4, y - 4 ],
+                   width: name_w - 12,
+                   height: 16,
+                   size: 8,
+                   style: :bold
+      pdf.text_box [ series_label, @classroom.name ].compact.join(" · "),
+                   at: [ left + name_w + 4, y - 4 ],
+                   width: turma_w - 12,
+                   height: 16,
+                   size: 7,
+                   style: :bold
+      pdf.text_box format("%02d", number),
+                   at: [ left + name_w + turma_w, y - 4 ],
+                   width: num_w,
+                   height: 16,
+                   size: 9,
+                   style: :bold,
+                   align: :center
+    end
+
+    def series_label
+      @classroom.grade_level&.name.presence
     end
 
     def draw_professor_keys(pdf)
@@ -596,11 +641,13 @@ module Documents
       per_col = (rows.size.to_f / columns).ceil
       col_w = width / columns.to_f
 
-      pdf.fill_color "000000"
-      pdf.fill_rectangle [left, top], fiducial, fiducial
-      pdf.fill_rectangle [left + width - fiducial, top], fiducial, fiducial
+      if fiducial.to_i.positive?
+        pdf.fill_color "000000"
+        pdf.fill_rectangle [left, top], fiducial, fiducial
+        pdf.fill_rectangle [left + width - fiducial, top], fiducial, fiducial
+      end
 
-      header_top = top - fiducial - 2
+      header_top = fiducial.to_i.positive? ? top - fiducial - 2 : top
       tallest = 0
       columns.times do |column|
         slice = rows.slice(column * per_col, per_col) || []
@@ -615,7 +662,8 @@ module Documents
           top: header_top,
           width: col_w - 8,
           row_h: row_h,
-          radius: layout[:radius]
+          radius: layout[:radius],
+          numbered: layout[:question_prefix] != false
         )
         tallest = height if height > tallest
       end
@@ -623,8 +671,8 @@ module Documents
       fiducial + 2 + tallest
     end
 
-    def draw_omr_column(pdf, rows, letters:, left:, top:, width:, row_h:, radius:)
-      label_w = 32
+    def draw_omr_column(pdf, rows, letters:, left:, top:, width:, row_h:, radius:, numbered: true)
+      label_w = numbered ? 32 : 18
       usable = [width - label_w, 20].max
       step = usable / [letters.size, 1].max
       radius = [radius, (step / 2) - 1.5].min
@@ -637,19 +685,19 @@ module Documents
                      at: [cx - 8, header_y],
                      width: 16,
                      height: 12,
-                     size: 9,
+                     size: 8,
                      align: :center,
                      style: :bold
       end
 
-      y = header_y - 16
+      y = header_y - 14
       rows.each do |row|
         pdf.fill_color "000000"
-        pdf.text_box "Q.#{row[:number]}",
+        pdf.text_box numbered ? "Q.#{row[:number]}" : row[:number].to_s,
                      at: [left, y + 4],
                      width: label_w,
                      height: 14,
-                     size: 9,
+                     size: numbered ? 9 : 8,
                      style: :bold
         letters.each_with_index do |_letter, index|
           cx = left + label_w + (index * step) + (step / 2)
