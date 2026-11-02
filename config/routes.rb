@@ -172,9 +172,12 @@ Rails.application.routes.draw do
   resources :lessons do
     collection do
       post :generate_from_timetable
+      get :export
+      post :import
     end
     member do
       post :copy
+      get :export
     end
   end
 

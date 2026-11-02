@@ -12,6 +12,64 @@
   ) %>
 </div>
 
+<section class="form-card lesson-pack-receiver">
+  <h2>Receber aulas de outro caderno</h2>
+  <p class="form-help">
+    Cole o pacote copiado no outro Maestro ou envie o arquivo
+    <code>.maestro.json</code>. O Maestro recria a aula, o plano, as questões,
+    a frequência e as notas. Aluno novo não é criado: se o nome no pacote
+    bater com um aluno já desta base, as informações vão para ele.
+  </p>
+
+  <%= form_with url: import_lessons_path,
+                method: :post,
+                multipart: true,
+                local: true,
+                html: { data: { turbo: false } } do |form| %>
+    <% if @classrooms.any? %>
+      <div class="form-field">
+        <%= form.label :classroom_id, "Turma de destino" %>
+        <%= form.select :classroom_id,
+                        @classrooms.map { |classroom| [classroom.name, classroom.id] },
+                        { include_blank: "Usar a turma do pacote", selected: params[:classroom_id] } %>
+      </div>
+    <% end %>
+
+    <div class="form-field">
+      <%= form.label :pack, "Pacote copiado" %>
+      <%= form.text_area :pack,
+                         rows: 6,
+                         placeholder: "Cole aqui o JSON copiado no outro caderno" %>
+    </div>
+
+    <div class="form-field">
+      <%= form.label :file, "Ou arquivo do pacote" %>
+      <%= form.file_field :file, accept: ".json,application/json" %>
+    </div>
+
+    <div class="form-actions">
+      <%= form.submit "Receber aulas", class: "button button-primary" %>
+    </div>
+  <% end %>
+</section>
+
+<% if params[:classroom_id].present? && @lessons.any? %>
+  <div class="lesson-pack-classroom-actions"
+       data-controller="clipboard"
+       data-clipboard-url-value="<%= export_lessons_path(format: :json, classroom_id: params[:classroom_id]) %>"
+       data-clipboard-copied-value="Pacote da turma copiado">
+    <button type="button"
+            class="button button-secondary"
+            data-action="clipboard#copy">
+      Copiar aulas desta turma
+    </button>
+    <%= link_to "Baixar aulas desta turma",
+                export_lessons_path(format: :json, classroom_id: params[:classroom_id], download: 1),
+                class: "button button-secondary",
+                data: { turbo: false } %>
+  </div>
+<% end %>
+
 <% if @lessons.any? %>
   <section class="monitoring-classrooms-section" aria-label="Aulas registradas">
     <div class="lesson-list-grid">
@@ -38,6 +96,7 @@
               <% if lesson.activity&.activity_type.present? %>
                 <span><%= lesson.activity.activity_type %></span>
               <% end %>
+              <%= lesson_siage_status_badge(@siage_shipments[lesson.id]) %>
             </div>
           <% end %>
 
@@ -56,6 +115,8 @@
               ),
               class: "button button-primary button-small"
             ) %>
+
+            <%= render "lessons/pack_actions", lesson: lesson %>
 
             <%= render "lessons/delete_button",
                        lesson: lesson,

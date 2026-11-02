@@ -198,6 +198,12 @@ module ApplicationHelper
     @siage_pending_nav_count ||= Siage::Ledger.new(professor: current_professor).summary[:pending].to_i
   end
 
+  def lesson_siage_status_badge(shipment)
+    status = shipment&.status.presence || "pending"
+    label = shipment&.status_label || "Pendente"
+    tag.span(label, class: "status-badge status-#{status}")
+  end
+
   def maestro_bottom_nav_items
     items = maestro_nav_groups.map do |group|
       {

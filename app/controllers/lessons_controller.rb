@@ -15,6 +15,52 @@ class LessonsController < ApplicationController
         classroom_id: params[:classroom_id]
       )
     end
+
+    @siage_shipments = SiageShipment
+                       .where(professor: current_professor, lesson_id: @lessons.map(&:id))
+                       .newest
+                       .group_by(&:lesson_id)
+                       .transform_values(&:first)
+  end
+
+  def export
+    lessons = exportable_lessons
+    payload = Lessons::Packager.new(lessons: lessons).to_pretty_json
+    filename = pack_filename(lessons)
+
+    if params[:download].present?
+      send_data payload,
+                filename: filename,
+                type: "application/json; charset=utf-8",
+                disposition: "attachment"
+    else
+      render plain: payload, content_type: "application/json; charset=utf-8"
+    end
+  end
+
+  def import
+    raw = params[:pack].to_s
+    upload = params[:file]
+    raw = upload.read if raw.blank? && upload.respond_to?(:read)
+    classroom = current_professor.classrooms.find_by(id: params[:classroom_id]) if params[:classroom_id].present?
+
+    result = Lessons::Importer.new(
+      professor: current_professor,
+      raw: raw,
+      classroom: classroom
+    ).call
+
+    parts = []
+    parts << "#{result.imported} aula(s) recebida(s)." if result.imported.positive?
+    parts << "#{result.skipped} já existiam nesta turma." if result.skipped.positive?
+    parts.concat(result.errors)
+
+    path = lessons_path({ classroom_id: classroom&.id }.compact)
+    if result.imported.positive?
+      redirect_to path, notice: parts.join(" ")
+    else
+      redirect_to path, alert: parts.join(" ").presence || "Nenhuma aula recebida."
+    end
   end
 
   def new
@@ -187,6 +233,49 @@ class LessonsController < ApplicationController
     @lesson = current_professor.lessons
                                .includes(:classroom, :course, :activity)
                                .find(params[:id])
+  end
+
+  def exportable_lessons
+    scope = current_professor.lessons
+                             .includes(
+                               :classroom,
+                               :course,
+                               :siage_shipments,
+                               classroom: :grade_level,
+                               attendance_records: { enrollment: :student },
+                               activity: [
+                                 { activity_questions: { image_attachment: :blob } },
+                                 { activity_submissions: :student },
+                                 { exam_assignments: :student },
+                                 {
+                                   adapted_versions: [
+                                     :activity_questions,
+                                     :recipient_students,
+                                     { activity_submissions: :student }
+                                   ]
+                                 }
+                               ]
+                             )
+                             .order(:lesson_date, :created_at)
+
+    if params[:id].present?
+      [ scope.find(params[:id]) ]
+    elsif params[:classroom_id].present?
+      scope.where(classroom_id: params[:classroom_id]).to_a
+    else
+      scope.to_a
+    end
+  end
+
+  def pack_filename(lessons)
+    if lessons.size == 1
+      lesson = lessons.first
+      stamp = lesson.lesson_date&.iso8601 || "aula"
+      slug = lesson.theme.to_s.parameterize.presence || "aula"
+      "aula-#{slug}-#{stamp}.maestro.json"
+    else
+      "aulas-#{Date.current.iso8601}.maestro.json"
+    end
   end
 
   def after_destroy_path(classroom_id, lesson_date)

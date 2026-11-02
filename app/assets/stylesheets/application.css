@@ -1859,6 +1859,21 @@ ul {
   font-size: 0.78rem;
 }
 
+.lesson-pack-receiver {
+  margin-bottom: 20px;
+}
+
+.lesson-pack-classroom-actions,
+.lesson-pack-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lesson-pack-classroom-actions {
+  margin: 0 0 12px;
+}
+
 .button-link-danger {
   display: inline-flex;
   min-height: 42px;
