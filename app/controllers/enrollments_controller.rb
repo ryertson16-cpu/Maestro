@@ -49,15 +49,13 @@ class EnrollmentsController < ApplicationController
   end
 
   def bulk_new
-    @classroom = current_professor.classrooms.find(params[:classroom_id])
+    @classroom = current_professor.classrooms.find_by(id: params[:classroom_id])
+    if @classroom.blank?
+      redirect_to classrooms_path, alert: "Escolha a turma para matricular os alunos."
+      return
+    end
 
-    @students = current_professor.students
-                                .where(active: true)
-                                .order(:name)
-
-    @enrolled_student_ids = @classroom.students
-                                      .where(active: true)
-                                      .pluck(:id)
+    load_bulk_students
   end
 
   def bulk_create
@@ -68,14 +66,7 @@ class EnrollmentsController < ApplicationController
                    .map(&:to_i)
 
     if student_ids.empty?
-      @students = current_professor.students
-                                   .where(active: true)
-                                   .order(:name)
-
-      @enrolled_student_ids = @classroom.students
-                                        .where(active: true)
-                                        .pluck(:id)
-
+      load_bulk_students
       flash.now[:alert] = "Selecione pelo menos um aluno."
 
       return render :bulk_new, status: :unprocessable_entity
@@ -115,14 +106,7 @@ class EnrollmentsController < ApplicationController
 
     redirect_to classroom_path(@classroom), notice: message
   rescue ActiveRecord::RecordInvalid => error
-    @students = current_professor.students
-                                .where(active: true)
-                                .order(:name)
-
-    @enrolled_student_ids = @classroom.students
-                                      .where(active: true)
-                                      .pluck(:id)
-
+    load_bulk_students
     flash.now[:alert] = error.record.errors.full_messages.to_sentence
 
     render :bulk_new, status: :unprocessable_entity
@@ -426,6 +410,17 @@ class EnrollmentsController < ApplicationController
     parts << "#{result.reactivated} voltaram para a turma." if result.reactivated.positive?
     parts << "#{result.skipped} já estavam na turma." if result.skipped.positive?
     parts.join(" ")
+  end
+
+  def load_bulk_students
+    @students = current_professor.students
+                                .where(active: true)
+                                .order(:name)
+
+    @enrolled_student_ids = @classroom.students
+                                      .where(active: true)
+                                      .distinct
+                                      .pluck(:id)
   end
 
   def load_form_options

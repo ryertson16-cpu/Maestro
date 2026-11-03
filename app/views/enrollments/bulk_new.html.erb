@@ -15,10 +15,10 @@
 
 <section class="form-card">
   <% if @students.any? %>
-    <%= form_with url: bulk_create_enrollments_path,
+    <%= form_with url: bulk_create_enrollments_path(@classroom),
               method: :post,
               local: true do |form| %>
-  <%= hidden_field_tag :classroom_id, @classroom.id %>
+      <%= hidden_field_tag :classroom_id, @classroom.id %>
 
       <div class="bulk-selection-header">
         <strong>Alunos ativos</strong>
