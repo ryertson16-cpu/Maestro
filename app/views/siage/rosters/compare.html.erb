@@ -1,0 +1,136 @@
+<% content_for :title, "Conferir alunos com o SIAGE | Maestro" %>
+
+<div class="page-header page-header-with-action">
+  <div class="siage-page-title">
+    <%= maestro_icon :siage, size: :lg %>
+    <span class="section-eyebrow">SIAGE</span>
+    <h1>Conferir alunos com o SIAGE</h1>
+    <p>
+      O SIAGE diz em qual turma o aluno está. Aqui você vê quem no Maestro
+      está em outra turma. Nada é apagado sozinho.
+    </p>
+  </div>
+
+  <nav class="diary-header-links" aria-label="Atalhos SIAGE">
+    <%= link_to "Trazer de novo", siage_roster_path, class: "button button-ghost button-small" %>
+    <%= link_to "Turmas", classrooms_path, class: "button button-ghost button-small" %>
+  </nav>
+</div>
+
+<% if @diff.empty? %>
+  <section class="empty-state">
+    <strong>A última leitura do SIAGE não trouxe alunos.</strong>
+    <p>Leia as turmas de novo pela extensão, na tela Visualizar Turma.</p>
+    <%= link_to "Trazer do SIAGE", siage_roster_path, class: "button button-primary" %>
+  </section>
+<% else %>
+  <section class="data-card">
+    <p class="form-help">
+      Última leitura:
+      <%= l(@import.created_at, format: :short) %>.
+      <%= @diff.matched_count %> matrícula(s) batem com o SIAGE.
+      <%= @diff.wrong_classroom.size %> em turma errada.
+    </p>
+  </section>
+
+  <section class="form-card lesson-pack-receiver">
+    <h2>Em turma errada</h2>
+    <p class="form-help">
+      No Maestro está numa turma; no SIAGE está em outra. Exemplo: Alerrandro
+      no caderno na 2ª H, no portal na 2ª F.
+    </p>
+    <% if @diff.wrong_classroom.any? %>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Aluno</th>
+              <th>No Maestro</th>
+              <th>No SIAGE</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @diff.wrong_classroom.each do |row| %>
+              <tr>
+                <td>
+                  <strong><%= row.student.name %></strong>
+                  <%= link_to "Ver ficha", student_path(row.student), class: "table-secondary-text" %>
+                </td>
+                <td>
+                  <%= link_to row.maestro_classroom.name, classroom_path(row.maestro_classroom) %>
+                  <% if row.maestro_classroom.school_course %>
+                    <small class="table-secondary-text"><%= row.maestro_classroom.school_course.name %></small>
+                  <% end %>
+                </td>
+                <td>
+                  <%= row.siage_classroom_name %>
+                  <% if row.siage_course.present? %>
+                    <small class="table-secondary-text"><%= row.siage_course %></small>
+                  <% end %>
+                </td>
+                <td class="table-actions student-row-actions">
+                  <% if row.siage_classroom.present? %>
+                    <%= button_to "Mover para #{row.siage_classroom.name}",
+                                  move_siage_roster_student_path(row.enrollment),
+                                  method: :patch,
+                                  params: { classroom_id: row.siage_classroom.id },
+                                  class: "button button-primary button-small" %>
+                  <% end %>
+                  <%= button_to "Sair desta turma",
+                                detach_siage_roster_student_path(row.enrollment),
+                                method: :patch,
+                                class: "button button-secondary button-small",
+                                data: {
+                                  turbo_confirm: "Tira #{row.student.name} da #{row.maestro_classroom.name}? O aluno continua no caderno."
+                                } %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="form-help">Nenhum aluno desta leitura está em turma errada.</p>
+    <% end %>
+  </section>
+
+  <section class="form-card lesson-pack-receiver">
+    <h2>Só no Maestro</h2>
+    <p class="form-help">Estão no caderno, mas não vieram nesta leitura do SIAGE.</p>
+    <% if @diff.only_maestro.any? %>
+      <ul class="siage-help-list">
+        <% @diff.only_maestro.each do |row| %>
+          <li>
+            <%= link_to row.student.name, student_path(row.student) %>
+            na
+            <%= link_to row.maestro_classroom.name, classroom_path(row.maestro_classroom) %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="form-help">Nenhum nesta leitura.</p>
+    <% end %>
+  </section>
+
+  <section class="form-card lesson-pack-receiver">
+    <h2>Só no SIAGE</h2>
+    <p class="form-help">Vieram do portal e ainda não estão na turma correspondente do caderno.</p>
+    <% if @diff.only_siage.any? %>
+      <ul class="siage-help-list">
+        <% @diff.only_siage.each do |row| %>
+          <li>
+            <%= row.siage_name %>
+            no SIAGE:
+            <%= row.siage_classroom_name %>
+            <% if row.siage_course.present? %>
+              · <%= row.siage_course %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="form-help">Nenhum nesta leitura.</p>
+    <% end %>
+  </section>
+<% end %>

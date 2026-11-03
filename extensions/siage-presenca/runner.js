@@ -1873,6 +1873,16 @@
     return nomes;
   }
 
+  function fichaBateComGrupo(grupo) {
+    const t = norm((document.body?.innerText || "").slice(0, 8000));
+    const turma = norm(grupo.turma || "");
+    if (turma && t.includes(turma)) return true;
+    const qual = norm(grupo.qualificacao || grupo.curso || "");
+    const comp = norm(grupo.componente || "");
+    if (qual && t.includes(qual) && (!comp || t.includes(comp))) return true;
+    return false;
+  }
+
   function lerFichaTurma() {
     const texto = document.body?.innerText || "";
     const pega = (re) => {
@@ -2051,6 +2061,13 @@
       if (ehVisualizarTurma() || (/\/turma\//.test(location.pathname) && !ehListagemTurmas())) {
         const idNaUrl = (location.pathname.match(/\/turma\/([0-9a-f-]{8,})/i) || [])[1];
         if (idNaUrl && !grupo.turmaId) grupo.turmaId = idNaUrl;
+        const fichaCerta = await aguardar(() => fichaBateComGrupo(grupo), 12000);
+        if (!fichaCerta) {
+          grupo.tentativasLeitura = (grupo.tentativasLeitura || 0) + 1;
+          await gravarJob(job);
+          location.href = URL_LISTAGEM;
+          return;
+        }
         const ficha = lerFichaTurma();
         if (ficha.curso) {
           grupo.curso = ficha.curso;

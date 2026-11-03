@@ -131,4 +131,81 @@ class Siage::RosterImporterTest < ActiveSupport::TestCase
     assert_equal "morning", group["shift"]
     assert_equal [ "Ana Beatriz Costa" ], group["students"].map { |row| row["name"] }
   end
+
+  test "does not enroll a student who already belongs to another classroom" do
+    grade = @professor.grade_levels.create!(name: "2º ano", active: true)
+    informatica = @professor.school_courses.create!(name: "INFORMÁTICA", active: true)
+    agro = @professor.school_courses.create!(name: "AGROECOLOGIA", active: true)
+    origem = @professor.classrooms.create!(
+      name: "2ª H",
+      school_year: Date.current.year,
+      grade_level: grade,
+      school_course: informatica,
+      active: true
+    )
+    destino = @professor.classrooms.create!(
+      name: "3ª K",
+      school_year: Date.current.year,
+      grade_level: grade,
+      school_course: agro,
+      active: true
+    )
+    aluno = @professor.students.create!(name: "Alerrandro Vitor da Silva Alves")
+    Enrollment.create!(
+      professor: @professor,
+      student: aluno,
+      classroom: origem,
+      enrolled_on: Date.current,
+      status: "active"
+    )
+
+    preview = Siage::RosterPreview.new(
+      professor: @professor,
+      payload: {
+        "classrooms" => [
+          {
+            "name" => "3ª SÉRIE K - AGROECOLOGIA",
+            "componente" => "Química",
+            "qualificacao" => "AGROECOLOGIA",
+            "students" => [ { "name" => "Alerrandro Vitor da Silva Alves" } ]
+          }
+        ]
+      }
+    ).as_json
+
+    agro_group = preview["classrooms"].find { |row| row["name"] == "3ª K" }
+    assert_empty agro_group["students"]
+
+    Siage::RosterImporter.new(professor: @professor, preview: preview).call
+
+    assert_equal [ origem.id ], aluno.enrollments.where(status: "active").pluck(:classroom_id)
+    assert_not destino.enrollments.exists?(student_id: aluno.id)
+  end
+
+  test "keeps separate classrooms for different SIAGE qualifications" do
+    preview = Siage::RosterPreview.new(
+      professor: @professor,
+      payload: {
+        "classrooms" => [
+          {
+            "name" => "2ª SÉRIE H - INFORMÁTICA",
+            "componente" => "Química",
+            "qualificacao" => "INFORMÁTICA",
+            "students" => [ { "name" => "Aluno Informatica Silva" } ]
+          },
+          {
+            "name" => "3ª SÉRIE K - AGROECOLOGIA",
+            "componente" => "Química",
+            "qualificacao" => "AGROECOLOGIA",
+            "students" => [ { "name" => "Aluno Agroecologia Souza" } ]
+          }
+        ]
+      }
+    ).as_json
+
+    assert_equal 2, preview["classroom_count"]
+    names = preview["classrooms"].map { |row| [ row["name"], row["school_course"] ] }
+    assert_includes names, [ "2ª H", "INFORMÁTICA" ]
+    assert_includes names, [ "3ª K", "AGROECOLOGIA" ]
+  end
 end

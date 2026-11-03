@@ -1,3 +1,7 @@
+# Novidades: versão 4.9.4 (03/11/2026)
+
+- Trazer do SIAGE: o aluno fica só na turma/curso dele. Não copia a lista de uma turma para outra.
+
 # Novidades: versão 4.9.3 (03/11/2026)
 
 - Trazer do SIAGE: abre cada turma pelo botão de ação e lê a lista **Estudantes** em Visualizar Turma. Não usa a tela de Frequência.

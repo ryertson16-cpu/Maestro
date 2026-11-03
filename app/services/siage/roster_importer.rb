@@ -152,9 +152,16 @@ module Siage
       return unless RosterPreview.student_name?(name)
 
       student = if row["existing_student_id"].present?
-        @professor.students.find_by(id: row["existing_student_id"])
+        found = @professor.students.find_by(id: row["existing_student_id"])
+        found unless found && enrolled_elsewhere?(found, classroom)
       end
-      student ||= Lessons::NameMatcher.match_student(name, @professor.students.to_a)
+      student ||= Lessons::NameMatcher.match_student(name, classroom.students.to_a)
+      if student.nil?
+        global = Lessons::NameMatcher.match_student(name, @professor.students.to_a)
+        return if global && enrolled_elsewhere?(global, classroom)
+
+        student = global
+      end
 
       if student.nil?
         student = @professor.students.create!(name: name)
@@ -180,6 +187,10 @@ module Siage
         status: "active"
       )
       result.enrollments += 1
+    end
+
+    def enrolled_elsewhere?(student, classroom)
+      student.enrollments.where(status: "active").where.not(classroom_id: classroom.id).exists?
     end
 
     def knowledge_area_for(name)

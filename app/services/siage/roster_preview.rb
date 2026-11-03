@@ -33,29 +33,31 @@ module Siage
           next if raw_name.to_s.strip.blank?
 
           maestro_name = RosterPreview.maestro_classroom_name(raw_name)
-          group = groups[maestro_name] ||= {
+          grade_level = RosterPreview.grade_level_name(raw_name)
+          school_course = RosterPreview.school_course_name(row, maestro_name, grade_level)
+          group_key = "#{Lessons::NameMatcher.normalize(maestro_name)}|#{Lessons::NameMatcher.normalize(school_course)}"
+          group = groups[group_key] ||= {
             "name" => maestro_name,
             "siage_names" => [],
-            "grade_level" => RosterPreview.grade_level_name(raw_name),
-            "school_course" => nil,
+            "grade_level" => grade_level,
+            "school_course" => school_course,
             "shift" => nil,
-            "existing_classroom_id" => existing_classroom_id(maestro_name),
-            "existing_school_course_id" => nil,
+            "existing_classroom_id" => existing_classroom_id(maestro_name, school_course),
+            "existing_school_course_id" => existing_school_course_id(school_course),
             "components" => [],
             "students" => {}
           }
           group["siage_names"] << raw_name.to_s.strip
           group["siage_names"].uniq!
-          group["school_course"] ||= RosterPreview.school_course_name(row, maestro_name, group["grade_level"])
-          group["existing_school_course_id"] ||= existing_school_course_id(group["school_course"])
           group["shift"] ||= RosterPreview.shift_from(row["turno"] || row[:turno] || row["shift"] || row[:shift])
           group["components"] << component_hash(row)
           Array(row["students"] || row[:students]).each do |student|
             name = (student["name"] || student[:name]).to_s.strip
             next unless RosterPreview.student_name?(name)
+            next if student_enrolled_elsewhere?(name, group["existing_classroom_id"])
 
             key = Lessons::NameMatcher.normalize(name)
-            group["students"][key] ||= student_hash(name, student)
+            group["students"][key] ||= student_hash(name, student, group["existing_classroom_id"])
           end
         end
 
@@ -78,8 +80,8 @@ module Siage
       }
     end
 
-    def student_hash(name, row)
-      existing = Lessons::NameMatcher.match_student(name, professor_students)
+    def student_hash(name, row, classroom_id)
+      existing = match_student_for_classroom(name, classroom_id)
       {
         "name" => name,
         "registration_number" => (row["registration"] || row["registration_number"] || row[:registration]).to_s.presence,
@@ -88,12 +90,44 @@ module Siage
       }
     end
 
-    def existing_classroom_id(name)
-      rooms = @professor.classrooms.where(school_year: school_year).to_a
-      rooms = @professor.classrooms.to_a if rooms.empty?
-      found = rooms.find { |room| Lessons::NameMatcher.classroom_in_text?(name, room.name) } ||
-              rooms.find { |room| Lessons::NameMatcher.normalize(room.name) == Lessons::NameMatcher.normalize(name) }
-      found&.id
+    def student_enrolled_elsewhere?(name, classroom_id)
+      student = Lessons::NameMatcher.match_student(name, professor_students)
+      return false unless student
+
+      student.enrollments.any? { |enrollment|
+        enrollment.status.to_s == "active" && enrollment.classroom_id != classroom_id
+      }
+    end
+
+    def match_student_for_classroom(name, classroom_id)
+      if classroom_id.present?
+        in_room = professor_students.select { |student|
+          student.enrollments.any? { |enrollment|
+            enrollment.status.to_s == "active" && enrollment.classroom_id == classroom_id
+          }
+        }
+        found = Lessons::NameMatcher.match_student(name, in_room)
+        return found if found
+      end
+
+      found = Lessons::NameMatcher.match_student(name, professor_students)
+      return if found && student_enrolled_elsewhere?(name, classroom_id)
+
+      found
+    end
+
+    def existing_classroom_id(name, school_course_name = nil)
+      rooms = @professor.classrooms.where(school_year: school_year).includes(:school_course).to_a
+      rooms = @professor.classrooms.includes(:school_course).to_a if rooms.empty?
+      wanted_course = Lessons::NameMatcher.normalize(school_course_name.to_s)
+      rooms.find { |room|
+        name_ok = Lessons::NameMatcher.classroom_in_text?(name, room.name) ||
+                  Lessons::NameMatcher.normalize(room.name) == Lessons::NameMatcher.normalize(name)
+        next unless name_ok
+        next true if wanted_course.blank? || room.school_course.blank?
+
+        Lessons::NameMatcher.normalize(room.school_course.name) == wanted_course
+      }&.id
     end
 
     def existing_course_id(name)
@@ -153,7 +187,7 @@ module Siage
     end
 
     def professor_students
-      @professor_students ||= @professor.students.to_a
+      @professor_students ||= @professor.students.includes(:enrollments).to_a
     end
 
     def self.maestro_classroom_name(value)

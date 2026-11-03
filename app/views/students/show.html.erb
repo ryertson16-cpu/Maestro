@@ -1,9 +1,13 @@
 <% content_for :title, "#{@student.name} | Maestro" %>
 
 <%
-  course_name = @current_enrollments.filter_map { |enrollment|
-    enrollment.classroom.school_course&.name
-  }.uniq
+  course_name = if @current_classroom.present?
+    Array(@current_classroom.school_course&.name)
+  else
+    @current_enrollments.filter_map { |enrollment|
+      enrollment.classroom.school_course&.name
+    }.uniq
+  end
   grade_history = @grade_history || { activities: [], bimesters: [] }
   grade_activities = grade_history[:activities] || []
   grade_bimesters = grade_history[:bimesters] || []

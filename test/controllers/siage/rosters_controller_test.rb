@@ -58,9 +58,44 @@ class Siage::RostersControllerTest < ActionDispatch::IntegrationTest
     assert_difference -> { @professor.classrooms.count }, 1 do
       post apply_siage_roster_path
     end
-    assert_redirected_to classrooms_path
+    assert_redirected_to siage_roster_compare_path
     assert @professor.classrooms.find_by(name: "2ª F").students.exists?(name: "Maria Silva")
   end
+
+  test "compare lists student enrolled in the wrong classroom" do
+    grade = @professor.grade_levels.create!(name: "2º ano", active: true)
+    sala_h = @professor.classrooms.create!(name: "2ª H", school_year: Date.current.year, grade_level: grade, active: true)
+    sala_f = @professor.classrooms.create!(name: "2ª F", school_year: Date.current.year, grade_level: grade, active: true)
+    aluno = @professor.students.create!(name: "Alerrandro Vitor da Silva Alves")
+    Enrollment.create!(professor: @professor, student: aluno, classroom: sala_h, enrolled_on: Date.current, status: "active")
+
+    @professor.siage_roster_imports.create!(
+      status: "applied",
+      applied_at: Time.current,
+      payload: {
+        "classrooms" => [
+          {
+            "name" => "2ª SÉRIE F",
+            "componente" => "Ciências",
+            "students" => [ { "name" => "Alerrandro Vitor da Silva Alves" } ]
+          }
+        ]
+      }
+    )
+
+    get siage_roster_compare_path
+    assert_response :success
+    assert_includes response.body, "Alerrandro Vitor da Silva Alves"
+    assert_includes response.body, "2ª H"
+    assert_includes response.body, "Mover para 2ª F"
+
+    enrollment = aluno.enrollments.find_by!(status: "active")
+    patch move_siage_roster_student_path(enrollment, classroom_id: sala_f.id)
+    assert_redirected_to siage_roster_compare_path
+    assert_equal "finished", enrollment.reload.status
+    assert sala_f.enrollments.where(status: "active").exists?(student: aluno)
+  end
+
 
   test "rejects roster post without token" do
     sign_out @professor

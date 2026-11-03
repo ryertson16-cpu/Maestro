@@ -351,6 +351,18 @@ Rails.application.routes.draw do
        to: "siage/rosters#apply",
        as: :apply_siage_roster
 
+  get "/siage/trazer/conferir",
+      to: "siage/rosters#compare",
+      as: :siage_roster_compare
+
+  patch "/siage/trazer/conferir/:id/mover",
+        to: "siage/rosters#move",
+        as: :move_siage_roster_student
+
+  patch "/siage/trazer/conferir/:id/remover",
+        to: "siage/rosters#detach",
+        as: :detach_siage_roster_student
+
   get "/horario",
       to: "timetables#show",
       as: :timetable

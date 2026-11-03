@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SIAGE Presença Automática",
-  "version": "4.9.3",
+  "version": "4.9.4",
   "description": "Registra frequência e notas no SIAGE e traz turmas e alunos para o Maestro.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
