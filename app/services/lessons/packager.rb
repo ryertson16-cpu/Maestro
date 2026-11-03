@@ -105,7 +105,7 @@ module Lessons
         "questions" => activity.activity_questions.sort_by(&:position).map { |item| dump_question(item) },
         "submissions" => dump_submissions(activity),
         "exam_assignments" => dump_exam_assignments(activity),
-        "adapted" => activity.adapted_versions.map { |item| dump_adapted(item) }
+        "adapted" => activity.regular? ? activity.adapted_versions.map { |item| dump_adapted(item) } : []
       }
     end
 

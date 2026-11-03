@@ -45,6 +45,8 @@ class ActivitiesPackTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: "Receber atividades de outro caderno"
     assert_select "form[action=?]", import_activities_path
     assert_select "button", text: "Copiar pacote"
+    assert_select "form.activity-classification-form a", count: 0
+    assert_select ".activity-card-actions a", text: "Prova"
   end
 
   test "exports an activity pack as json" do

@@ -80,6 +80,10 @@ class GradeLevelsController < ApplicationController
   rescue ActiveRecord::RecordNotFound
     redirect_to grade_levels_path,
                 alert: "Turma ou atividade nao encontrada."
+  rescue StandardError => error
+    Rails.logger.error("[grade_levels#activity_report] #{error.class}: #{error.message}")
+    redirect_to grade_levels_path(classroom_id: params[:classroom_id], activity_id: params[:activity_id]),
+                alert: "Não consegui gerar o relatório desta atividade."
   end
 
   def activity_notice
@@ -95,6 +99,10 @@ class GradeLevelsController < ApplicationController
   rescue ActiveRecord::RecordNotFound
     redirect_to grade_levels_path,
                 alert: "Turma ou atividade nao encontrada."
+  rescue StandardError => error
+    Rails.logger.error("[grade_levels#activity_notice] #{error.class}: #{error.message}")
+    redirect_to grade_levels_path(classroom_id: params[:classroom_id], activity_id: params[:activity_id]),
+                alert: "Não consegui montar o aviso do grupo desta atividade."
   end
 
   def exam_result

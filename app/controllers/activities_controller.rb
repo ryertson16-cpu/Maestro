@@ -2,8 +2,7 @@ class ActivitiesController < ApplicationController
   include CorrectionHost
 
   before_action :authenticate_professor!
-  before_action :set_activity, except: %i[create import export]
-  before_action :set_activity, only: :export, if: -> { params[:id].present? }
+  before_action :set_activity, except: %i[create import], if: -> { action_name != "export" || params[:id].present? }
 
   def export
     activities = exportable_activities
@@ -24,6 +23,8 @@ class ActivitiesController < ApplicationController
     else
       render plain: payload, content_type: "application/json; charset=utf-8"
     end
+  rescue StandardError => error
+    redirect_activity_alert("Não consegui copiar o pacote desta atividade.", error)
   end
 
   def import
@@ -53,7 +54,7 @@ class ActivitiesController < ApplicationController
 
   def sheet
     @activity.ensure_correction_pin!
-    students = @classroom.students.order(:name)
+    students = exam_roster
     Activities::ExamAssigner.new(@activity).ensure!(students)
     pdf = Documents::ActivitySheet.new(
       professor: current_professor,
@@ -67,11 +68,13 @@ class ActivitiesController < ApplicationController
               filename: sheet_filename,
               type: "application/pdf",
               disposition: "attachment"
+  rescue StandardError => error
+    redirect_activity_alert("Não consegui gerar a folha do aluno.", error)
   end
 
   def key_sheet
     @activity.ensure_correction_token!
-    Activities::ExamAssigner.new(@activity).ensure!(@classroom.students.order(:name))
+    Activities::ExamAssigner.new(@activity).ensure!(exam_roster)
     pdf = Documents::ActivitySheet.new(
       professor: current_professor,
       activity: @activity,
@@ -82,6 +85,8 @@ class ActivitiesController < ApplicationController
               filename: sheet_filename(prefix: "gabarito-"),
               type: "application/pdf",
               disposition: "attachment"
+  rescue StandardError => error
+    redirect_activity_alert("Não consegui gerar o gabarito do professor.", error)
   end
 
   def assemble
@@ -95,7 +100,7 @@ class ActivitiesController < ApplicationController
     @correction_url = gabarito_public_url(@activity)
     @correction_gate_url = correction_gate_public_url
     @items = @activity.activity_questions.with_attached_image.includes(:question)
-    @exam_assignments = Activities::ExamAssigner.new(@activity).ensure!(@classroom.students.order(:name))
+    @exam_assignments = Activities::ExamAssigner.new(@activity).ensure!(exam_roster)
     @courses = current_professor.courses.order(:name)
     @bank = current_professor
             .questions
@@ -113,13 +118,15 @@ class ActivitiesController < ApplicationController
     @bank = @bank.where.not(id: used_ids) if used_ids.any?
     @lira_ready = Lira.llm_enabled?
     @pending_cards = @activity.pending_cards.includes(:student)
-    @students = @classroom.students.order(:name)
+    @students = exam_roster
     @card_readings = @activity
                     .activity_submissions
                     .with_attached_marked_photo
                     .with_attached_card_photo
                     .includes(:student)
                     .order(updated_at: :desc)
+  rescue StandardError => error
+    redirect_activity_alert("Não consegui abrir a prova.", error)
   end
 
   def open_gabarito
@@ -236,7 +243,9 @@ class ActivitiesController < ApplicationController
                  build_adapted_from(@parent)
                end
     @classroom = current_professor.classrooms.find(@adapted.lesson.classroom_id)
-    @students = @classroom.students.order(:name)
+    @students = exam_roster
+  rescue StandardError => error
+    redirect_activity_alert("Não consegui abrir a versão adaptada.", error)
   end
 
   def create
@@ -285,6 +294,8 @@ class ActivitiesController < ApplicationController
         bimester: params[:bimester_filter].presence
       ), alert: @activity.errors.full_messages.to_sentence
     end
+  rescue ActionController::ParameterMissing
+    redirect_activity_alert("Não recebi o bimestre e o peso para salvar.")
   end
 
   def destroy
@@ -296,9 +307,25 @@ class ActivitiesController < ApplicationController
       bimester: params[:bimester].presence || params[:bimester_filter].presence,
       kind: params[:kind]
     ), notice: "Atividade excluída. Notas, entregas e questões ligadas a ela também foram removidas."
+  rescue ActiveRecord::InvalidForeignKey, ActiveRecord::RecordNotDestroyed, ActiveRecord::StatementInvalid
+    redirect_activity_alert("Não foi possível excluir a atividade porque ainda há registros ligados a ela.")
   end
 
   private
+
+  def exam_roster
+    @classroom.students.merge(Enrollment.where(status: "active")).distinct.order(:name).to_a
+  end
+
+  def redirect_activity_alert(message, error = nil)
+    Rails.logger.error("[activities##{action_name}] #{error.class}: #{error.message}") if error
+    path = if @classroom
+             grade_levels_path(classroom_id: @classroom.id, activity_id: @activity&.id)
+           else
+             grade_levels_path
+           end
+    redirect_to path, alert: message
+  end
 
   def exportable_activities
     return [ @activity ] if @activity.present?

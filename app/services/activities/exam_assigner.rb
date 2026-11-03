@@ -16,7 +16,7 @@ module Activities
     end
 
     def ensure!(students)
-      roster = Array(students)
+      roster = Array(students).compact.uniq(&:id)
       items = catalog
       return ActivityExamAssignment.none if items.empty? || roster.empty?
 
@@ -24,17 +24,16 @@ module Activities
         @activity.exam_assignments.delete_all
       end
       existing = @activity.exam_assignments.includes(:student).to_a
-      return existing if existing.size == roster.size
+      return existing if existing.size == roster.size && existing.all?(&:student)
 
       packs = build_packs(slot_count(roster.size), items)
       roster.sort_by { |student| [ student.name.to_s, student.id ] }.each_with_index do |student, index|
         pack = packs[index % packs.size]
-        @activity.exam_assignments.create!(
-          student: student,
-          slot: pack[:slot],
-          item_order: pack[:item_order],
-          choice_maps: pack[:choice_maps]
-        )
+        assignment = @activity.exam_assignments.find_or_initialize_by(student: student)
+        assignment.slot = pack[:slot]
+        assignment.item_order = pack[:item_order]
+        assignment.choice_maps = pack[:choice_maps]
+        assignment.save!
       end
       @activity.exam_assignments.includes(:student).to_a
     end
@@ -103,11 +102,12 @@ module Activities
       ordered.each do |item|
         next unless item.objective?
 
-        originals = item.choice_pairs.map(&:first).compact
+        originals = item.choice_pairs.map(&:first).compact.first(Question::LETTERS.size)
         shuffled = originals.shuffle(random: rng)
-        maps[item.id.to_s] = shuffled.each_with_index.to_h do |original, index|
-          [ Question::LETTERS.fetch(index), original ]
-        end
+        maps[item.id.to_s] = shuffled.each_with_index.filter_map { |original, index|
+          letter = Question::LETTERS[index]
+          [ letter, original ] if letter
+        }.to_h
       end
       {
         slot: slot,

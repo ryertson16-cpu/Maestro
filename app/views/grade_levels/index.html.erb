@@ -297,7 +297,9 @@
 
                 <%= form.submit "Salvar bimestre e peso",
                                 class: "button button-secondary button-small" %>
+              <% end %>
 
+              <div class="activity-card-actions">
                 <% if activity.adapted? %>
                   <%= link_to "Editar adaptação",
                               adapt_activity_path(activity),
@@ -331,7 +333,7 @@
                            classroom: @classroom,
                            bimester: @bimester_filter,
                            kind: @activity_kind %>
-              <% end %>
+              </div>
             <% end %>
           </article>
         <% end %>

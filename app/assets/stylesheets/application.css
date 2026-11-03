@@ -6121,6 +6121,14 @@ button.monitoring-filter-chip:hover {
   font-size: 0.82rem;
 }
 
+.activity-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
 .activity-notice-card {
   display: grid;
   gap: 16px;

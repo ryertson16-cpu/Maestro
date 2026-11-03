@@ -169,7 +169,7 @@
           </tr>
         </thead>
         <tbody>
-          <% @exam_assignments.sort_by { |row| row.student.name.to_s }.each do |row| %>
+          <% @exam_assignments.select(&:student).sort_by { |row| row.student.name.to_s }.each do |row| %>
             <tr>
               <td><%= row.student.name %></td>
               <td><%= row.slot %></td>

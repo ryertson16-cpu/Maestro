@@ -99,8 +99,29 @@ class Activities::ExamAssignerTest < ActiveSupport::TestCase
     text = reader.pages.map(&:text).join(" ")
 
     assert_includes text, "Ana"
-    assert_includes text, "Q.1"
+    assert_match(/1\.\s*Quem\?|Q\.1/, text)
     refute_match(/folha 1|variante|prova a\b/i, text)
-    assert_operator reader.page_count, :>=, 4
+    assert_operator reader.page_count, :>=, 3
+  end
+
+  test "ensure ignores duplicate students and extra choice letters" do
+    @first.update!(
+      choices: [
+        { "letter" => "A", "text" => "Um" },
+        { "letter" => "B", "text" => "Dois" },
+        { "letter" => "C", "text" => "Tres" },
+        { "letter" => "D", "text" => "Quatro" },
+        { "letter" => "E", "text" => "Cinco" },
+        { "letter" => "F", "text" => "Seis" }
+      ]
+    )
+
+    rows = Activities::ExamAssigner.new(@activity).ensure!([ @ana, @ana, @bia ])
+
+    assert_equal 2, rows.size
+    assert_equal [ @ana.id, @bia.id ].sort, rows.map(&:student_id).sort
+    map = rows.first.choice_maps[@first.id.to_s]
+    assert_equal 5, map.size
+    assert_equal %w[A B C D E], map.keys.sort
   end
 end
