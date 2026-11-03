@@ -1,0 +1,15 @@
+<div class="lesson-pack-actions"
+     data-controller="clipboard"
+     data-clipboard-url-value="<%= export_activity_path(activity, format: :json) %>"
+     data-clipboard-copied-value="Pacote copiado">
+  <button type="button"
+          class="button button-secondary button-small"
+          data-action="clipboard#copy">
+    Copiar pacote
+  </button>
+
+  <%= link_to "Baixar",
+              export_activity_path(activity, format: :json, download: 1),
+              class: "button button-secondary button-small",
+              data: { turbo: false } %>
+</div>

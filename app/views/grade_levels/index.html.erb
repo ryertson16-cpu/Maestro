@@ -127,6 +127,57 @@
 <% end %>
 
 <% if @classroom.present? %>
+  <section class="form-card lesson-pack-receiver">
+    <h2>Receber atividades de outro caderno</h2>
+    <p class="form-help">
+      Cole o pacote copiado no outro Maestro ou envie o arquivo
+      <code>.maestro.json</code>. O Maestro recria a atividade, as questões,
+      as imagens e as notas. Aluno novo não é criado: se o nome no pacote
+      bater com um aluno já desta base, as informações vão para ele.
+    </p>
+
+    <%= form_with url: import_activities_path,
+                  method: :post,
+                  multipart: true,
+                  local: true,
+                  html: { data: { turbo: false } } do |form| %>
+      <%= hidden_field_tag :classroom_id, @classroom.id %>
+
+      <div class="form-field">
+        <%= form.label :pack, "Pacote copiado" %>
+        <%= form.text_area :pack,
+                           rows: 6,
+                           placeholder: "Cole aqui o JSON copiado no outro caderno" %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :file, "Ou arquivo do pacote" %>
+        <%= form.file_field :file, accept: ".json,application/json" %>
+      </div>
+
+      <div class="form-actions">
+        <%= form.submit "Receber atividades", class: "button button-primary" %>
+      </div>
+    <% end %>
+  </section>
+
+  <% if @all_classroom_activities.any? { |activity| !activity.adapted? } %>
+    <div class="lesson-pack-classroom-actions"
+         data-controller="clipboard"
+         data-clipboard-url-value="<%= export_activities_path(format: :json, classroom_id: @classroom.id, bimester: @bimester_filter) %>"
+         data-clipboard-copied-value="Pacote da turma copiado">
+      <button type="button"
+              class="button button-secondary"
+              data-action="clipboard#copy">
+        Copiar atividades desta turma
+      </button>
+      <%= link_to "Baixar atividades desta turma",
+                  export_activities_path(format: :json, classroom_id: @classroom.id, bimester: @bimester_filter, download: 1),
+                  class: "button button-secondary",
+                  data: { turbo: false } %>
+    </div>
+  <% end %>
+
   <section class="data-card activity-board">
     <div class="section-heading">
       <div>
@@ -257,6 +308,7 @@
                               class: "button button-secondary button-small" %>
                 <% end %>
 
+                <%= render "activities/pack_actions", activity: activity %>
                 <%= link_to "Prova",
                             assemble_activity_path(activity),
                             class: "button button-secondary button-small" %>

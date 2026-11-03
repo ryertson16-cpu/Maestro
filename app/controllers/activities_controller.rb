@@ -2,7 +2,54 @@ class ActivitiesController < ApplicationController
   include CorrectionHost
 
   before_action :authenticate_professor!
-  before_action :set_activity, except: :create
+  before_action :set_activity, except: %i[create import export]
+  before_action :set_activity, only: :export, if: -> { params[:id].present? }
+
+  def export
+    activities = exportable_activities
+    if activities.empty?
+      redirect_to grade_levels_path({ classroom_id: params[:classroom_id] }.compact),
+                  alert: "Não há atividade para baixar neste recorte."
+      return
+    end
+
+    payload = Activities::Packager.new(activities: activities).to_pretty_json
+    filename = pack_filename(activities)
+
+    if params[:download].present?
+      send_data payload,
+                filename: filename,
+                type: "application/json; charset=utf-8",
+                disposition: "attachment"
+    else
+      render plain: payload, content_type: "application/json; charset=utf-8"
+    end
+  end
+
+  def import
+    raw = params[:pack].to_s
+    upload = params[:file]
+    raw = upload.read if raw.blank? && upload.respond_to?(:read)
+    classroom = current_professor.classrooms.find_by(id: params[:classroom_id]) if params[:classroom_id].present?
+
+    result = Activities::Importer.new(
+      professor: current_professor,
+      raw: raw,
+      classroom: classroom
+    ).call
+
+    parts = []
+    parts << "#{result.imported} atividade(s) recebida(s)." if result.imported.positive?
+    parts << "#{result.skipped} já existiam nesta turma." if result.skipped.positive?
+    parts.concat(result.errors)
+
+    path = grade_levels_path({ classroom_id: classroom&.id }.compact)
+    if result.imported.positive?
+      redirect_to path, notice: parts.join(" ")
+    else
+      redirect_to path, alert: parts.join(" ").presence || "Nenhuma atividade recebida."
+    end
+  end
 
   def sheet
     @activity.ensure_correction_pin!
@@ -252,6 +299,48 @@ class ActivitiesController < ApplicationController
   end
 
   private
+
+  def exportable_activities
+    return [ @activity ] if @activity.present?
+
+    scope = Activity
+            .joins(:lesson)
+            .where(
+              adapted: false,
+              lessons: { professor_id: current_professor.id }
+            )
+            .includes(
+              lesson: [ :classroom, :course, { classroom: :grade_level } ],
+              activity_questions: { image_attachment: :blob },
+              activity_submissions: :student,
+              exam_assignments: :student,
+              adapted_versions: [
+                :activity_questions,
+                :recipient_students,
+                { activity_submissions: :student }
+              ]
+            )
+            .order("lessons.lesson_date DESC", "activities.created_at DESC")
+
+    if params[:classroom_id].present?
+      scope = scope.where(lessons: { classroom_id: params[:classroom_id] })
+    end
+    if params[:bimester].present? && (1..4).cover?(params[:bimester].to_i)
+      scope = scope.where(bimester: params[:bimester].to_i)
+    end
+    scope.to_a
+  end
+
+  def pack_filename(activities)
+    if activities.size == 1
+      activity = activities.first
+      stamp = activity.due_date&.iso8601 || "atividade"
+      slug = activity.title.to_s.parameterize.presence || "atividade"
+      "atividade-#{slug}-#{stamp}.maestro.json"
+    else
+      "atividades-#{Date.current.iso8601}.maestro.json"
+    end
+  end
 
   def set_activity
     @activity = Activity

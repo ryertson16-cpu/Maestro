@@ -213,6 +213,11 @@ Rails.application.routes.draw do
        as: :gabarito_scan
 
   resources :activities, only: %i[create update destroy] do
+    collection do
+      get :export
+      post :import
+    end
+
     resources :activity_questions, only: %i[create destroy] do
       member do
         patch :move
@@ -220,6 +225,7 @@ Rails.application.routes.draw do
     end
 
     member do
+      get :export
       get :sheet, defaults: { format: :pdf }
       get :key_sheet, path: "folha-gabarito", defaults: { format: :pdf }
       get :adapt

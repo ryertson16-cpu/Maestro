@@ -23,6 +23,12 @@ module Lessons
       JSON.pretty_generate(as_json)
     end
 
+    def packed_activity_entry(activity)
+      dump_lesson(activity.lesson)
+        .except("attendance", "siage_shipment", "professor_id")
+        .merge("activity" => dump_activity(activity))
+    end
+
     private
 
     def dump_lesson(lesson)

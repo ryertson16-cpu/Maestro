@@ -37,6 +37,18 @@ module Lessons
       Result.new(imported: 0, skipped: 0, errors: [ "Não consegui ler o pacote. Cole o JSON copiado no outro caderno." ])
     end
 
+    def packed_classroom(meta)
+      resolve_classroom(meta)
+    end
+
+    def packed_course(meta)
+      find_existing_course(meta) || create_course(meta)
+    end
+
+    def attach_packed_activity(lesson, entry)
+      import_activity(lesson, entry)
+    end
+
     private
 
     def parse_payload
