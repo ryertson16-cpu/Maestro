@@ -45,6 +45,7 @@ module Siage
         "teste" => false,
         "grupos" => [],
         "turmas" => [],
+        "conhecidas" => professor.classrooms.order(:name).pluck(:name),
         "token" => token,
         "origin" => origin.to_s,
         "criado" => Time.current.to_i

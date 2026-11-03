@@ -100,5 +100,35 @@ class Siage::RosterImporterTest < ActiveSupport::TestCase
     student = @professor.students.find_by!(name: "Pedro Alves")
     assert room.enrollments.exists?(student_id: student.id)
     assert_equal "uuid-1", @professor.siage_classroom_bindings.find_by!(classroom: room).siage_turma_id
+    assert_equal "Ensino Médio", room.school_course.name
+    assert room.school_course.courses.exists?(name: "História")
+  end
+
+  test "preview drops period rows and uses SIAGE course name" do
+    preview = Siage::RosterPreview.new(
+      professor: @professor,
+      payload: {
+        "classrooms" => [
+          {
+            "name" => "2ª SÉRIE H - INFORMÁTICA",
+            "componente" => "Química",
+            "qualificacao" => "INFORMÁTICA",
+            "etapa" => "Curso técnico integrado (ensino médio integrado)",
+            "curso" => "Informática",
+            "turno" => "Manhã",
+            "students" => [
+              { "name" => "1º Período", "registration" => "10022026" },
+              { "name" => "2º Período", "registration" => "24042026" },
+              { "name" => "Ana Beatriz Costa" }
+            ]
+          }
+        ]
+      }
+    ).as_json
+
+    group = preview["classrooms"].first
+    assert_equal "INFORMÁTICA", group["school_course"]
+    assert_equal "morning", group["shift"]
+    assert_equal [ "Ana Beatriz Costa" ], group["students"].map { |row| row["name"] }
   end
 end

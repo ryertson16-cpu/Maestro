@@ -256,8 +256,15 @@
   function ehPaginaTurmaAberta() {
     if (/\/turma\//.test(location.pathname)) return true;
     return q("a, button, .nav-link, [role=tab]").some((a) =>
-      visivel(a) && /registro de aula|registro de avaliacoes|^frequencia$/.test(norm(a.textContent))
+      visivel(a) && /registro de aula|registro de avaliacoes|^frequencia$|visualizar turma/.test(norm(a.textContent))
     );
+  }
+
+  function ehVisualizarTurma() {
+    if (/\/frequencia/i.test(location.pathname) || /\/avaliacoes/i.test(location.pathname)) return false;
+    const t = norm((document.body?.innerText || "").slice(0, 5000));
+    if (/visualizar turma/.test(t) && /estudantes/.test(t)) return true;
+    return abaAtiva(/visualizar turma/);
   }
 
   function clicarNav(re) {
@@ -380,12 +387,64 @@
 
   // ---------- Painel ----------
   let painel;
+  function escHtml(s) {
+    return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function nomeTurmaPainel(t) {
+    return `${t.turma || ""}${t.componente ? " · " + t.componente : ""}`;
+  }
+
+  function turmaJaConhecida(grupo, job) {
+    return (job.conhecidas || []).some((n) => norm(n) === norm(grupo.turma));
+  }
+
+  function marcarTurmaLida(grupo, job) {
+    grupo.estado = turmaJaConhecida(grupo, job) ? "ja" : "lida";
+  }
+
+  function desenharPainelRoster(job, atual) {
+    const rodando = job.status === "rodando";
+    const turmas = job.turmas || [];
+    const feitas = turmas.filter((t) => t.estado === "lida" || t.estado === "ja").length;
+    const linhas = turmas.map((t) => {
+      const nome = escHtml(nomeTurmaPainel(t));
+      if (t.estado === "ja") {
+        return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid #f3f4f6"><span>${nome}</span><b style="color:#5b4bdb;white-space:nowrap">turma já lida</b></div>`;
+      }
+      if (t.estado === "lida") {
+        return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid #f3f4f6"><span>${nome}</span><b style="color:#15803d;white-space:nowrap">lida ✓</b></div>`;
+      }
+      if (t.estado === "lendo") {
+        return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid #f3f4f6"><span>${nome}</span><span style="color:#1d4ed8">lendo…</span></div>`;
+      }
+      return `<div style="padding:4px 0;border-top:1px solid #f3f4f6;color:#6b7280">${nome}</div>`;
+    }).join("");
+    painel.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <b>${rodando ? "Lendo turmas" : job.status === "concluido" ? "Concluído" : "Parado"}</b>
+      <button type="button" id="siage-fila-botao" style="pointer-events:auto;border:1px solid ${rodando ? "#b91c1c" : "#6b7280"};color:${rodando ? "#b91c1c" : "#374151"};background:#fff;border-radius:6px;padding:2px 8px;cursor:pointer">${rodando ? "Parar" : "Fechar"}</button></div>
+      <div style="margin-bottom:6px;font-size:12px;color:#374151"><b>${feitas}</b> de <b>${turmas.length}</b> turma(s)</div>
+      <div style="color:#1d4ed8;margin-bottom:6px">${escHtml(atual || "")}</div>${linhas}`;
+    painel.querySelector("#siage-fila-botao").onclick = async () => {
+      if (rodando) {
+        const j = await lerJob();
+        j.status = "parado";
+        await gravarJob(j);
+        desenharPainel(j, "Parando…");
+      } else painel.remove();
+    };
+  }
+
   function desenharPainel(job, atual) {
     if (!painel || !document.body.contains(painel)) {
       painel = document.createElement("div");
       painel.id = "siage-fila-painel";
       painel.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:2147483647;width:360px;max-height:70vh;overflow:auto;background:#fff;color:#1f2937;border:1px solid #d1d5db;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.2);font:13px system-ui,sans-serif;padding:12px;pointer-events:none";
       document.body.appendChild(painel);
+    }
+    if (job && job.kind === "roster") {
+      desenharPainelRoster(job, atual);
+      return;
     }
     const rodando = job.status === "rodando";
     const c = contarEstados(job);
@@ -1696,47 +1755,159 @@
     const ths = q("th, thead td, [role=columnheader]").map((el) => norm(el.textContent));
     return {
       turma: Math.max(0, indiceColuna(ths, /^turma$/)),
-      componente: indiceColuna(ths, /componente/)
+      componente: indiceColuna(ths, /componente/),
+      curso: indiceColuna(ths, /^curso$|curso tecnico|nome do curso/),
+      etapa: indiceColuna(ths, /etapa/),
+      turno: indiceColuna(ths, /turno/),
+      escola: indiceColuna(ths, /escola/)
     };
   }
 
+  function textoColuna(textos, idx) {
+    return idx >= 0 ? (textos[idx] || "") : "";
+  }
+
+  function textoCelula(td) {
+    return (td.innerText || td.textContent || "").replace(/\s+/g, " ").trim();
+  }
+
+  function qualificacaoDaTurma(turma) {
+    const partes = String(turma || "").split(/\s[-–—]\s+/);
+    if (partes.length < 2) return "";
+    const resto = partes.slice(1).join(" - ").trim();
+    if (!resto || /^\d/.test(resto)) return "";
+    return resto;
+  }
+
   function lerLinhaListagem(tr, cols) {
-    const textos = q("td", tr).map((td) => (td.innerText || td.textContent || "").trim().split("\n")[0].trim());
+    const textos = q("td", tr).map(textoCelula);
     const turma = textos[cols.turma] || textos[0] || "";
-    const componente = (cols.componente >= 0 ? textos[cols.componente] : textos[1]) || "";
+    const componente = textoColuna(textos, cols.componente) || "";
     const link = q("a[href*='/turma/']", tr)[0];
     const href = link ? (link.getAttribute("href") || link.href || "") : "";
     const turmaId = (String(href).match(/\/turma\/([0-9a-f-]{8,})/i) || [])[1] || "";
-    return { turma, componente, turmaId };
+    return {
+      turma,
+      componente,
+      turmaId,
+      curso: textoColuna(textos, cols.curso),
+      etapa: textoColuna(textos, cols.etapa),
+      turno: textoColuna(textos, cols.turno),
+      escola: textoColuna(textos, cols.escola),
+      qualificacao: qualificacaoDaTurma(turma)
+    };
+  }
+
+  function parecePeriodoLetivo(s) {
+    const t = norm(s);
+    if (/\d+\s*(o|a)?\s*periodo/.test(t)) return true;
+    if (/dias letivos|inicio das aulas|fim das aulas/.test(t)) return true;
+    if (/^\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}$/.test(String(s).trim())) return true;
+    return false;
   }
 
   function pareceNomeAluno(s) {
     const t = norm(s);
-    if (!t || t.length < 3) return false;
-    if (/^(turma|componente|acao|acoes|n|no|matricula|frequencia|data|periodo|tempo|estudantes|aluno|nome|situacao)$/.test(t)) return false;
+    if (!t || t.length < 5) return false;
+    if (parecePeriodoLetivo(s)) return false;
+    if (/^(turma|componente|acao|acoes|n|no|matricula|frequencia|data|periodo|tempo|estudantes|aluno|nome|situacao|inicio|fim|unidade)$/.test(t)) return false;
     if (/^\d+([.,]\d+)?$/.test(t)) return false;
-    return /[a-z]/.test(t);
+    if (/\d+\s*(o|a)?\s*(tempo|unidade|ano|serie)\b/.test(t) && t.split(" ").length <= 3) return false;
+    if (!/[a-z]{3,}/.test(t)) return false;
+    return t.split(" ").filter((p) => p.length > 1).length >= 2;
+  }
+
+  function matriculaDaCelula(c) {
+    const d = String(c || "").replace(/\D/g, "");
+    if (d.length < 5 || d.length > 20) return "";
+    if (pareceNomeAluno(c)) return "";
+    if (d.length === 8) {
+      const dia = Number(d.slice(0, 2));
+      const mes = Number(d.slice(2, 4));
+      const ano = Number(d.slice(4));
+      if (dia >= 1 && dia <= 31 && mes >= 1 && mes <= 12 && ano >= 2000 && ano <= 2100) return "";
+    }
+    return d;
+  }
+
+  function tabelaPareceCalendario(tr) {
+    const raiz = tr.closest("table") || tr.closest("[class*='datatable']") || tr.parentElement;
+    const cab = q("th, [role=columnheader]", raiz).map((el) => norm(el.textContent)).join(" ");
+    if (/dias letivos/.test(cab)) return true;
+    if (/periodo/.test(cab) && /(inicio|fim|termino)/.test(cab)) return true;
+    return false;
+  }
+
+  function alunosDaChamada() {
+    return listarAlunos()
+      .map((item) => ({ name: item.nome, registration: "" }))
+      .filter((s) => pareceNomeAluno(s.name));
+  }
+
+  function linhasTabelaEstudantes() {
+    const th = q("th, [role=columnheader]").find((el) => visivel(el) && /^nome/.test(norm(el.textContent)));
+    const raiz = th?.closest("table") || th?.closest(".p-datatable") || th?.closest("[class*='datatable']");
+    if (!raiz) return [];
+    const cab = q("th, [role=columnheader]", raiz).map((el) => norm(el.textContent)).join(" ");
+    if (/componente curricular|dias letivos/.test(cab)) return [];
+    return q("tbody tr, .p-datatable-tbody > tr", raiz).filter((tr) => visivel(tr) && !tr.closest("#siage-fila-painel"));
   }
 
   function nomesDosAlunosNaTurma() {
     const nomes = [];
     const visto = new Set();
-    q("table tbody tr, .p-datatable-tbody > tr").forEach((tr) => {
+    const linhas = linhasTabelaEstudantes();
+    const origem = linhas.length ? linhas : q("table tbody tr, .p-datatable-tbody > tr");
+    origem.forEach((tr) => {
       if (!visivel(tr) || tr.closest("#siage-fila-painel")) return;
-      const cells = q("td", tr).map((td) => (td.innerText || "").trim().split("\n")[0].trim()).filter(Boolean);
+      if (tabelaPareceCalendario(tr)) return;
+      const cells = q("td", tr).map(textoCelula).filter(Boolean);
       if (!cells.length) return;
       const nome = cells.find(pareceNomeAluno);
       if (!nome) return;
       const key = norm(nome);
       if (visto.has(key)) return;
       visto.add(key);
-      const matriculaCell = cells.find((c) => {
-        const d = c.replace(/\D/g, "");
-        return d.length >= 5 && d.length <= 20 && !pareceNomeAluno(c);
-      });
-      nomes.push({ name: nome, registration: matriculaCell ? matriculaCell.replace(/\D/g, "") : "" });
+      nomes.push({ name: nome, registration: cells.map(matriculaDaCelula).find(Boolean) || "" });
     });
     return nomes;
+  }
+
+  function lerFichaTurma() {
+    const texto = document.body?.innerText || "";
+    const pega = (re) => {
+      const m = texto.match(re);
+      return m ? m[1].replace(/\s+/g, " ").trim() : "";
+    };
+    return {
+      componente: pega(/componente curricular:\s*([^\n]+)/i),
+      turno: pega(/turno:\s*([^\n]+)/i),
+      curso: pega(/qualifica[cç][aã]o t[eé]cnica:\s*([^\n]+)/i)
+    };
+  }
+
+  async function coletarEstudantesPaginados() {
+    const abaEst = q("a, button, [role=tab], .nav-link").filter(visivel)
+      .find((el) => /^estudantes$/.test(norm(el.textContent)));
+    if (abaEst) {
+      clicarNativo(abaEst);
+      await esperar(500);
+    }
+    await aguardar(() => nomesDosAlunosNaTurma().length > 0, 10000);
+    const mapa = new Map();
+    for (let paginas = 1; paginas < 40; paginas++) {
+      nomesDosAlunosNaTurma().forEach((aluno) => {
+        const key = norm(aluno.name);
+        if (key && !mapa.has(key)) mapa.set(key, aluno);
+      });
+      const proxima = q("li.pagination-next:not(.disabled) a, .pagination-next:not(.disabled) a, a[aria-label*='Next'], a[aria-label*='Próxima']").find(visivel);
+      if (!proxima) break;
+      const antes = nomesDosAlunosNaTurma().map((a) => a.name).join("|");
+      proxima.click();
+      await aguardar(() => nomesDosAlunosNaTurma().map((a) => a.name).join("|") !== antes, 5000);
+      await esperar(400);
+    }
+    return [...mapa.values()];
   }
 
   async function coletarListagemTurmas(job) {
@@ -1762,12 +1933,28 @@
       await aguardar(() => linhasListagemTurmas().map((tr) => tr.innerText).join("|") !== antes, 5000);
       await esperar(700);
     }
-    job.turmas = [...mapa.values()].map((row) => ({
-      turma: row.turma,
-      componente: row.componente,
-      turmaId: row.turmaId || "",
-      students: null
-    }));
+    const anteriores = new Map((job.turmas || []).map((t) => [`${norm(t.turma)}|${norm(t.componente)}`, t]));
+    job.turmas = [...mapa.values()].map((row) => {
+      const prev = anteriores.get(`${norm(row.turma)}|${norm(row.componente)}`);
+      const base = {
+        turma: row.turma,
+        componente: row.componente,
+        turmaId: row.turmaId || (prev && prev.turmaId) || "",
+        curso: row.curso || (prev && prev.curso) || "",
+        etapa: row.etapa || (prev && prev.etapa) || "",
+        turno: row.turno || (prev && prev.turno) || "",
+        escola: row.escola || (prev && prev.escola) || "",
+        qualificacao: row.qualificacao || (prev && prev.qualificacao) || ""
+      };
+      if (prev && Array.isArray(prev.students)) {
+        return {
+          ...base,
+          students: prev.students,
+          estado: prev.estado === "lida" ? "lida" : "ja"
+        };
+      }
+      return { ...base, students: null, estado: "pendente" };
+    });
     await gravarJob(job);
     return job.turmas;
   }
@@ -1777,6 +1964,11 @@
       name: t.turma,
       componente: t.componente,
       turma_id: t.turmaId || "",
+      curso: t.curso || "",
+      etapa: t.etapa || "",
+      turno: t.turno || "",
+      escola: t.escola || "",
+      qualificacao: t.qualificacao || "",
       students: Array.isArray(t.students) ? t.students : []
     }));
     try {
@@ -1816,6 +2008,7 @@
         }
         await coletarListagemTurmas(job);
         job = await lerJob();
+        desenharPainel(job, job.turmas.length ? "Turmas encontradas. Lendo os alunos…" : "Não achei turmas na listagem.");
         if (!job.turmas.length) {
           job.status = "concluido";
           await gravarJob(job);
@@ -1836,12 +2029,52 @@
         return;
       }
       const grupo = job.turmas[falta];
-      desenharPainel(job, `Alunos de ${grupo.turma}${grupo.componente ? " · " + grupo.componente : ""}…`);
-      if (grupo.turmaId && !/\/turma\//.test(location.pathname)) {
-        location.href = `${URL_LISTAGEM}/turma/${grupo.turmaId}/frequencia`;
+      const irma = job.turmas.find((t) => t !== grupo && Array.isArray(t.students) && norm(t.turma) === norm(grupo.turma) && norm(t.componente) === norm(grupo.componente));
+      if (irma) {
+        grupo.students = irma.students;
+        grupo.estado = "ja";
+        await gravarJob(job);
+        desenharPainel(job, `${nomeTurmaPainel(grupo)} já lida.`);
         return;
       }
-      if (!grupo.turmaId && ehListagemTurmas()) {
+      grupo.estado = "lendo";
+      await gravarJob(job);
+      desenharPainel(job, `Alunos de ${nomeTurmaPainel(grupo)}…`);
+      if (naAbaFrequencia() || /\/frequencia/i.test(location.pathname)) {
+        if (clicarNav(/^visualizar turma$/)) {
+          await esperar(800);
+          return;
+        }
+        location.href = URL_LISTAGEM;
+        return;
+      }
+      if (ehVisualizarTurma() || (/\/turma\//.test(location.pathname) && !ehListagemTurmas())) {
+        const idNaUrl = (location.pathname.match(/\/turma\/([0-9a-f-]{8,})/i) || [])[1];
+        if (idNaUrl && !grupo.turmaId) grupo.turmaId = idNaUrl;
+        const ficha = lerFichaTurma();
+        if (ficha.curso) {
+          grupo.curso = ficha.curso;
+          grupo.qualificacao = grupo.qualificacao || ficha.curso;
+        }
+        if (ficha.componente && !grupo.componente) grupo.componente = ficha.componente;
+        if (ficha.turno) grupo.turno = ficha.turno;
+        const alunos = await coletarEstudantesPaginados();
+        grupo.students = alunos;
+        marcarTurmaLida(grupo, job);
+        await gravarJob(job);
+        desenharPainel(job, `${nomeTurmaPainel(grupo)} ${grupo.estado === "ja" ? "já lida." : "lida."}`);
+        location.href = URL_LISTAGEM;
+        return;
+      }
+      if (ehListagemTurmas() || ehHubDiario()) {
+        if (ehHubDiario()) {
+          const btn = botaoAcessarDoCard(/visualizar minhas turmas/);
+          if (btn) {
+            clicarNativo(btn);
+            await esperar(800);
+            return;
+          }
+        }
         const linha = await acharNaListagem({ turma: grupo.turma, componente: grupo.componente });
         if (linha) {
           const btn = botaoPrancheta(linha);
@@ -1852,26 +2085,11 @@
           }
         }
         grupo.students = [];
+        marcarTurmaLida(grupo, job);
         await gravarJob(job);
+        desenharPainel(job, `${nomeTurmaPainel(grupo)} ${grupo.estado === "ja" ? "já lida." : "lida."}`);
         return;
       }
-      const idNaUrl = (location.pathname.match(/\/turma\/([0-9a-f-]{8,})/i) || [])[1];
-      if (idNaUrl && !grupo.turmaId) {
-        grupo.turmaId = idNaUrl;
-        await gravarJob(job);
-      }
-      if (/\/turma\//.test(location.pathname) && !/\/frequencia/i.test(location.pathname) && !ehTelaDeAvaliacoes()) {
-        location.href = `${URL_LISTAGEM}/turma/${idNaUrl || grupo.turmaId}/frequencia`;
-        return;
-      }
-      await aguardar(() => nomesDosAlunosNaTurma().length > 0 || ehTelaDeAvaliacoes() || naLista(), 8000);
-      let alunos = nomesDosAlunosNaTurma();
-      if (!alunos.length && !ehTelaDeAvaliacoes() && clicarNav(/registro de avaliacoes/)) {
-        await aguardar(() => ehTelaDeAvaliacoes() || nomesDosAlunosNaTurma().length > 0, 8000);
-        alunos = nomesDosAlunosNaTurma();
-      }
-      grupo.students = alunos;
-      await gravarJob(job);
       location.href = URL_LISTAGEM;
     } finally {
       trabalhando = false;

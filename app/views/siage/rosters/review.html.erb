@@ -28,6 +28,7 @@
         </span>
       </h2>
       <p class="form-help">
+        Curso: <%= classroom["school_course"].presence || "não informado" %>.
         Série: <%= classroom["grade_level"] %>.
         No SIAGE:
         <%= Array(classroom["siage_names"]).uniq.join(", ") %>.

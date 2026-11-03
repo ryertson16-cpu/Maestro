@@ -37,16 +37,22 @@ module Siage
             "name" => maestro_name,
             "siage_names" => [],
             "grade_level" => RosterPreview.grade_level_name(raw_name),
+            "school_course" => nil,
+            "shift" => nil,
             "existing_classroom_id" => existing_classroom_id(maestro_name),
+            "existing_school_course_id" => nil,
             "components" => [],
             "students" => {}
           }
           group["siage_names"] << raw_name.to_s.strip
           group["siage_names"].uniq!
+          group["school_course"] ||= RosterPreview.school_course_name(row, maestro_name, group["grade_level"])
+          group["existing_school_course_id"] ||= existing_school_course_id(group["school_course"])
+          group["shift"] ||= RosterPreview.shift_from(row["turno"] || row[:turno] || row["shift"] || row[:shift])
           group["components"] << component_hash(row)
           Array(row["students"] || row[:students]).each do |student|
             name = (student["name"] || student[:name]).to_s.strip
-            next if name.blank?
+            next unless RosterPreview.student_name?(name)
 
             key = Lessons::NameMatcher.normalize(name)
             group["students"][key] ||= student_hash(name, student)
@@ -94,6 +100,56 @@ module Siage
       return if name.blank?
 
       @professor.courses.find { |course| Lessons::NameMatcher.discipline_match?(course.name, name) }&.id
+    end
+
+    def existing_school_course_id(name)
+      return if name.blank?
+
+      @professor.school_courses.find { |course|
+        Lessons::NameMatcher.normalize(course.name) == Lessons::NameMatcher.normalize(name)
+      }&.id
+    end
+
+    def self.school_course_name(row, maestro_name, grade_level)
+      qualificacao = (row["qualificacao"] || row[:qualificacao]).to_s.strip
+      return qualificacao if qualificacao.present?
+
+      raw = (
+        row["curso"] || row[:curso] ||
+        row["school_course"] || row[:school_course] ||
+        row["etapa"] || row[:etapa]
+      ).to_s.strip
+      normalized = Lessons::NameMatcher.normalize(raw)
+      if raw.present? && !normalized.match?(/\A\d+\s*(o|a)?\s*(ano|serie)/) && normalized != "etapa"
+        return raw
+      end
+
+      hay = Lessons::NameMatcher.normalize("#{maestro_name} #{grade_level}")
+      return "Ensino Médio" if hay.match?(/medio|serie/) || hay.match?(/\b[123]\s*(o|a)?\s*ano/)
+      return "Educação Infantil" if hay.match?(/infantil|pre\s*escolar/)
+      return "EJA" if hay.match?(/\beja\b/)
+
+      "Ensino Fundamental"
+    end
+
+    def self.shift_from(turno)
+      n = Lessons::NameMatcher.normalize(turno.to_s)
+      return "morning" if n.match?(/manha|matutino/)
+      return "afternoon" if n.match?(/tarde|vespertino/)
+      return "evening" if n.match?(/noite|noturno/)
+      return "full_time" if n.match?(/integral/)
+
+      nil
+    end
+
+    def self.student_name?(name)
+      n = Lessons::NameMatcher.normalize(name)
+      return false if n.blank? || n.length < 5
+      return false if n.match?(/\d+\s*(o|a)?\s*periodo/)
+      return false if n.match?(/dias letivos|unidade|rec\s*rep/)
+      return false if n.match?(/\A\d{1,2}\s+\d{1,2}\s+\d{2,4}\z/)
+
+      n.split.size >= 2
     end
 
     def professor_students

@@ -16,9 +16,15 @@ module Siage
         classroom = find_or_create_classroom(entry, year, result)
         next unless classroom
 
+        school_course = find_or_create_school_course(entry)
+        assign_school_course!(classroom, school_course)
+
         Array(entry["components"]).each do |component|
           course = find_or_create_course(component, result)
+          next unless course
+
           bind!(classroom, course, component, result)
+          link_discipline!(school_course, course)
         end
 
         Array(entry["students"]).each do |row|
@@ -32,16 +38,24 @@ module Siage
     private
 
     def find_or_create_classroom(entry, year, result)
+      shift = RosterPreview.shift_from(entry["shift"] || entry["turno"])
+
       if entry["existing_classroom_id"].present?
         found = @professor.classrooms.find_by(id: entry["existing_classroom_id"])
-        return found if found
+        if found
+          found.update!(shift: shift) if found.shift.blank? && shift.present?
+          return found
+        end
       end
 
       name = entry["name"].to_s.strip
       return if name.blank?
 
       existing = @professor.classrooms.find { |room| Lessons::NameMatcher.classroom_in_text?(name, room.name) }
-      return existing if existing
+      if existing
+        existing.update!(shift: shift) if existing.shift.blank? && shift.present?
+        return existing
+      end
 
       grade_name = entry["grade_level"].presence || RosterPreview.grade_level_name(name)
       grade = @professor.grade_levels.where("LOWER(name) = ?", grade_name.downcase).first
@@ -51,7 +65,43 @@ module Siage
         name: name,
         school_year: year,
         grade_level: grade,
+        shift: shift,
         active: true
+      )
+    end
+
+    def find_or_create_school_course(entry)
+      name = entry["school_course"].to_s.strip
+      return if name.blank?
+
+      if entry["existing_school_course_id"].present?
+        found = @professor.school_courses.find_by(id: entry["existing_school_course_id"])
+        return found if found
+      end
+
+      existing = @professor.school_courses.find { |course|
+        Lessons::NameMatcher.normalize(course.name) == Lessons::NameMatcher.normalize(name)
+      }
+      return existing if existing
+
+      @professor.school_courses.create!(name: name, active: true)
+    end
+
+    def assign_school_course!(classroom, school_course)
+      return unless classroom && school_course
+      return if classroom.school_course_id == school_course.id
+
+      classroom.update!(school_course: school_course) if classroom.school_course_id.blank?
+    end
+
+    def link_discipline!(school_course, course)
+      return unless school_course && course
+      return if school_course.course_disciplines.exists?(course_id: course.id)
+
+      school_course.course_disciplines.create!(
+        course: course,
+        position: school_course.course_disciplines.count,
+        required: true
       )
     end
 
@@ -99,7 +149,7 @@ module Siage
 
     def import_student(classroom, row, result)
       name = row["name"].to_s.strip
-      return if name.blank?
+      return unless RosterPreview.student_name?(name)
 
       student = if row["existing_student_id"].present?
         @professor.students.find_by(id: row["existing_student_id"])

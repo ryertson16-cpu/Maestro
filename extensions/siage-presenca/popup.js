@@ -290,10 +290,31 @@ async function acordarMotor(aba) {
   await chrome.tabs.sendMessage(aba.id, { tipo: "iniciar" });
 }
 
+function escHtml(s) {
+  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 async function mostrarTrabalho() {
   const { job } = await chrome.storage.local.get("job");
   if (!job) { $("trabalho").style.display = "none"; return; }
-  const todas = job.grupos.flatMap((g) => g.aulas);
+  if (job.kind === "roster") {
+    const turmas = job.turmas || [];
+    const nome = { rodando: "Em andamento", parado: "Parado", concluido: "Concluído" }[job.status] || job.status;
+    const linhas = turmas.map((t) => {
+      const n = escHtml(`${t.turma || ""}${t.componente ? " · " + t.componente : ""}`);
+      let badge = "";
+      if (t.estado === "ja") badge = `<b style="color:#5b4bdb;white-space:nowrap">turma já lida</b>`;
+      else if (t.estado === "lida") badge = `<b style="color:#15803d;white-space:nowrap">lida ✓</b>`;
+      else if (t.estado === "lendo") badge = `<span style="color:#1d4ed8">lendo…</span>`;
+      return `<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-top:1px solid #e5e7eb"><span>${n}</span>${badge}</div>`;
+    }).join("");
+    $("trabalhoTexto").innerHTML = `<div><b>Turmas do SIAGE · ${escHtml(nome)}</b></div>${linhas || "<div>Aguardando a listagem…</div>"}`;
+    const pend = turmas.some((t) => t.students == null);
+    $("continuar").style.display = pend && job.status !== "rodando" ? "" : "none";
+    $("trabalho").style.display = "block";
+    return;
+  }
+  const todas = (job.grupos || []).flatMap((g) => g.aulas);
   const ok = todas.filter((a) => a.estado === "ok").length;
   const ja = todas.filter((a) => a.estado === "ja").length;
   const erro = todas.filter((a) => a.estado === "erro").length;
@@ -524,4 +545,8 @@ chrome.storage.local.get(["lista", "teste", "periodo", "de"], (cfg) => {
   $("periodo").value = cfg.periodo || "auto";
   atualizarPrevia();
   mostrarTrabalho();
+});
+
+chrome.storage.onChanged.addListener((mudancas, area) => {
+  if (area === "local" && mudancas.job) mostrarTrabalho();
 });

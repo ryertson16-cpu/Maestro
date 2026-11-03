@@ -1,3 +1,15 @@
+# Novidades: versão 4.9.3 (03/11/2026)
+
+- Trazer do SIAGE: abre cada turma pelo botão de ação e lê a lista **Estudantes** em Visualizar Turma. Não usa a tela de Frequência.
+
+# Novidades: versão 4.9.2 (03/11/2026)
+
+- Trazer do SIAGE: lê nomes de alunos (não a tabela de períodos) e vincula a turma ao curso (Etapa/Curso) e à disciplina.
+
+# Novidades: versão 4.9.1 (03/11/2026)
+
+- Painel e pop-up: lista cada turma na leitura. **lida ✓** em verde; **turma já lida** em roxo se o Maestro já tinha essa turma ou se ela já tinha sido lida nesta passagem.
+
 # Novidades: versão 4.9.0 (03/11/2026)
 
 - **Trazer do SIAGE**: lê Visualizar Minhas Turmas e os alunos, manda ao Maestro para conferir e gravar. Não apaga lista antiga e não traz frequência nem nota.
