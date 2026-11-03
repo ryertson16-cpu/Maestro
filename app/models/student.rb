@@ -7,6 +7,9 @@ class Student < ApplicationRecord
 
   has_many :activity_recipients, dependent: :destroy
   has_many :activity_submissions, dependent: :delete_all
+  has_many :activity_exam_assignments, dependent: :delete_all
+  has_many :activity_pending_cards, dependent: :nullify
+  has_many :enem_simulado_sheets, dependent: :destroy
   has_many :council_notes, dependent: :delete_all
   has_many :student_occurrences, dependent: :delete_all
   has_many :recovery_grades, dependent: :delete_all
@@ -35,11 +38,17 @@ class Student < ApplicationRecord
 
   def destroy_with_history!
     transaction do
+      ActivityExamAssignment.where(student_id: id).delete_all
+      ActivityPendingCard.where(student_id: id).update_all(student_id: nil)
       ActivitySubmission.where(student_id: id).delete_all
       ActivityRecipient.where(student_id: id).delete_all
       CouncilNote.where(student_id: id).delete_all
       StudentOccurrence.where(student_id: id).delete_all
       RecoveryGrade.where(student_id: id).delete_all
+      EnemSimuladoSheet.where(student_id: id).find_each do |sheet|
+        sheet.card_pdf.purge if sheet.card_pdf.attached?
+        sheet.delete
+      end
 
       enrollment_ids = Enrollment.where(student_id: id).pluck(:id)
       AttendanceRecord.where(enrollment_id: enrollment_ids).delete_all

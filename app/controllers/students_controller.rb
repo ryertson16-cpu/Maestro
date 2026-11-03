@@ -161,6 +161,9 @@ class StudentsController < ApplicationController
     redirect_to student_path(@student),
                 alert: error.record&.errors&.full_messages&.to_sentence.presence ||
                        "Não foi possível excluir o aluno."
+  rescue ActiveRecord::InvalidForeignKey, ActiveRecord::StatementInvalid
+    redirect_to student_path(@student),
+                alert: "Não foi possível excluir o aluno porque ainda há registros ligados a ele."
   end
 
   private
