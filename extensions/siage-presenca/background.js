@@ -19,6 +19,32 @@ function origensDoMaestro(origin) {
   return [...new Set(lista)];
 }
 
+async function reportarRoster(msg) {
+  const corpo = JSON.stringify({
+    token: msg.token || "",
+    classrooms: msg.classrooms || []
+  });
+  for (const origem of origensDoMaestro(msg.origin)) {
+    try {
+      const res = await fetch(`${origem}/siage/extensao/roster`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-Maestro-Token": msg.token || ""
+        },
+        credentials: "include",
+        body: corpo
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return { ok: true, review_url: data.review_url, status: data.status };
+      }
+    } catch (e) {}
+  }
+  return { ok: false };
+}
+
 async function reportarLivro(msg) {
   const corpo = JSON.stringify(msg.kind === "grades" ? {
     kind: "grades",
@@ -55,6 +81,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg) return;
   if (msg.tipo === "maestro-ledger") {
     reportarLivro(msg).then(sendResponse);
+    return true;
+  }
+  if (msg.tipo === "maestro-roster") {
+    reportarRoster(msg).then(sendResponse);
     return true;
   }
   if (msg.tipo === "abrir-siage") {

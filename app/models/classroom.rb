@@ -37,6 +37,7 @@ class Classroom < ApplicationRecord
   has_many :timetable_entries, dependent: :destroy
   has_many :council_notes, dependent: :destroy
   has_many :siage_shipments, dependent: :destroy
+  has_many :siage_classroom_bindings, dependent: :destroy
   has_many :project_classrooms, dependent: :destroy
   has_many :enem_simulados, dependent: :destroy
   has_many :projects, through: :project_classrooms

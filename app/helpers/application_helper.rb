@@ -151,6 +151,7 @@ module ApplicationHelper
           { label: "Aulas", href: maestro_nav_path(:lessons_path, classroom), hint: "Aulas já registradas" },
           { label: "Planos", href: lesson_plan_templates_path, hint: "Modelos de plano de aula" },
           { label: "Abrir SIAGE", href: siage_open_path, hint: "Extensão #{Siage::EXTENSION_VERSION}: login, Frequência e Avaliações", emphasis: true },
+          { label: "Trazer do SIAGE", href: siage_roster_path, hint: "Ler turmas e alunos do portal e conferir antes de gravar" },
           { label: "Envios SIAGE", href: siage_ledger_path, hint: "Livro-razão de todas as turmas", emphasis: true }
         ]
       },
@@ -332,6 +333,7 @@ module ApplicationHelper
           command_item("Início", root_path, :cards, "Painel inicial", "home dashboard inicio painel"),
           command_item("Diário", maestro_nav_path(:attendance_records_path), :diary, "Aula, chamada e Frequência", "frequencia chamada siage"),
           command_item("Abrir SIAGE", siage_open_path, :siage, "Login, Frequência e Avaliações", "siage abrir portal cpf senha"),
+          command_item("Trazer do SIAGE", siage_roster_path, :siage, "Turmas e alunos do portal", "siage trazer turmas alunos"),
           command_item("Envios SIAGE", siage_ledger_path, :siage, "Livro-razão da extensão #{Siage::EXTENSION_VERSION}", "siage livro razao exportar"),
           command_item("Ajuda SIAGE", siage_help_path, :siage, "Como usar a extensão #{Siage::EXTENSION_VERSION}", "siage json extensao aula ajuda"),
           command_item("Meu horário", timetable_path, :calendar, "Grade da semana", "horario pdf quadro aula"),

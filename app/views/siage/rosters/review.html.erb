@@ -1,0 +1,64 @@
+<% content_for :title, "Conferir lista do SIAGE | Maestro" %>
+
+<div class="page-header page-header-with-action">
+  <div class="siage-page-title">
+    <%= maestro_icon :siage, size: :lg %>
+    <h1>Conferir lista do SIAGE</h1>
+    <p>
+      <%= @preview["classroom_count"] %> turma(s) e
+      <%= @preview["student_count"] %> aluno(s) lidos.
+      Confira e grave. O Maestro não apaga o que já está no caderno.
+    </p>
+  </div>
+</div>
+
+<% if @preview["empty"] %>
+  <section class="empty-state">
+    <strong>A extensão não leu nenhuma turma.</strong>
+    <p>Abra o SIAGE de novo e espere a listagem carregar.</p>
+    <%= link_to "Tentar de novo", siage_roster_path, class: "button button-primary" %>
+  </section>
+<% else %>
+  <% Array(@preview["classrooms"]).each do |classroom| %>
+    <section class="form-card lesson-pack-receiver">
+      <h2>
+        <%= classroom["name"] %>
+        <span class="status-badge status-<%= classroom["action"] == "reuse" ? "verified" : "pending" %>">
+          <%= classroom["action"] == "reuse" ? "Já no caderno" : "Nova turma" %>
+        </span>
+      </h2>
+      <p class="form-help">
+        Série: <%= classroom["grade_level"] %>.
+        No SIAGE:
+        <%= Array(classroom["siage_names"]).uniq.join(", ") %>.
+      </p>
+      <p class="form-help">
+        Disciplinas:
+        <%= Array(classroom["components"]).map { |item|
+          "#{item["componente"].presence || "sem componente"} (#{item["action"] == "reuse" ? "já existe" : "nova"})"
+        }.join(" · ") %>
+      </p>
+      <% if classroom["students"].any? %>
+        <ul class="siage-help-list">
+          <% classroom["students"].each do |student| %>
+            <li>
+              <%= student["name"] %>
+              <span class="status-badge status-<%= student["action"] == "match" ? "verified" : "pending" %>">
+                <%= student["action"] == "match" ? "Já no caderno" : "Novo aluno" %>
+              </span>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="form-help">Nenhum aluno lido nesta turma. A turma ainda pode ser gravada.</p>
+      <% end %>
+    </section>
+  <% end %>
+
+  <%= form_with url: apply_siage_roster_path, method: :post, local: true do %>
+    <div class="form-actions">
+      <%= submit_tag "Gravar no caderno", class: "button button-primary" %>
+      <%= link_to "Ler de novo", siage_roster_path(nova: 1), class: "button button-secondary" %>
+    </div>
+  <% end %>
+<% end %>

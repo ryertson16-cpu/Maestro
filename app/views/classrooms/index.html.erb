@@ -11,6 +11,9 @@
                   classroom_path(remembered_classroom),
                   class: "button button-secondary" %>
     <% end %>
+    <%= link_to "Trazer do SIAGE",
+                siage_roster_path,
+                class: "button button-secondary" %>
     <%= link_to "Nova turma",
                 new_classroom_path,
                 class: "button button-primary" %>

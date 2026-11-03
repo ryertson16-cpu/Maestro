@@ -19,6 +19,7 @@ import "attendance_offline"
 import "question_form"
 import "qr_scanner"
 import "correction"
+import "siage_roster"
 
 document.addEventListener("click", function (event) {
   const button = event.target.closest("[data-fill-today]");

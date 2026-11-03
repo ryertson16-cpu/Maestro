@@ -47,7 +47,12 @@ module Siage
         turma = turma_label_for(lesson.classroom)
         componente = componente_for(lesson)
         chave = "#{turma}|#{componente}"
-        grupo = grupos[chave] ||= { "turma" => turma, "componente" => componente, "aulas" => [] }
+        grupo = grupos[chave] ||= {
+          "turma" => turma,
+          "componente" => componente,
+          "turmaId" => turma_id_for(lesson.classroom, lesson.course, componente),
+          "aulas" => []
+        }
         iso = lesson.lesson_date.iso8601
         tempos = tempos_for(lesson).split(",").map(&:presence).compact
         aula = grupo["aulas"].find { |item| item["data"] == iso }
@@ -125,6 +130,14 @@ module Siage
     def tempos_for(lesson)
       digits = lesson.siage_time_slot.to_s.scan(/\d+/)
       digits.any? ? digits.join(",") : "1"
+    end
+
+    def turma_id_for(room, course, componente)
+      scope = professor.siage_classroom_bindings.where(classroom: room)
+      found = course.present? ? scope.find_by(course: course) : nil
+      found ||= scope.where("LOWER(COALESCE(componente, '')) = ?", componente.to_s.downcase).first if componente.present?
+      found ||= scope.first
+      found&.siage_turma_id.presence
     end
 
     def turma_label_for(room)

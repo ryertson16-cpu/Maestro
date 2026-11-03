@@ -16,6 +16,7 @@ class Course < ApplicationRecord
   }.freeze
 
   belongs_to :professor
+  has_many :siage_classroom_bindings, dependent: :nullify
 
   has_many :classrooms, dependent: :restrict_with_error
 

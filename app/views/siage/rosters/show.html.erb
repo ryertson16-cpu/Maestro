@@ -1,0 +1,59 @@
+<% content_for :title, "Trazer do SIAGE | Maestro" %>
+
+<script type="application/json" id="maestro-siage-handoff"><%= raw json_escape(@handoff.to_json) %></script>
+
+<div class="page-header page-header-with-action">
+  <div class="siage-page-title">
+    <%= maestro_icon :siage, size: :lg %>
+    <span class="section-eyebrow">SIAGE</span>
+    <h1>Trazer turmas e alunos</h1>
+    <p>
+      A extensão lê <strong>Visualizar Minhas Turmas</strong> e a lista de alunos
+      no portal. Depois você confere aqui antes de gravar. O Maestro não apaga
+      turma nem aluno que já existam.
+    </p>
+  </div>
+
+  <nav class="diary-header-links" aria-label="Atalhos SIAGE">
+    <%= link_to "Abrir SIAGE", siage_open_path, class: "button button-ghost button-small" %>
+    <%= link_to "Ajuda SIAGE", siage_help_path, class: "button button-ghost button-small" %>
+  </nav>
+</div>
+
+<section class="data-card siage-help-card" data-siage-roster-poll="<%= siage_roster_status_path %>">
+  <h2>Como funciona</h2>
+  <ul class="siage-help-list">
+    <li>
+      CPF:
+      <% if @resumo[:cpf] %>
+        cadastrado no perfil.
+      <% else %>
+        ainda não informado —
+        <%= link_to "adicione no perfil", edit_profile_path %>.
+      <% end %>
+    </li>
+    <li>
+      Senha do SIAGE:
+      <% if @resumo[:senha] %>
+        a extensão preenche sozinha.
+      <% else %>
+        ainda não informada —
+        <%= link_to "adicione no perfil", edit_profile_path %>.
+      <% end %>
+    </li>
+    <li>Uma turma do Maestro por nome (ex.: 2ª F). O componente vira disciplina.</li>
+    <li>Aluno com o mesmo nome só é matriculado. Nome novo é criado. Nada é apagado.</li>
+  </ul>
+
+  <p>
+    <%= link_to "Ler turmas no SIAGE",
+                Siage::ORIGIN + "/auth",
+                class: "button button-primary",
+                data: { siage_open: true },
+                target: "_blank",
+                rel: "noopener" %>
+  </p>
+  <p class="classroom-pending-help" data-siage-roster-wait hidden>
+    A extensão está lendo o portal. Esta tela atualiza sozinha quando a lista chegar.
+  </p>
+</section>

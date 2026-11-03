@@ -1,16 +1,19 @@
 module Siage
   class Handoff
-    def self.payload(professor:, origin:, classroom: nil)
-      new(professor: professor, origin: origin, classroom: classroom).payload
+    def self.payload(professor:, origin:, classroom: nil, mode: nil)
+      new(professor: professor, origin: origin, classroom: classroom, mode: mode).payload
     end
 
-    def initialize(professor:, origin:, classroom: nil)
+    def initialize(professor:, origin:, classroom: nil, mode: nil)
       @professor = professor
       @origin = origin.to_s.presence
       @classroom = classroom
+      @mode = mode.to_s
     end
 
     def payload
+      return roster_payload if roster?
+
       dados = job
       notas = grade_payloads
       precisa = Array(dados["grupos"]).any? || notas.any?
@@ -28,7 +31,35 @@ module Siage
 
     private
 
-    attr_reader :professor, :origin, :classroom
+    attr_reader :professor, :origin, :classroom, :mode
+
+    def roster?
+      mode == "roster"
+    end
+
+    def roster_payload
+      token = Siage::ExtensionToken.generate(professor)
+      dados = {
+        "kind" => "roster",
+        "status" => "aguardando-login",
+        "teste" => false,
+        "grupos" => [],
+        "turmas" => [],
+        "token" => token,
+        "origin" => origin.to_s,
+        "criado" => Time.current.to_i
+      }
+
+      {
+        "cpf" => professor.cpf.to_s,
+        "senha" => professor.siage_password.to_s,
+        "origin" => origin,
+        "token" => token,
+        "mode" => "roster",
+        "job" => dados,
+        "grades" => []
+      }
+    end
 
     def open_lessons
       @open_lessons ||= Siage::Ledger.new(professor: professor, classroom: classroom).open_lessons

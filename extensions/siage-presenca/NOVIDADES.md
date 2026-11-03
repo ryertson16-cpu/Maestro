@@ -1,3 +1,7 @@
+# Novidades: versão 4.9.0 (03/11/2026)
+
+- **Trazer do SIAGE**: lê Visualizar Minhas Turmas e os alunos, manda ao Maestro para conferir e gravar. Não apaga lista antiga e não traz frequência nem nota.
+
 # Novidades: versão 4.8.4 (29/10/2026)
 
 - O ZIP da extensão baixa em cadernomaestro.com.br. O caderno publicado (`.com.br` e `www`) conversa com a extensão; **Abrir SIAGE** no site passa a entregar a chamada.

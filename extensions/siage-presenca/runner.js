@@ -1688,14 +1688,209 @@
     return { ok: false, travou: true, msg: "o SIAGE não respondeu" };
   }
 
-  // ---------- Laço principal ----------
-  let trabalhando = false;
-  async function trabalhar() {
+  function indiceColuna(ths, re) {
+    return ths.findIndex((t) => re.test(t));
+  }
+
+  function colunasDaListagem() {
+    const ths = q("th, thead td, [role=columnheader]").map((el) => norm(el.textContent));
+    return {
+      turma: Math.max(0, indiceColuna(ths, /^turma$/)),
+      componente: indiceColuna(ths, /componente/)
+    };
+  }
+
+  function lerLinhaListagem(tr, cols) {
+    const textos = q("td", tr).map((td) => (td.innerText || td.textContent || "").trim().split("\n")[0].trim());
+    const turma = textos[cols.turma] || textos[0] || "";
+    const componente = (cols.componente >= 0 ? textos[cols.componente] : textos[1]) || "";
+    const link = q("a[href*='/turma/']", tr)[0];
+    const href = link ? (link.getAttribute("href") || link.href || "") : "";
+    const turmaId = (String(href).match(/\/turma\/([0-9a-f-]{8,})/i) || [])[1] || "";
+    return { turma, componente, turmaId };
+  }
+
+  function pareceNomeAluno(s) {
+    const t = norm(s);
+    if (!t || t.length < 3) return false;
+    if (/^(turma|componente|acao|acoes|n|no|matricula|frequencia|data|periodo|tempo|estudantes|aluno|nome|situacao)$/.test(t)) return false;
+    if (/^\d+([.,]\d+)?$/.test(t)) return false;
+    return /[a-z]/.test(t);
+  }
+
+  function nomesDosAlunosNaTurma() {
+    const nomes = [];
+    const visto = new Set();
+    q("table tbody tr, .p-datatable-tbody > tr").forEach((tr) => {
+      if (!visivel(tr) || tr.closest("#siage-fila-painel")) return;
+      const cells = q("td", tr).map((td) => (td.innerText || "").trim().split("\n")[0].trim()).filter(Boolean);
+      if (!cells.length) return;
+      const nome = cells.find(pareceNomeAluno);
+      if (!nome) return;
+      const key = norm(nome);
+      if (visto.has(key)) return;
+      visto.add(key);
+      const matriculaCell = cells.find((c) => {
+        const d = c.replace(/\D/g, "");
+        return d.length >= 5 && d.length <= 20 && !pareceNomeAluno(c);
+      });
+      nomes.push({ name: nome, registration: matriculaCell ? matriculaCell.replace(/\D/g, "") : "" });
+    });
+    return nomes;
+  }
+
+  async function coletarListagemTurmas(job) {
+    const cols = colunasDaListagem();
+    const primeira = q(".ngx-pagination li a, .pagination li a, pagination-controls a").find((a) => visivel(a) && norm(a.textContent).replace(/page/g, "").trim() === "1");
+    if (primeira && !primeira.closest("li.current")) {
+      primeira.click();
+      await esperar(1200);
+    }
+    const mapa = new Map();
+    for (let paginas = 1; paginas < 30; paginas++) {
+      await aguardar(() => linhasListagemTurmas().length > 0, 8000);
+      linhasListagemTurmas().forEach((tr) => {
+        const row = lerLinhaListagem(tr, cols);
+        if (!row.turma) return;
+        const chave = `${norm(row.turma)}|${norm(row.componente)}|${row.turmaId}`;
+        if (!mapa.has(chave)) mapa.set(chave, row);
+      });
+      const proxima = q("li.pagination-next:not(.disabled) a, .pagination-next:not(.disabled) a, a[aria-label*='Next'], a[aria-label*='Próxima']").find(visivel);
+      if (!proxima) break;
+      const antes = linhasListagemTurmas().map((tr) => tr.innerText).join("|");
+      proxima.click();
+      await aguardar(() => linhasListagemTurmas().map((tr) => tr.innerText).join("|") !== antes, 5000);
+      await esperar(700);
+    }
+    job.turmas = [...mapa.values()].map((row) => ({
+      turma: row.turma,
+      componente: row.componente,
+      turmaId: row.turmaId || "",
+      students: null
+    }));
+    await gravarJob(job);
+    return job.turmas;
+  }
+
+  async function enviarRoster(job) {
+    const classrooms = (job.turmas || []).map((t) => ({
+      name: t.turma,
+      componente: t.componente,
+      turma_id: t.turmaId || "",
+      students: Array.isArray(t.students) ? t.students : []
+    }));
+    try {
+      chrome.runtime.sendMessage({
+        tipo: "maestro-roster",
+        token: job.token || "",
+        origin: job.origin || "",
+        classrooms
+      }, () => void chrome.runtime.lastError);
+    } catch (e) {}
+  }
+
+  async function trabalharRoster() {
     if (trabalhando) return;
     trabalhando = true;
     try {
       const { handoff } = await chrome.storage.local.get("handoff");
       let job = await lerJob();
+      if (!job) return;
+      job.kind = "roster";
+      if (ehTelaDeLogin()) {
+        await preencherLogin(handoff || { cpf: "" });
+        job = await lerJob();
+      }
+      if (job.status === "aguardando-login" && !ehTelaDeLogin()) {
+        job.status = "rodando";
+        await gravarJob(job);
+      }
+      if (job.status !== "rodando") return;
+      desenharPainel(job, "Lendo turmas do SIAGE…");
+      const entrada = await entrarNoDiario();
+      if (entrada === "login" || entrada === "navegando") return;
+      if (!Array.isArray(job.turmas) || !job.turmas.length) {
+        if (!ehListagemTurmas()) {
+          location.href = URL_LISTAGEM;
+          return;
+        }
+        await coletarListagemTurmas(job);
+        job = await lerJob();
+        if (!job.turmas.length) {
+          job.status = "concluido";
+          await gravarJob(job);
+          await enviarRoster(job);
+          desenharPainel(job, "Não achei turmas na listagem.");
+          try { await chrome.storage.local.remove("handoff"); } catch (e) {}
+          return;
+        }
+      }
+      const falta = (job.turmas || []).findIndex((t) => t.students == null);
+      if (falta < 0) {
+        job.status = "concluido";
+        await gravarJob(job);
+        await enviarRoster(job);
+        desenharPainel(job, "Lista lida. Volte ao Maestro para conferir.");
+        try { await chrome.storage.local.remove("handoff"); } catch (e) {}
+        try { await chrome.storage.session.remove("senha"); } catch (e) {}
+        return;
+      }
+      const grupo = job.turmas[falta];
+      desenharPainel(job, `Alunos de ${grupo.turma}${grupo.componente ? " · " + grupo.componente : ""}…`);
+      if (grupo.turmaId && !/\/turma\//.test(location.pathname)) {
+        location.href = `${URL_LISTAGEM}/turma/${grupo.turmaId}/frequencia`;
+        return;
+      }
+      if (!grupo.turmaId && ehListagemTurmas()) {
+        const linha = await acharNaListagem({ turma: grupo.turma, componente: grupo.componente });
+        if (linha) {
+          const btn = botaoPrancheta(linha);
+          if (btn) {
+            clicarNativo(btn);
+            await esperar(800);
+            return;
+          }
+        }
+        grupo.students = [];
+        await gravarJob(job);
+        return;
+      }
+      const idNaUrl = (location.pathname.match(/\/turma\/([0-9a-f-]{8,})/i) || [])[1];
+      if (idNaUrl && !grupo.turmaId) {
+        grupo.turmaId = idNaUrl;
+        await gravarJob(job);
+      }
+      if (/\/turma\//.test(location.pathname) && !/\/frequencia/i.test(location.pathname) && !ehTelaDeAvaliacoes()) {
+        location.href = `${URL_LISTAGEM}/turma/${idNaUrl || grupo.turmaId}/frequencia`;
+        return;
+      }
+      await aguardar(() => nomesDosAlunosNaTurma().length > 0 || ehTelaDeAvaliacoes() || naLista(), 8000);
+      let alunos = nomesDosAlunosNaTurma();
+      if (!alunos.length && !ehTelaDeAvaliacoes() && clicarNav(/registro de avaliacoes/)) {
+        await aguardar(() => ehTelaDeAvaliacoes() || nomesDosAlunosNaTurma().length > 0, 8000);
+        alunos = nomesDosAlunosNaTurma();
+      }
+      grupo.students = alunos;
+      await gravarJob(job);
+      location.href = URL_LISTAGEM;
+    } finally {
+      trabalhando = false;
+    }
+  }
+
+  // ---------- Laço principal ----------
+  let trabalhando = false;
+  async function trabalhar() {
+    if (trabalhando) return;
+    const extra = await chrome.storage.local.get(["handoff", "job"]);
+    const jobAtual = extra.job || await lerJob();
+    if ((jobAtual && jobAtual.kind === "roster") || (extra.handoff && extra.handoff.mode === "roster")) {
+      return trabalharRoster();
+    }
+    trabalhando = true;
+    try {
+      const { handoff } = extra;
+      let job = jobAtual;
       const precisaLogin = !!(handoff || (job && job.status !== "concluido" && job.status !== "parado"));
       if (ehTelaDeLogin() && precisaLogin) {
         await preencherLogin(handoff || { cpf: "" });

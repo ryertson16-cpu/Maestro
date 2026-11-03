@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "SIAGE Presença Automática",
-  "version": "4.8.4",
-  "description": "Registra frequência e notas no SIAGE a partir dos arquivos do Maestro.",
+  "version": "4.9.0",
+  "description": "Registra frequência e notas no SIAGE e traz turmas e alunos para o Maestro.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
     "https://professor.see.pb.gov.br/*",

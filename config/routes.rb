@@ -335,6 +335,22 @@ Rails.application.routes.draw do
        to: "siage/extension_results#create",
        as: :siage_extension_result
 
+  post "/siage/extensao/roster",
+       to: "siage/extension_rosters#create",
+       as: :siage_extension_roster
+
+  get "/siage/trazer",
+      to: "siage/rosters#show",
+      as: :siage_roster
+
+  get "/siage/trazer/status",
+      to: "siage/rosters#status",
+      as: :siage_roster_status
+
+  post "/siage/trazer",
+       to: "siage/rosters#apply",
+       as: :apply_siage_roster
+
   get "/horario",
       to: "timetables#show",
       as: :timetable

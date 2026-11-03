@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_31_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_03_120000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -616,6 +616,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_120000) do
     t.check_constraint "bimester BETWEEN 1 AND 4", name: "series_bimester_settings_bimester_range"
   end
 
+  create_table "siage_classroom_bindings", force: :cascade do |t|
+    t.integer "classroom_id", null: false
+    t.string "componente"
+    t.integer "course_id"
+    t.datetime "created_at", null: false
+    t.integer "professor_id", null: false
+    t.string "siage_turma_id"
+    t.string "turma_name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["classroom_id", "course_id"], name: "index_siage_bindings_on_classroom_and_course"
+    t.index ["classroom_id"], name: "index_siage_classroom_bindings_on_classroom_id"
+    t.index ["course_id"], name: "index_siage_classroom_bindings_on_course_id"
+    t.index ["professor_id", "siage_turma_id"], name: "index_siage_bindings_unique_turma_id", unique: true, where: "siage_turma_id IS NOT NULL AND siage_turma_id != ''"
+    t.index ["professor_id"], name: "index_siage_classroom_bindings_on_professor_id"
+  end
+
+  create_table "siage_roster_imports", force: :cascade do |t|
+    t.datetime "applied_at"
+    t.datetime "created_at", null: false
+    t.text "error_message"
+    t.json "payload", default: {}, null: false
+    t.json "preview", default: {}
+    t.integer "professor_id", null: false
+    t.string "status", default: "pending_review", null: false
+    t.datetime "updated_at", null: false
+    t.index ["professor_id", "created_at"], name: "index_siage_roster_imports_on_professor_id_and_created_at"
+    t.index ["professor_id"], name: "index_siage_roster_imports_on_professor_id"
+  end
+
   create_table "siage_shipments", force: :cascade do |t|
     t.integer "bimester"
     t.integer "classroom_id", null: false
@@ -938,6 +967,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_120000) do
   add_foreign_key "schools", "professors"
   add_foreign_key "series_bimester_settings", "grade_levels"
   add_foreign_key "series_bimester_settings", "professors"
+  add_foreign_key "siage_classroom_bindings", "classrooms"
+  add_foreign_key "siage_classroom_bindings", "courses"
+  add_foreign_key "siage_classroom_bindings", "professors"
+  add_foreign_key "siage_roster_imports", "professors"
   add_foreign_key "siage_shipments", "classrooms"
   add_foreign_key "siage_shipments", "lessons"
   add_foreign_key "siage_shipments", "professors"

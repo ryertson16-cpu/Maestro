@@ -35,6 +35,8 @@ class Professor < ApplicationRecord
 
   has_many :agent_conversations, dependent: :destroy
   has_many :siage_shipments, dependent: :destroy
+  has_many :siage_classroom_bindings, dependent: :destroy
+  has_many :siage_roster_imports, dependent: :destroy
   has_many :school_calendar_days, dependent: :destroy
   has_many :timetable_entries, dependent: :destroy
   has_many :council_notes, dependent: :destroy

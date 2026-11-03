@@ -1,4 +1,7 @@
 class MarketingController < ApplicationController
+  skip_before_action :require_maestro_subscription,
+                     only: %i[home download siage_extension]
+
   def home
   end
 
