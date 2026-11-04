@@ -294,26 +294,7 @@ function escHtml(s) {
   return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-async function mostrarTrabalho() {
-  const { job } = await chrome.storage.local.get("job");
-  if (!job) { $("trabalho").style.display = "none"; return; }
-  if (job.kind === "roster") {
-    const turmas = job.turmas || [];
-    const nome = { rodando: "Em andamento", parado: "Parado", concluido: "Concluído" }[job.status] || job.status;
-    const linhas = turmas.map((t) => {
-      const n = escHtml(`${t.turma || ""}${t.componente ? " · " + t.componente : ""}`);
-      let badge = "";
-      if (t.estado === "ja") badge = `<b style="color:#5b4bdb;white-space:nowrap">turma já lida</b>`;
-      else if (t.estado === "lida") badge = `<b style="color:#15803d;white-space:nowrap">lida ✓</b>`;
-      else if (t.estado === "lendo") badge = `<span style="color:#1d4ed8">lendo…</span>`;
-      return `<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-top:1px solid #e5e7eb"><span>${n}</span>${badge}</div>`;
-    }).join("");
-    $("trabalhoTexto").innerHTML = `<div><b>Turmas do SIAGE · ${escHtml(nome)}</b></div>${linhas || "<div>Aguardando a listagem…</div>"}`;
-    const pend = turmas.some((t) => t.students == null);
-    $("continuar").style.display = pend && job.status !== "rodando" ? "" : "none";
-    $("trabalho").style.display = "block";
-    return;
-  }
+function textoFilaChamada(job) {
   const todas = (job.grupos || []).flatMap((g) => g.aulas);
   const ok = todas.filter((a) => a.estado === "ok").length;
   const ja = todas.filter((a) => a.estado === "ja").length;
@@ -324,25 +305,75 @@ async function mostrarTrabalho() {
   if (ja) partes.push(`${ja} já no SIAGE`);
   if (erro) partes.push(`${erro} com erro`);
   if (pend) partes.push(`${pend} pendentes`);
-  $("trabalhoTexto").textContent = `${nome}: ${partes.join(", ")}${job.teste ? " (modo teste)" : ""}.`;
-  $("continuar").style.display = pend && job.status !== "rodando" ? "" : "none";
+  return { html: `<div><b>Frequência · ${escHtml(nome)}</b>: ${partes.join(", ")}${job.teste ? " (modo teste)" : ""}.</div>`, pend, ativo: job.status !== "rodando" && pend };
+}
+
+function textoFilaRoster(job) {
+  const turmas = job.turmas || [];
+  const nome = { rodando: "Em andamento", parado: "Parado", concluido: "Concluído" }[job.status] || job.status;
+  const linhas = turmas.map((t) => {
+    const n = escHtml(`${t.turma || ""}${t.componente ? " · " + t.componente : ""}`);
+    let badge = "";
+    if (t.estado === "ja") badge = `<b style="color:#5b4bdb;white-space:nowrap">turma já lida</b>`;
+    else if (t.estado === "lida") badge = `<b style="color:#15803d;white-space:nowrap">lida ✓</b>`;
+    else if (t.estado === "lendo") badge = `<span style="color:#1d4ed8">lendo…</span>`;
+    return `<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-top:1px solid #e5e7eb"><span>${n}</span>${badge}</div>`;
+  }).join("");
+  const pend = turmas.some((t) => t.students == null);
+  return {
+    html: `<div><b>Turmas do SIAGE · ${escHtml(nome)}</b></div>${linhas || "<div>Aguardando a listagem…</div>"}`,
+    pend,
+    ativo: pend && job.status !== "rodando"
+  };
+}
+
+async function mostrarTrabalho() {
+  const extra = await chrome.storage.local.get(["job", "rosterJob"]);
+  const chamada = extra.job && extra.job.kind !== "roster" ? extra.job : null;
+  const roster = extra.rosterJob || (extra.job && extra.job.kind === "roster" ? extra.job : null);
+  if (!chamada && !roster) { $("trabalho").style.display = "none"; return; }
+  const blocos = [];
+  let podeContinuar = false;
+  if (chamada) {
+    const t = textoFilaChamada(chamada);
+    blocos.push(t.html);
+    if (t.ativo) podeContinuar = true;
+  }
+  if (roster) {
+    const t = textoFilaRoster(roster);
+    blocos.push(t.html);
+    if (t.ativo) podeContinuar = true;
+  }
+  $("trabalhoTexto").innerHTML = blocos.join("<hr style='border:0;border-top:1px solid #e5e7eb;margin:8px 0'>");
+  $("continuar").style.display = podeContinuar ? "" : "none";
   $("trabalho").style.display = "block";
 }
 
 $("continuar").addEventListener("click", async () => {
   const aba = await abaDoSiage();
   if (!aba) return mostrar("Abra o SIAGE (professor.see.pb.gov.br) nesta aba.", "erro");
-  const { job } = await chrome.storage.local.get("job");
+  const extra = await chrome.storage.local.get(["job", "rosterJob"]);
   if ($("senha").value) await chrome.storage.session.set({ senha: $("senha").value });
-  job.status = "rodando";
-  job.teste = false;
-  await chrome.storage.local.set({ job });
+  const chamada = extra.job && extra.job.kind !== "roster" ? extra.job : null;
+  const roster = extra.rosterJob;
+  const pendChamada = chamada && (chamada.grupos || []).some((g) => (g.aulas || []).some((a) => a.estado === "pendente"));
+  if (pendChamada && chamada.status !== "rodando") {
+    chamada.status = "rodando";
+    chamada.teste = false;
+    await chrome.storage.local.set({ job: chamada });
+    await chrome.storage.local.remove("rosterHandoff");
+  } else if (roster && roster.status !== "rodando") {
+    roster.status = "rodando";
+    await chrome.storage.local.set({ rosterJob: roster });
+  }
   await acordarMotor(aba);
   mostrar("Continuando. Acompanhe o painel na página do SIAGE.", "ok");
   mostrarTrabalho();
 });
 $("limpar").addEventListener("click", async () => {
-  await chrome.storage.local.remove("job");
+  await chrome.storage.local.remove(["job", "rosterJob", "rosterHandoff"]);
+  const extra = await chrome.storage.local.get("handoff");
+  if (extra.handoff && extra.handoff.mode === "roster") await chrome.storage.local.remove("handoff");
   await chrome.storage.session.remove("senha");
   mostrarTrabalho();
 });
@@ -354,10 +385,13 @@ $("iniciar").addEventListener("click", async () => {
   const aba = await abaDoSiage();
   if (!aba) return mostrar("Abra o SIAGE (professor.see.pb.gov.br) nesta aba e tente de novo.", "erro");
   const { job: antigo } = await chrome.storage.local.get("job");
-  if (antigo && antigo.status === "rodando") return mostrar("Já há um registro em andamento. Pare pelo painel da página antes.", "erro");
+  if (antigo && antigo.kind !== "roster" && antigo.status === "rodando") {
+    return mostrar("Já há um registro de frequência em andamento. Pare pelo painel da página antes.", "erro");
+  }
   const teste = $("teste").checked;
   if (teste) { grupos.splice(1); grupos[0].aulas.splice(1); }
   await chrome.storage.session.set({ senha: $("senha").value });
+  await chrome.storage.local.remove("rosterHandoff");
   await chrome.storage.local.set({ job: { status: "rodando", teste, grupos, token: token || "", origin: origin || "", criado: Date.now() } });
   try {
     await acordarMotor(aba);
@@ -548,5 +582,5 @@ chrome.storage.local.get(["lista", "teste", "periodo", "de"], (cfg) => {
 });
 
 chrome.storage.onChanged.addListener((mudancas, area) => {
-  if (area === "local" && mudancas.job) mostrarTrabalho();
+  if (area === "local" && (mudancas.job || mudancas.rosterJob)) mostrarTrabalho();
 });

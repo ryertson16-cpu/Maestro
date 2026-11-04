@@ -90,9 +90,19 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.tipo === "abrir-siage") {
     const handoff = msg.handoff || {};
     const senha = String(handoff.senha || "").trim();
-    const gravar = senha
-      ? chrome.storage.session.set({ senha }).then(() => chrome.storage.local.set({ handoff, job: handoff.job || null }))
-      : chrome.storage.local.set({ handoff, job: handoff.job || null });
+    const ehRoster = handoff.mode === "roster" || (handoff.job && handoff.job.kind === "roster");
+    const gravar = (async () => {
+      if (senha) await chrome.storage.session.set({ senha });
+      if (ehRoster) {
+        await chrome.storage.local.set({
+          rosterHandoff: handoff,
+          rosterJob: handoff.job || null
+        });
+        return;
+      }
+      await chrome.storage.local.set({ handoff, job: handoff.job || null });
+      await chrome.storage.local.remove("rosterHandoff");
+    })();
     gravar.then(() => {
       chrome.tabs.create({ url: "https://professor.see.pb.gov.br/auth" });
       sendResponse({ ok: true });

@@ -53,6 +53,60 @@
   const dataBR = (iso) => iso.split("-").reverse().join("/");
   const lerJob = async () => (await chrome.storage.local.get("job")).job;
   const gravarJob = (job) => chrome.storage.local.set({ job });
+  const lerRosterJob = async () => (await chrome.storage.local.get("rosterJob")).rosterJob;
+  const gravarRosterJob = (job) => chrome.storage.local.set({ rosterJob });
+
+  function temAulasPendentes(job) {
+    return !!(job && job.kind !== "roster" && Array.isArray(job.grupos) &&
+      job.grupos.some((g) => (g.aulas || []).some((a) => a.estado === "pendente")));
+  }
+
+  function chamadaAtiva(job) {
+    return !!(job && job.kind !== "roster" && (job.status === "rodando" || job.status === "aguardando-login") &&
+      (temAulasPendentes(job) || (Array.isArray(job.grupos) && job.grupos.length)));
+  }
+
+  function rosterAtivo(job) {
+    return !!(job && (job.status === "rodando" || job.status === "aguardando-login"));
+  }
+
+  async function limparHandoffLista() {
+    try {
+      await chrome.storage.local.remove("rosterHandoff");
+      const extra = await chrome.storage.local.get("handoff");
+      if (extra.handoff && extra.handoff.mode === "roster") {
+        await chrome.storage.local.remove("handoff");
+      }
+    } catch (e) {}
+  }
+
+  async function migrarFilasAntigas() {
+    const extra = await chrome.storage.local.get(["job", "handoff", "rosterJob", "rosterHandoff"]);
+    if (extra.job && extra.job.kind === "roster") {
+      if (!extra.rosterJob) await chrome.storage.local.set({ rosterJob: extra.job });
+      await chrome.storage.local.remove("job");
+    }
+    if (extra.handoff && extra.handoff.mode === "roster") {
+      if (!extra.rosterHandoff) await chrome.storage.local.set({ rosterHandoff: extra.handoff });
+      const grupos = extra.handoff.job && extra.handoff.job.grupos;
+      const temAulas = Array.isArray(grupos) && grupos.some((g) => (g.aulas || []).length);
+      const temNotas = Array.isArray(extra.handoff.grades) && extra.handoff.grades.length;
+      if (!temAulas && !temNotas) await chrome.storage.local.remove("handoff");
+    }
+  }
+
+  async function marcarLoginFeito() {
+    const job = await lerJob();
+    if (job && job.status === "aguardando-login") {
+      job.status = "rodando";
+      await gravarJob(job);
+    }
+    const roster = await lerRosterJob();
+    if (roster && roster.status === "aguardando-login") {
+      roster.status = "rodando";
+      await gravarRosterJob(roster);
+    }
+  }
   function statusDoLivro(estado) {
     if (estado === "ok") return "verified";
     if (estado === "ja") return "already_registered";
@@ -166,11 +220,7 @@
     const acessar = botaoComTexto(/acessar|entrar/) ||
       q("button").filter(visivel).find((b) => /acessar|entrar/i.test(b.textContent || b.value || ""));
     if (acessar && !acessar.disabled) clicarNativo(acessar);
-    const job = await lerJob();
-    if (job && job.status === "aguardando-login") {
-      job.status = "rodando";
-      await gravarJob(job);
-    }
+    await marcarLoginFeito();
     await aguardar(() => ehTelaAnoLetivo() || !ehTelaDeLogin(), 20000);
     return true;
   }
@@ -427,10 +477,12 @@
       <div style="color:#1d4ed8;margin-bottom:6px">${escHtml(atual || "")}</div>${linhas}`;
     painel.querySelector("#siage-fila-botao").onclick = async () => {
       if (rodando) {
-        const j = await lerJob();
-        j.status = "parado";
-        await gravarJob(j);
-        desenharPainel(j, "Parando…");
+        const j = await lerRosterJob();
+        if (j) {
+          j.status = "parado";
+          await gravarRosterJob(j);
+          desenharPainel(j, "Parando…");
+        }
       } else painel.remove();
     };
   }
@@ -1965,7 +2017,8 @@
       }
       return { ...base, students: null, estado: "pendente" };
     });
-    await gravarJob(job);
+    if (job && job.kind === "roster") await gravarRosterJob(job);
+    else await gravarJob(job);
     return job.turmas;
   }
 
@@ -1995,17 +2048,20 @@
     if (trabalhando) return;
     trabalhando = true;
     try {
-      const { handoff } = await chrome.storage.local.get("handoff");
-      let job = await lerJob();
+      const extra = await chrome.storage.local.get(["rosterHandoff", "handoff"]);
+      const handoff = extra.rosterHandoff || (extra.handoff && extra.handoff.mode === "roster" ? extra.handoff : null);
+      let job = await lerRosterJob();
+      if (!job && handoff && handoff.job) job = handoff.job;
       if (!job) return;
       job.kind = "roster";
+      await gravarRosterJob(job);
       if (ehTelaDeLogin()) {
         await preencherLogin(handoff || { cpf: "" });
-        job = await lerJob();
+        job = await lerRosterJob();
       }
       if (job.status === "aguardando-login" && !ehTelaDeLogin()) {
         job.status = "rodando";
-        await gravarJob(job);
+        await gravarRosterJob(job);
       }
       if (job.status !== "rodando") return;
       desenharPainel(job, "Lendo turmas do SIAGE…");
@@ -2017,24 +2073,24 @@
           return;
         }
         await coletarListagemTurmas(job);
-        job = await lerJob();
+        job = await lerRosterJob();
         desenharPainel(job, job.turmas.length ? "Turmas encontradas. Lendo os alunos…" : "Não achei turmas na listagem.");
         if (!job.turmas.length) {
           job.status = "concluido";
-          await gravarJob(job);
+          await gravarRosterJob(job);
           await enviarRoster(job);
           desenharPainel(job, "Não achei turmas na listagem.");
-          try { await chrome.storage.local.remove("handoff"); } catch (e) {}
+          await limparHandoffLista();
           return;
         }
       }
       const falta = (job.turmas || []).findIndex((t) => t.students == null);
       if (falta < 0) {
         job.status = "concluido";
-        await gravarJob(job);
+        await gravarRosterJob(job);
         await enviarRoster(job);
         desenharPainel(job, "Lista lida. Volte ao Maestro para conferir.");
-        try { await chrome.storage.local.remove("handoff"); } catch (e) {}
+        await limparHandoffLista();
         try { await chrome.storage.session.remove("senha"); } catch (e) {}
         return;
       }
@@ -2043,12 +2099,12 @@
       if (irma) {
         grupo.students = irma.students;
         grupo.estado = "ja";
-        await gravarJob(job);
+        await gravarRosterJob(job);
         desenharPainel(job, `${nomeTurmaPainel(grupo)} já lida.`);
         return;
       }
       grupo.estado = "lendo";
-      await gravarJob(job);
+      await gravarRosterJob(job);
       desenharPainel(job, `Alunos de ${nomeTurmaPainel(grupo)}…`);
       if (naAbaFrequencia() || /\/frequencia/i.test(location.pathname)) {
         if (clicarNav(/^visualizar turma$/)) {
@@ -2064,7 +2120,7 @@
         const fichaCerta = await aguardar(() => fichaBateComGrupo(grupo), 12000);
         if (!fichaCerta) {
           grupo.tentativasLeitura = (grupo.tentativasLeitura || 0) + 1;
-          await gravarJob(job);
+          await gravarRosterJob(job);
           location.href = URL_LISTAGEM;
           return;
         }
@@ -2078,7 +2134,7 @@
         const alunos = await coletarEstudantesPaginados();
         grupo.students = alunos;
         marcarTurmaLida(grupo, job);
-        await gravarJob(job);
+        await gravarRosterJob(job);
         desenharPainel(job, `${nomeTurmaPainel(grupo)} ${grupo.estado === "ja" ? "já lida." : "lida."}`);
         location.href = URL_LISTAGEM;
         return;
@@ -2103,7 +2159,7 @@
         }
         grupo.students = [];
         marcarTurmaLida(grupo, job);
-        await gravarJob(job);
+        await gravarRosterJob(job);
         desenharPainel(job, `${nomeTurmaPainel(grupo)} ${grupo.estado === "ja" ? "já lida." : "lida."}`);
         return;
       }
@@ -2117,15 +2173,30 @@
   let trabalhando = false;
   async function trabalhar() {
     if (trabalhando) return;
-    const extra = await chrome.storage.local.get(["handoff", "job"]);
-    const jobAtual = extra.job || await lerJob();
-    if ((jobAtual && jobAtual.kind === "roster") || (extra.handoff && extra.handoff.mode === "roster")) {
+    await migrarFilasAntigas();
+    const extra = await chrome.storage.local.get(["handoff", "job", "rosterJob", "rosterHandoff"]);
+    const jobAtual = extra.job;
+    const rosterJob = extra.rosterJob;
+    const pediuLista = !!(extra.rosterHandoff || (extra.handoff && extra.handoff.mode === "roster"));
+    if (chamadaAtiva(jobAtual) || temAulasPendentes(jobAtual)) {
+      await limparHandoffLista();
+      const limpo = await chrome.storage.local.get(["handoff", "job"]);
+      return trabalharChamada(limpo);
+    }
+    if (rosterAtivo(rosterJob) || pediuLista) {
       return trabalharRoster();
     }
+    if (jobAtual && jobAtual.kind !== "roster" && (jobAtual.status === "rodando" || jobAtual.status === "aguardando-login")) {
+      return trabalharChamada(extra);
+    }
+  }
+
+  async function trabalharChamada(extra) {
+    if (trabalhando) return;
     trabalhando = true;
     try {
-      const { handoff } = extra;
-      let job = jobAtual;
+      const { handoff } = extra || {};
+      let job = extra && extra.job;
       const precisaLogin = !!(handoff || (job && job.status !== "concluido" && job.status !== "parado"));
       if (ehTelaDeLogin() && precisaLogin) {
         await preencherLogin(handoff || { cpf: "" });
@@ -2136,6 +2207,7 @@
         job.status = "rodando";
         await gravarJob(job);
       }
+      if (!job || job.kind === "roster" || !Array.isArray(job.grupos)) return;
       const trabalhou = !!(job && job.status === "rodando");
       while (job && job.status === "rodando") {
         if (ehTelaAnoLetivo()) desenharPainel(job, "Selecionando ano letivo e matrícula…");
@@ -2271,11 +2343,14 @@
   setTimeout(trabalhar, 1500);
   setInterval(async () => {
     if (trabalhando) return;
-    const job = await lerJob();
-    const ativo = job && (job.status === "rodando" || job.status === "aguardando-login");
-    let handoff = null;
-    try { handoff = (await chrome.storage.local.get("handoff")).handoff; } catch (e) {}
-    if (!ativo && !handoff) return;
+    await migrarFilasAntigas();
+    const extra = await chrome.storage.local.get(["job", "handoff", "rosterJob", "rosterHandoff"]);
+    const chamada = chamadaAtiva(extra.job) || temAulasPendentes(extra.job) ||
+      (extra.job && extra.job.kind !== "roster" && (extra.job.status === "rodando" || extra.job.status === "aguardando-login"));
+    const lista = rosterAtivo(extra.rosterJob) || extra.rosterHandoff ||
+      (extra.handoff && extra.handoff.mode === "roster");
+    const notas = extra.handoff && extra.handoff.mode !== "roster";
+    if (!chamada && !lista && !notas) return;
     trabalhar();
   }, 2500);
 })();

@@ -1,3 +1,7 @@
+# Novidades: versão 4.9.5 (04/11/2026)
+
+- Frequência e Trazer turmas viram filas separadas. Uma não cancela a outra. Trazer alunos só quando o Maestro pede; a chamada só quando há aula para lançar. O pedido de lista some ao terminar ou ao iniciar uma chamada.
+
 # Novidades: versão 4.9.4 (03/11/2026)
 
 - Trazer do SIAGE: o aluno fica só na turma/curso dele. Não copia a lista de uma turma para outra.
