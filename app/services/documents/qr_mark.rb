@@ -32,16 +32,16 @@ module Documents
       return if @url.blank?
 
       png = RQRCode::QRCode.new(@url, level: :l).as_png(
-        bit_depth: 1,
+        bit_depth: 8,
         border_modules: 4,
-        color_mode: ChunkyPNG::COLOR_GRAYSCALE,
-        color: "000000",
+        color_mode: ChunkyPNG::COLOR_TRUECOLOR,
+        color: ChunkyPNG::Color::BLACK,
         file: nil,
-        fill: "ffffff",
+        fill: ChunkyPNG::Color::WHITE,
         module_px_size: 16,
         resize_exactly_to: false,
         resize_gte_to: false,
-        size: 512
+        size: 640
       )
 
       tempfile = Tempfile.new(["maestro-qr", ".png"])

@@ -448,6 +448,7 @@ module Documents
       if url.present?
         pdf.fill_color "FFFFFF"
         pdf.fill_rectangle [ (width - qr_size) / 2.0 - 2, qr_size + 4 ], qr_size + 4, qr_size + 4
+        pdf.fill_color "000000"
         @qr.draw(pdf, size: qr_size, url: url, at: [ (width - qr_size) / 2.0, qr_size + 2 ])
       end
     end
