@@ -202,7 +202,7 @@ async function sendCard(root, studentId, canvas) {
   body.append("authenticity_token", csrfToken())
   body.append("student_id", studentId)
   body.append("card", blob, "cartao.jpg")
-  appendReading(body, readPrintedCard(canvas, bubbleOptions(root)))
+  appendReading(body, readPrintedCard(canvas, { ...bubbleOptions(root), jsQR: window.jsQR }))
 
   const response = await fetch(scanUrl, {
     method: "POST",
@@ -426,12 +426,44 @@ function frameIsBlank(canvas) {
 }
 
 async function canvasFromFile(file) {
-  const image = await fileImageData(file)
+  const source = await orientedSource(file)
+  const maxSide = 1600
+  const sourceWidth = source.naturalWidth || source.width
+  const sourceHeight = source.naturalHeight || source.height
+  const scale = Math.min(1, maxSide / Math.max(sourceWidth, sourceHeight))
   const canvas = document.createElement("canvas")
-  canvas.width = image.width
-  canvas.height = image.height
-  canvas.getContext("2d").putImageData(image, 0, 0)
+  canvas.width = Math.max(1, Math.round(sourceWidth * scale))
+  canvas.height = Math.max(1, Math.round(sourceHeight * scale))
+  canvas.getContext("2d", { willReadFrequently: true }).drawImage(source, 0, 0, canvas.width, canvas.height)
+  if (source.close) source.close()
   return canvas
+}
+
+async function orientedSource(file) {
+  if (typeof createImageBitmap === "function") {
+    try {
+      return await createImageBitmap(file, { imageOrientation: "from-image" })
+    } catch (_error) {}
+  }
+
+  const image = await fileImageElement(file)
+  return image
+}
+
+function fileImageElement(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    const url = URL.createObjectURL(file)
+    image.onload = () => {
+      URL.revokeObjectURL(url)
+      resolve(image)
+    }
+    image.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error("foto"))
+    }
+    image.src = url
+  })
 }
 
 function bindFileCapture(root) {
@@ -447,7 +479,8 @@ function bindFileCapture(root) {
     setBanner(root, "Lendo as bolhas da foto…", "wait")
     let reading = null
     try {
-      reading = readPrintedCard(await canvasFromFile(file), bubbleOptions(root))
+      const jsQR = await loadJsQr().catch(() => window.jsQR)
+      reading = readPrintedCard(await canvasFromFile(file), { ...bubbleOptions(root), jsQR })
     } catch (_error) {}
 
     if (form && root.hasAttribute("data-qr-grade") && knownStudent) {

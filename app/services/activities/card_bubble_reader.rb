@@ -3,7 +3,7 @@ require "chunky_png"
 module Activities
   class CardBubbleReader
     MAX_SIDE = 720
-    DARK = 78
+    DARK = 120
 
     def self.read(path, question_count:, letters:)
       new(path, question_count, letters).read
@@ -63,9 +63,9 @@ module Activities
     end
 
     def image_pipeline
-      ImageProcessing::Vips.source(@path)
+      ImageProcessing::Vips.source(@path).auto_orient
     rescue LoadError, StandardError
-      ImageProcessing::MiniMagick.source(@path)
+      ImageProcessing::MiniMagick.source(@path).auto_orient
     rescue LoadError, StandardError
       nil
     end
@@ -170,8 +170,8 @@ module Activities
 
           box_w = max_x - min_x + 1
           box_h = max_y - min_y + 1
-          next if count < 40 || count > 6000
-          next if box_w < 6 || box_h < 6
+          next if count < 24 || count > 12000
+          next if box_w < 5 || box_h < 5
           ratio = box_w.to_f / box_h
           next unless ratio.between?(0.65, 1.45)
           next if count < (box_w * box_h) * 0.45
@@ -185,9 +185,10 @@ module Activities
     def chosen_letter(samples)
       ordered = samples.sort_by { |sample| sample[:lum] }
       best = ordered[0]
-      second = ordered[1]
-      return if best.nil? || best[:lum] > 150
-      return if second && (second[:lum] - best[:lum]) < 30
+      return if best.nil? || best[:lum] > 170
+      rest = ordered.drop(1)
+      rest_average = rest.sum { |sample| sample[:lum] } / [ rest.size, 1 ].max.to_f
+      return if rest_average - best[:lum] < 18
 
       best[:letter]
     end

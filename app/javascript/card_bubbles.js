@@ -10,15 +10,31 @@ export function readPrintedCard(canvas, options = {}) {
   const image = sampleCanvas(canvas)
   if (!image) return null
 
+  const qr = locateQr(image, options.jsQR)
   const corners = findCorners(image)
-  if (!corners) return null
+  const fromQr = qr && sampleGrid(
+    image,
+    homography(qrCardCorners(qr.version), qr.corners),
+    Math.hypot(qr.corners[1][0] - qr.corners[0][0], qr.corners[1][1] - qr.corners[0][1]) * 0.05,
+    questionCount,
+    letterCount
+  )
+  const fromCorners = corners && sampleGrid(
+    image,
+    homography(fiducials(), corners),
+    Math.hypot(corners[1][0] - corners[0][0], corners[1][1] - corners[0][1]) * 0.012,
+    questionCount,
+    letterCount
+  )
+  return richer(fromQr, fromCorners)
+}
 
-  const warp = homography(fiducials(), corners)
+function sampleGrid(image, warp, spanRadius, questionCount, letterCount) {
   if (!warp) return null
 
   const answers = {}
   let covered = 0
-  const radius = Math.max(2, Math.round(Math.hypot(corners[1][0] - corners[0][0], corners[1][1] - corners[0][1]) * 0.012))
+  const radius = Math.max(3, Math.round(spanRadius))
   Object.entries(bubblePoints(questionCount, letterCount)).forEach(([ number, letters ]) => {
     const samples = Object.entries(letters).map(([ letter, point ]) => {
       const [ x, y ] = warp(point[0], point[1])
@@ -30,9 +46,18 @@ export function readPrintedCard(canvas, options = {}) {
     covered += 1
     if (decision.letter) answers[number] = decision.letter
   })
-
   if (covered < 1) return null
   return { answers, covered }
+}
+
+function richer(first, second) {
+  if (!first) return second
+  if (!second) return first
+  const firstLetters = Object.keys(first.answers).length
+  const secondLetters = Object.keys(second.answers).length
+  if (secondLetters > firstLetters) return second
+  if (firstLetters > secondLetters) return first
+  return (second.covered || 0) > (first.covered || 0) ? second : first
 }
 
 function bubblePoints(count, letterCount) {
@@ -65,8 +90,74 @@ function fiducials() {
   return [ [ x, y ], [ 1 - x, y ], [ x, 1 - y ], [ 1 - x, 1 - y ] ]
 }
 
+function qrCardCorners(version) {
+  const modules = 21 + ((Number(version) || 2) - 1) * 4
+  const inset = 4 / (modules + 8)
+  const width = 58 / CARD_W
+  const height = 58 / CARD_H
+  const left = ((CARD_W - 58) / 2) / CARD_W
+  const top = (CARD_H - 60) / CARD_H
+  return [
+    [ left + (width * inset), top + (height * inset) ],
+    [ left + (width * (1 - inset)), top + (height * inset) ],
+    [ left + (width * inset), top + (height * (1 - inset)) ],
+    [ left + (width * (1 - inset)), top + (height * (1 - inset)) ]
+  ]
+}
+
+function locateQr(image, jsQR) {
+  if (!jsQR) return null
+
+  const regions = [
+    { x: 0, y: 0, width: image.width, height: image.height },
+    { x: 0, y: Math.floor(image.height * 0.5), width: image.width, height: Math.ceil(image.height * 0.5) },
+    {
+      x: Math.floor(image.width * 0.15),
+      y: Math.floor(image.height * 0.55),
+      width: Math.ceil(image.width * 0.7),
+      height: Math.ceil(image.height * 0.42)
+    }
+  ]
+  for (const region of regions) {
+    const found = decodeRegion(image, jsQR, region)
+    if (found) return found
+  }
+  return null
+}
+
+function decodeRegion(image, jsQR, region) {
+  const width = Math.max(1, Math.min(region.width, image.width - region.x))
+  const height = Math.max(1, Math.min(region.height, image.height - region.y))
+  const data = new Uint8ClampedArray(width * height * 4)
+  for (let y = 0; y < height; y += 1) {
+    const source = (((region.y + y) * image.width) + region.x) * 4
+    data.set(image.data.subarray(source, source + (width * 4)), y * width * 4)
+  }
+
+  let found = null
+  try {
+    found = jsQR(data, width, height, { inversionAttempts: "attemptBoth" })
+  } catch (_error) {
+    return null
+  }
+  const location = found?.location
+  if (!location?.topLeftCorner || !location.topRightCorner || !location.bottomLeftCorner || !location.bottomRightCorner) {
+    return null
+  }
+  const shift = (point) => [ point.x + region.x, point.y + region.y ]
+  return {
+    version: found.version,
+    corners: [
+      shift(location.topLeftCorner),
+      shift(location.topRightCorner),
+      shift(location.bottomLeftCorner),
+      shift(location.bottomRightCorner)
+    ]
+  }
+}
+
 function sampleCanvas(canvas) {
-  const scale = Math.min(1, 720 / Math.max(canvas.width, canvas.height))
+  const scale = Math.min(1, 1200 / Math.max(canvas.width, canvas.height))
   const width = Math.max(1, Math.round(canvas.width * scale))
   const height = Math.max(1, Math.round(canvas.height * scale))
   const copy = document.createElement("canvas")
@@ -158,7 +249,7 @@ function darkSquares(image) {
       const boxW = maxX - minX + 1
       const boxH = maxY - minY + 1
       const ratio = boxW / boxH
-      if (count < 40 || count > 6000 || boxW < 6 || boxH < 6) continue
+      if (count < 24 || count > 12000 || boxW < 5 || boxH < 5) continue
       if (ratio < 0.65 || ratio > 1.45) continue
       if (count < boxW * boxH * 0.45) continue
       blobs.push({ x: sumX / count, y: sumY / count, area: count })
@@ -170,11 +261,12 @@ function darkSquares(image) {
 function chosen(samples) {
   const ordered = samples.slice().sort((a, b) => a.lum - b.lum)
   const best = ordered[0]
-  const second = ordered[1]
+  const rest = ordered.slice(1)
   if (!best) return null
-  if (best.lum > 150) return { letter: null }
-  if (second && (second.lum - best.lum) < 30) return null
-  return { letter: best.letter }
+  const restAverage = rest.reduce((sum, sample) => sum + sample.lum, 0) / Math.max(rest.length, 1)
+  if (best.lum <= 170 && restAverage - best.lum >= 18) return { letter: best.letter }
+  if (ordered.every((sample) => sample.lum >= 185)) return { letter: null }
+  return null
 }
 
 function luminanceAt(image, x, y, radius) {
@@ -197,7 +289,7 @@ function luminanceAt(image, x, y, radius) {
 
 function darkAt(data, pixelIndex) {
   const index = pixelIndex * 4
-  return ((data[index] + data[index + 1] + data[index + 2]) / 3) <= 78
+  return ((data[index] + data[index + 1] + data[index + 2]) / 3) <= 120
 }
 
 function homography(sources, destinations) {
