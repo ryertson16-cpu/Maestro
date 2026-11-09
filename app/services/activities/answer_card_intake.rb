@@ -32,10 +32,14 @@ module Activities
 
     def scan_for_student!(upload, student:, overwrite: true)
       return PhoneScan.new(status: :missing_photo) unless upload.respond_to?(:original_filename)
-      return PhoneScan.new(status: :lira_off) unless @vision || Lira.llm_enabled?
 
       path = persist_temp(upload)
       scan = read_card(path)
+      if scan.nil?
+        return PhoneScan.new(status: :lira_off) unless @vision || Lira.llm_enabled?
+
+        return PhoneScan.new(status: :empty)
+      end
       answers = scan&.answers || {}
       filled = scan&.filled_count.to_i
       mapped = answers_for_grader(answers, student: student)
@@ -111,9 +115,22 @@ module Activities
     end
 
     def read_card(path)
+      local = Activities::CardBubbleReader.read(
+        path,
+        question_count: objective_count,
+        letters: bubble_letters
+      )
+      return local if local&.filled_count.to_i.positive?
+
       return @vision.call(path) if @vision
 
       Activities::AnswerCardVision.scan(path, question_count: card_number_count)
+    end
+
+    def bubble_letters
+      count = @activity.activity_questions.select(&:objective?).map { |item| item.choice_pairs.size }.max.to_i
+      count = 5 if count < 2 || count > 5
+      Question::LETTERS.first(count)
     end
 
     def persist_temp(upload)

@@ -41,12 +41,6 @@ class PublicCorrectionsController < ApplicationController
       return
     end
 
-    unless Lira.llm_enabled?
-      redirect_to gabarito_aluno_path(@activity.correction_token, student),
-                  alert: "A leitura por foto precisa da Lira. Marque as letras na tela."
-      return
-    end
-
     upload = params[:card]
     unless upload.respond_to?(:original_filename)
       redirect_to gabarito_aluno_path(@activity.correction_token, student),
@@ -74,6 +68,9 @@ class PublicCorrectionsController < ApplicationController
       session[:gabarito_preview] = { "student_id" => student.id, "answers" => result.answers }
       redirect_to gabarito_aluno_path(@activity.correction_token, student),
                   alert: "Li as bolhas. Confira as letras e lance a nota. Discursiva você preenche na tela."
+    when :lira_off
+      redirect_to gabarito_aluno_path(@activity.correction_token, student),
+                  alert: "Não li as bolhas neste cartão. Marque as letras na tela."
     else
       session.delete(:gabarito_preview)
       redirect_to gabarito_aluno_path(@activity.correction_token, student),

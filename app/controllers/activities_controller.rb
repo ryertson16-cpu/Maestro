@@ -206,12 +206,6 @@ class ActivitiesController < ApplicationController
       return
     end
 
-    unless Lira.llm_enabled?
-      redirect_to assemble_activity_path(@activity),
-                  alert: "A leitura automática precisa do Maestro com OpenAI ou Gemini. No celular, marque as letras na tela."
-      return
-    end
-
     result = Activities::AnswerCardIntake.new(@activity, professor: current_professor).ingest!(uploads)
     redirect_to results_activity_path(@activity),
                 notice: scan_notice(result)

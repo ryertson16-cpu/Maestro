@@ -1,5 +1,6 @@
 require "test_helper"
 require "chunky_png"
+require "chunky_png"
 
 class Activities::AnswerCardIntakeTest < ActiveSupport::TestCase
   def load_fixtures(_config = ActiveRecord::Base)
@@ -196,6 +197,25 @@ class Activities::AnswerCardIntakeTest < ActiveSupport::TestCase
     assert_equal 8.0, ActivitySubmission.find_by!(activity: @activity, student: @maria).score
   end
 
+  test "phone photo reads the bubbles without calling the remote reader" do
+    called = false
+    intake = Activities::AnswerCardIntake.new(
+      @activity,
+      professor: @professor,
+      vision: lambda { |_path|
+        called = true
+        nil
+      }
+    )
+    file = Rack::Test::UploadedFile.new(painted_card, "image/png")
+
+    result = intake.scan_for_student!(file, student: @maria, overwrite: true)
+
+    assert_equal false, called
+    assert_equal :launched, result.status
+    assert_equal 10.0, result.score
+  end
+
   private
 
   def upload(name)
@@ -207,5 +227,31 @@ class Activities::AnswerCardIntakeTest < ActiveSupport::TestCase
     @uploads ||= []
     @uploads << file
     Rack::Test::UploadedFile.new(file.path, "image/png")
+  end
+
+  def painted_card
+    grid = Activities::BubbleGrid.new(1, %w[A B])
+    width = 420
+    height = (width * Activities::BubbleGrid::CARD_H / Activities::BubbleGrid::CARD_W).round
+    image = ChunkyPNG::Image.new(width, height, ChunkyPNG::Color::WHITE)
+    grid.fiducials.each do |nx, ny|
+      paint(image, nx * width, ny * height, 16)
+    end
+    ax, ay = grid.bubbles.fetch("1").fetch("A")
+    paint(image, ax * width, ay * height, 9, disk: true)
+    path = Rails.root.join("tmp/intake-bubbles-#{SecureRandom.hex(4)}.png").to_s
+    image.save(path)
+    path
+  end
+
+  def paint(image, cx, cy, radius, disk: false)
+    (cy.round - radius).upto(cy.round + radius) do |y|
+      (cx.round - radius).upto(cx.round + radius) do |x|
+        next if x.negative? || y.negative? || x >= image.width || y >= image.height
+        next if disk && ((x - cx)**2) + ((y - cy)**2) > radius**2
+
+        image[x, y] = ChunkyPNG::Color::BLACK
+      end
+    end
   end
 end
