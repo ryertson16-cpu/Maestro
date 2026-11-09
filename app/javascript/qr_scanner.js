@@ -1,3 +1,5 @@
+import { readPrintedCard } from "card_bubbles"
+
 function cardCodeFromText(text) {
   const compact = (text || "").toUpperCase().replace(/[^A-Z0-9]/g, "")
   const match = compact.match(/M(\d{6})(?:A(\d+))?/)
@@ -187,14 +189,20 @@ async function sendCard(root, studentId, canvas) {
   if (!scanUrl || !studentId) return false
 
   const name = studentName(studentId)
-  setBanner(root, name ? `Lendo o gabarito de ${name}…` : "QR lido. Lendo as bolhas…", "wait")
+  setBanner(root, name ? `Lendo o cartão de ${name}…` : "Lendo o cartão…", "wait")
 
   grabFrame(root.querySelector("[data-qr-video]"), canvas)
+  if (frameIsBlank(canvas)) {
+    setBanner(root, "A câmera da tela ficou preta. Toque em Fotografar cartão.", "warn")
+    return false
+  }
+
   const blob = await frameBlob(canvas)
   const body = new FormData()
   body.append("authenticity_token", csrfToken())
   body.append("student_id", studentId)
   body.append("card", blob, "cartao.jpg")
+  appendReading(body, readPrintedCard(canvas, bubbleOptions(root)))
 
   const response = await fetch(scanUrl, {
     method: "POST",
@@ -326,7 +334,6 @@ async function startScanner(root) {
           locked = false
           delete root.dataset.qrLocked
           hits = 0
-          setBanner(root, "Não consegui corrigir. Aproxime o QR grande do cartão.", "warn")
           requestAnimationFrame(tick)
           return
         }
@@ -371,6 +378,62 @@ function fileImageData(file) {
   })
 }
 
+function bubbleOptions(root) {
+  return {
+    questionCount: Number(root.getAttribute("data-question-count")) || 0,
+    letterCount: Number(root.getAttribute("data-letter-count")) || 5
+  }
+}
+
+function appendReading(target, reading) {
+  if (!reading) return
+  const payload = JSON.stringify(reading.answers || {})
+  if (target instanceof FormData) {
+    target.append("bubble_answers", payload)
+    target.append("bubble_covered", String(reading.covered || 0))
+    return
+  }
+
+  let answers = target.querySelector('input[name="bubble_answers"]')
+  if (!answers) {
+    answers = document.createElement("input")
+    answers.type = "hidden"
+    answers.name = "bubble_answers"
+    target.appendChild(answers)
+  }
+  answers.value = payload
+  let covered = target.querySelector('input[name="bubble_covered"]')
+  if (!covered) {
+    covered = document.createElement("input")
+    covered.type = "hidden"
+    covered.name = "bubble_covered"
+    target.appendChild(covered)
+  }
+  covered.value = String(reading.covered || 0)
+}
+
+function frameIsBlank(canvas) {
+  if (!canvas.width || !canvas.height) return true
+  const data = canvas.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, canvas.width, canvas.height).data
+  let total = 0
+  let count = 0
+  const step = Math.max(4, Math.floor(data.length / 8000) * 4)
+  for (let index = 0; index < data.length; index += step) {
+    total += data[index] + data[index + 1] + data[index + 2]
+    count += 1
+  }
+  return count === 0 || (total / count) < 24
+}
+
+async function canvasFromFile(file) {
+  const image = await fileImageData(file)
+  const canvas = document.createElement("canvas")
+  canvas.width = image.width
+  canvas.height = image.height
+  canvas.getContext("2d").putImageData(image, 0, 0)
+  return canvas
+}
+
 function bindFileCapture(root) {
   const input = root.querySelector("[data-qr-file]")
   if (!input) return
@@ -381,6 +444,12 @@ function bindFileCapture(root) {
 
     const form = input.closest("form")
     const knownStudent = root.getAttribute("data-student-id") || ""
+    setBanner(root, "Lendo as bolhas da foto…", "wait")
+    let reading = null
+    try {
+      reading = readPrintedCard(await canvasFromFile(file), bubbleOptions(root))
+    } catch (_error) {}
+
     if (form && root.hasAttribute("data-qr-grade") && knownStudent) {
       let hidden = form.querySelector('input[name="student_id"]')
       if (!hidden) {
@@ -390,7 +459,8 @@ function bindFileCapture(root) {
         form.appendChild(hidden)
       }
       hidden.value = knownStudent
-      setBanner(root, "Enviando o cartão…", "wait")
+      appendReading(form, reading)
+      setBanner(root, reading ? "Bolhas lidas. Lançando a nota…" : "Enviando o cartão…", "wait")
       form.submit()
       return
     }
@@ -416,6 +486,8 @@ function bindFileCapture(root) {
         form.appendChild(hidden)
       }
       hidden.value = studentId
+      appendReading(form, reading)
+      setBanner(root, reading ? "Bolhas lidas. Lançando a nota…" : "Enviando o cartão…", "wait")
       form.submit()
       return
     }
@@ -474,7 +546,6 @@ function bindCaptureNow(root) {
     const sent = await sendCard(root, studentId, canvas).catch(() => false)
     if (!sent) {
       delete root.dataset.qrLocked
-      setBanner(root, "Não consegui corrigir. Enquadre o cartão inteiro e toque de novo.", "warn")
       return
     }
     const stream = video.srcObject
@@ -508,9 +579,7 @@ function bindScanner(root) {
   }
 
   if (phone && grade) {
-    if (start) start.hidden = true
-    setBanner(root, "Aponte para o QR grande do cartão. O Maestro reconhece o aluno sozinho.", "wait")
-    startScanner(root)
+    setBanner(root, "Toque em Fotografar cartão e enquadre a folha inteira, com os quatro quadrados pretos.", "wait")
     return
   }
 

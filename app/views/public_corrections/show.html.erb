@@ -47,14 +47,17 @@
       <p class="correction-kicker">Correção automática</p>
       <h2>Apontar para o cartão</h2>
       <p>
-        Aponte para o QR grande do cartão. O Maestro reconhece o aluno, fotografa
-        e lê as bolhas. Folha <%= @assignment&.slot || "—" %>.
+        Toque em Fotografar cartão. A foto precisa mostrar a folha inteira,
+        com os quatro quadrados pretos. O celular lê as bolhas dessa foto.
+        Folha <%= @assignment&.slot || "—" %>.
       </p>
       <div class="qr-scanner-card"
            data-qr-scanner
            data-qr-grade
            data-scan-url="<%= gabarito_scan_path(@activity.correction_token) %>"
            data-correction-pin="<%= @activity.ensure_correction_pin! %>"
+           data-question-count="<%= @bubble_question_count %>"
+           data-letter-count="<%= @bubble_letter_count %>"
            data-student-id="<%= @student.id %>">
         <%= form_with url: gabarito_scan_path(@activity.correction_token),
                       method: :post,
@@ -150,6 +153,8 @@
     <div class="qr-scanner-card"
          data-qr-scanner
          data-correction-pin="<%= @activity.ensure_correction_pin! %>"
+         data-question-count="<%= @bubble_question_count %>"
+         data-letter-count="<%= @bubble_letter_count %>"
          <% if @lira_ready %>
            data-qr-grade
            data-scan-url="<%= gabarito_scan_path(@activity.correction_token) %>"

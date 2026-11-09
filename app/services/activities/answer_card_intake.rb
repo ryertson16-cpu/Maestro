@@ -30,11 +30,11 @@ module Activities
 
     PhoneScan = Struct.new(:status, :score, :answers, keyword_init: true)
 
-    def scan_for_student!(upload, student:, overwrite: true)
+    def scan_for_student!(upload, student:, overwrite: true, position_answers: nil)
       return PhoneScan.new(status: :missing_photo) unless upload.respond_to?(:original_filename)
 
       path = persist_temp(upload)
-      scan = read_card(path)
+      scan = positioned_scan(position_answers) || read_card(path)
       if scan.nil?
         return PhoneScan.new(status: :lira_off) unless @vision || Lira.llm_enabled?
 
@@ -112,6 +112,26 @@ module Activities
       :pending
     ensure
       File.delete(path) if path && File.exist?(path)
+    end
+
+    def positioned_scan(raw)
+      return if raw.blank?
+
+      parsed = raw.is_a?(String) ? JSON.parse(raw) : raw
+      answers = {}
+      parsed.each do |number, letter|
+        next unless number.to_s.match?(/\A\d+\z/)
+
+        value = letter.to_s.upcase
+        next unless Question::LETTERS.include?(value)
+
+        answers[number.to_s] = value
+      end
+      return if answers.empty?
+
+      AnswerCardVision::Result.new(name: nil, answers: answers, source: "phone", bubbles: nil)
+    rescue JSON::ParserError, NoMethodError
+      nil
     end
 
     def read_card(path)

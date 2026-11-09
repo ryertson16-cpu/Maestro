@@ -216,6 +216,29 @@ class Activities::AnswerCardIntakeTest < ActiveSupport::TestCase
     assert_equal 10.0, result.score
   end
 
+  test "letters read on the phone launch the grade without opening the photo" do
+    called = false
+    intake = Activities::AnswerCardIntake.new(
+      @activity,
+      professor: @professor,
+      vision: lambda { |_path|
+        called = true
+        nil
+      }
+    )
+
+    result = intake.scan_for_student!(
+      upload("vanessa.jpg"),
+      student: @maria,
+      overwrite: true,
+      position_answers: { "1" => "A" }
+    )
+
+    assert_equal false, called
+    assert_equal :launched, result.status
+    assert_equal 10.0, result.score
+  end
+
   private
 
   def upload(name)

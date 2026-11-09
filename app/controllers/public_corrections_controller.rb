@@ -31,6 +31,10 @@ class PublicCorrectionsController < ApplicationController
     @assignment = @student && @assignments_by_student[@student.id]
     @presented = Activities::ExamAssigner.new(@activity).presented_for(@student)
     @lira_ready = Lira.llm_enabled?
+    objective_items = @items.select(&:objective?)
+    @bubble_question_count = objective_items.size
+    letter_count = objective_items.map { |item| item.choice_pairs.size }.max.to_i
+    @bubble_letter_count = letter_count.between?(2, 5) ? letter_count : 5
     apply_photo_preview
   end
 
@@ -57,7 +61,12 @@ class PublicCorrectionsController < ApplicationController
     result = Activities::AnswerCardIntake.new(
       @activity,
       professor: @activity.lesson.professor
-    ).scan_for_student!(upload, student: student, overwrite: true)
+    ).scan_for_student!(
+      upload,
+      student: student,
+      overwrite: true,
+      position_answers: params[:bubble_answers]
+    )
 
     case result.status
     when :launched
