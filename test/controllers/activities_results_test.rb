@@ -60,6 +60,17 @@ class ActivitiesResultsTest < ActionDispatch::IntegrationTest
     assert_match "Exportar notas", response.body
     assert_match "Q1", response.body
     assert_match "Identificado", response.body
+    assert_match "Apagar correção", response.body
+  end
+
+  test "clear results removes the scored correction" do
+    assert_difference -> { ActivitySubmission.where(activity: @activity).count }, -1 do
+      delete clear_results_activity_path(@activity)
+    end
+
+    assert_redirected_to results_activity_path(@activity)
+    follow_redirect!
+    assert_match "Ainda não há cartão lido", response.body
   end
 
   test "grades export is a pdf" do

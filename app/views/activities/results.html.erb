@@ -60,10 +60,21 @@
 </section>
 
 <section class="data-card">
-  <h2>Alunos identificados</h2>
-  <p class="activity-type-hint">
-    Verde na foto: pintou a certa. Vermelho: a certa ficou vazia. Azul: questão em branco.
-  </p>
+  <div class="page-header page-header-with-action">
+    <div>
+      <h2>Alunos identificados</h2>
+      <p class="activity-type-hint">
+        Verde na foto: pintou a certa. Vermelho: a certa ficou vazia. Azul: questão em branco.
+      </p>
+    </div>
+    <% if @result.identified.any? %>
+      <%= button_to "Apagar correção",
+                    clear_results_activity_path(@activity),
+                    method: :delete,
+                    class: "button button-danger",
+                    data: { turbo_confirm: "Apagar as notas e os cartões lidos desta prova?" } %>
+    <% end %>
+  </div>
   <% if @result.identified.any? %>
     <div class="exam-identified">
       <% @result.identified.each do |row| %>

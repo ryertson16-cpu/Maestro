@@ -215,6 +215,13 @@ class ActivitiesController < ApplicationController
     @result = Activities::ExamResult.new(@activity)
   end
 
+  def clear_results
+    @activity.activity_submissions.find_each(&:destroy!)
+    @activity.pending_cards.find_each(&:destroy!)
+    redirect_to results_activity_path(@activity),
+                notice: "Correção apagada. As notas e os cartões saíram deste resultado."
+  end
+
   def grades_export
     result = Activities::ExamResult.new(@activity)
     pdf = Documents::ExamGradesReport.new(

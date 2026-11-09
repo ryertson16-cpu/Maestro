@@ -236,6 +236,7 @@ Rails.application.routes.draw do
       post :grade, path: "corrigir"
       post :scan_cards, path: "cartoes"
       get :results, path: "resultado"
+      delete :clear_results, path: "resultado"
       get :grades_export, path: "resultado/notas", defaults: { format: :pdf }
     end
 
