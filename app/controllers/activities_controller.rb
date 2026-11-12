@@ -215,11 +215,51 @@ class ActivitiesController < ApplicationController
     @result = Activities::ExamResult.new(@activity)
   end
 
+  def edit_result
+    @student = @classroom.students.find(params[:student_id])
+    @submission = @activity.activity_submissions.find_by(student: @student)
+    @answers = @submission&.answers.presence || {}
+    @assignment = @activity.exam_assignments.find_by(student: @student)
+    @presented = Activities::ExamAssigner.new(@activity).presented_for(@student)
+    @score = @submission&.score
+  end
+
+  def update_result
+    student = @classroom.students.find(params[:student_id])
+    answers = params[:answers].presence || {}
+    answers = answers.to_unsafe_h if answers.respond_to?(:to_unsafe_h)
+    assignment = @activity.exam_assignments.find_by(student: student)
+    score = Activities::Grader.new(@activity, assignment: assignment).score(answers)
+    submission = ActivitySubmission.find_or_initialize_by(activity: @activity, student: student)
+    submission.professor = current_professor
+    submission.answers = answers
+    submission.score = score
+    submission.submitted_on ||= Date.current
+
+    if submission.save
+      redirect_to results_activity_path(@activity),
+                  notice: "Acertos de #{student.name} atualizados. Nota #{format('%.1f', score).tr('.', ',')}."
+    else
+      redirect_to edit_result_activity_path(@activity, student_id: student),
+                  alert: submission.errors.full_messages.to_sentence
+    end
+  end
+
   def clear_results
-    @activity.activity_submissions.find_each(&:destroy!)
-    @activity.pending_cards.find_each(&:destroy!)
+    @activity.activity_submissions.find_each { |submission| discard_submission!(submission) }
+    @activity.pending_cards.find_each { |card| discard_card!(card) }
     redirect_to results_activity_path(@activity),
                 notice: "Correção apagada. As notas e os cartões saíram deste resultado."
+  end
+
+  def clear_student_result
+    student = @classroom.students.find(params[:student_id])
+    if (submission = @activity.activity_submissions.find_by(student: student))
+      discard_submission!(submission)
+    end
+    @activity.pending_cards.where(student: student).find_each { |card| discard_card!(card) }
+    redirect_to results_activity_path(@activity),
+                notice: "Correção de #{student.name} apagada."
   end
 
   def grades_export
@@ -368,6 +408,29 @@ class ActivitiesController < ApplicationController
     else
       "atividades-#{Date.current.iso8601}.maestro.json"
     end
+  end
+
+  def discard_submission!(submission)
+    detach_attachment(submission.card_photo)
+    detach_attachment(submission.marked_photo)
+    submission.destroy!
+  rescue StandardError
+    submission.delete
+  end
+
+  def discard_card!(card)
+    detach_attachment(card.card)
+    card.destroy!
+  rescue StandardError
+    card.delete
+  end
+
+  def detach_attachment(attachment)
+    return unless attachment&.attached?
+
+    attachment.purge
+  rescue StandardError
+    attachment.detach
   end
 
   def set_activity

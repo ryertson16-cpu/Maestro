@@ -60,7 +60,8 @@ class ActivitiesResultsTest < ActionDispatch::IntegrationTest
     assert_match "Exportar notas", response.body
     assert_match "Q1", response.body
     assert_match "Identificado", response.body
-    assert_match "Apagar correção", response.body
+    assert_match "Editar acertos", response.body
+    assert_match "Apagar", response.body
   end
 
   test "clear results removes the scored correction" do
@@ -71,6 +72,44 @@ class ActivitiesResultsTest < ActionDispatch::IntegrationTest
     assert_redirected_to results_activity_path(@activity)
     follow_redirect!
     assert_match "Ainda não há cartão lido", response.body
+  end
+
+  test "clear one student keeps the other correction" do
+    other = @professor.students.create!(name: "Bruno Lima")
+    Enrollment.create!(professor: @professor, student: other, classroom: @activity.lesson.classroom, enrolled_on: Date.current, status: "active")
+    ActivitySubmission.create!(
+      activity: @activity,
+      student: other,
+      professor: @professor,
+      score: 4,
+      submitted_on: Date.current,
+      answers: {}
+    )
+    kept = ActivitySubmission.find_by!(activity: @activity, student: @activity.lesson.classroom.students.find_by!(name: "Ana Beatriz Rocha"))
+
+    assert_difference -> { ActivitySubmission.where(activity: @activity).count }, -1 do
+      delete clear_student_result_activity_path(@activity, student_id: other)
+    end
+
+    assert_redirected_to results_activity_path(@activity)
+    assert ActivitySubmission.exists?(kept.id)
+    assert_nil ActivitySubmission.find_by(activity: @activity, student: other)
+  end
+
+  test "editing hits updates the score" do
+    student = @activity.lesson.classroom.students.find_by!(name: "Ana Beatriz Rocha")
+    item = @activity.activity_questions.first
+
+    get edit_result_activity_path(@activity, student_id: student)
+    assert_response :success
+    assert_match "Ana Beatriz Rocha", response.body
+    assert_match "Salvar acertos", response.body
+
+    patch update_result_activity_path(@activity, student_id: student),
+          params: { answers: { item.id.to_s => "B" } }
+
+    assert_redirected_to results_activity_path(@activity)
+    assert_equal 0, ActivitySubmission.find_by!(activity: @activity, student: student).score.to_f
   end
 
   test "grades export is a pdf" do

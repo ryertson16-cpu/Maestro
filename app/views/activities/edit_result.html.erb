@@ -1,0 +1,37 @@
+<% content_for :title, "Editar acertos | Maestro" %>
+
+<div class="page-header">
+  <div>
+    <h1>Editar acertos</h1>
+    <p>
+      <%= @student.name %>
+      —
+      <%= @activity.title %>
+      <% if @assignment %>
+        · Folha <%= @assignment.slot %>
+      <% end %>
+    </p>
+  </div>
+</div>
+
+<%= form_with url: update_result_activity_path(@activity, student_id: @student),
+              method: :patch,
+              local: true,
+              data: { turbo: false },
+              class: "data-card" do %>
+  <%= render "public_corrections/omr_sheet", reveal: true, editable: true %>
+  <% Array(@presented).reject { |row| row.item.objective? }.each do |row| %>
+    <label class="correction-discursive">
+      <%= row.number %>. Pontos (máx. <%= format("%.1f", row.item.points).tr(".", ",") %>)
+      <%= number_field_tag "answers[#{row.item.id}]",
+                           @answers[row.item.id.to_s],
+                           min: 0,
+                           max: row.item.points,
+                           step: 0.1 %>
+    </label>
+  <% end %>
+  <div class="page-header-actions">
+    <%= submit_tag "Salvar acertos", class: "button button-primary" %>
+    <%= link_to "Voltar ao resultado", results_activity_path(@activity), class: "button button-secondary" %>
+  </div>
+<% end %>

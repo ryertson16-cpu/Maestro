@@ -72,7 +72,7 @@
                     clear_results_activity_path(@activity),
                     method: :delete,
                     class: "button button-danger",
-                    data: { turbo_confirm: "Apagar as notas e os cartões lidos desta prova?" } %>
+                    form: { data: { turbo: false, confirm_message: "Apagar as notas e os cartões lidos desta prova?" } } %>
     <% end %>
   </div>
   <% if @result.identified.any? %>
@@ -92,8 +92,20 @@
             <strong><%= row.student.name %></strong>
             <p class="exam-identified-status">Identificado · <%= row.hits %> de <%= row.objective_count %></p>
           </div>
-          <div class="exam-identified-score">
-            <%= row.submission&.score.present? ? format("%.1f", row.submission.score).tr(".", ",") : "—" %>
+          <div class="exam-identified-side">
+            <div class="exam-identified-score">
+              <%= row.submission&.score.present? ? format("%.1f", row.submission.score).tr(".", ",") : "—" %>
+            </div>
+            <div class="exam-identified-actions">
+              <%= link_to "Editar acertos",
+                          edit_result_activity_path(@activity, student_id: row.student),
+                          class: "button button-secondary" %>
+              <%= button_to "Apagar",
+                            clear_student_result_activity_path(@activity, student_id: row.student),
+                            method: :delete,
+                            class: "button button-danger",
+                            form: { data: { turbo: false, confirm_message: "Apagar a correção de #{row.student.name}?" } } %>
+            </div>
           </div>
         </article>
       <% end %>

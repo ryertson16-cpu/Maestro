@@ -219,8 +219,13 @@ document.addEventListener(
 
     confirmThen(event.submitter || form, () => {
       form.dataset.confirmed = "true"
+      if (form.getAttribute("data-turbo") || "").toLowerCase() === "false") {
+        form.submit()
+        return
+      }
+      const submitter = event.submitter instanceof HTMLElement ? event.submitter : undefined
       if (typeof form.requestSubmit === "function") {
-        form.requestSubmit(event.submitter)
+        form.requestSubmit(submitter)
       } else {
         form.submit()
       }
