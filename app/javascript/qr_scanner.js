@@ -388,9 +388,11 @@ function bubbleOptions(root) {
 function appendReading(target, reading) {
   if (!reading) return
   const payload = JSON.stringify(reading.answers || {})
+  const stable = reading.stable ? "1" : "0"
   if (target instanceof FormData) {
     target.append("bubble_answers", payload)
     target.append("bubble_covered", String(reading.covered || 0))
+    target.append("bubble_stable", stable)
     return
   }
 
@@ -402,6 +404,14 @@ function appendReading(target, reading) {
     target.appendChild(answers)
   }
   answers.value = payload
+  let stableInput = target.querySelector('input[name="bubble_stable"]')
+  if (!stableInput) {
+    stableInput = document.createElement("input")
+    stableInput.type = "hidden"
+    stableInput.name = "bubble_stable"
+    target.appendChild(stableInput)
+  }
+  stableInput.value = reading.stable ? "1" : "0"
   let covered = target.querySelector('input[name="bubble_covered"]')
   if (!covered) {
     covered = document.createElement("input")

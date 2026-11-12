@@ -18,6 +18,12 @@
     <p class="correction-kicker">Gabarito corrigido</p>
     <p>Nota de <%= @student.name %></p>
     <strong><%= format("%.1f", @score).tr(".", ",") %></strong>
+    <% if @assignment %>
+      <p>Folha <%= @assignment.slot %> desta aluna. A letra certa é a impressa na folha dela.</p>
+    <% end %>
+    <% if @presented&.any? %>
+      <%= render "omr_sheet", reveal: true, editable: false %>
+    <% end %>
     <p>A nota já está no caderno. A foto ficou no Maestro, não na galeria do celular.</p>
     <% if @submission&.marked_photo&.attached? || @submission&.card_photo&.attached? %>
       <figure class="correction-marked-card">
@@ -28,6 +34,9 @@
         </figcaption>
       </figure>
     <% end %>
+    <%= link_to "Ajustar letras",
+                gabarito_aluno_path(@activity.correction_token, @student),
+                class: "button button-secondary button-block" %>
     <%= link_to "Corrigir próximo aluno",
                 gabarito_path(@activity.correction_token),
                 class: "button button-primary button-block" %>
@@ -89,7 +98,7 @@
   <% end %>
 
   <% if @photo_review %>
-    <p class="correction-flash is-warn">Confira as letras lidas abaixo e toque em Lançar nota.</p>
+    <p class="correction-flash is-warn">Confira a folha abaixo. Verde é a certa desta versão. O X vermelho é a letra lida. Acerte o que estiver diferente e toque em Lançar nota.</p>
   <% end %>
 
   <%= form_with url: gabarito_grade_path(@activity.correction_token),
@@ -98,38 +107,23 @@
                 class: "correction-form" do %>
     <%= hidden_field_tag :student_id, @student.id %>
 
-    <% Array(@presented).each do |row| %>
+    <%= render "omr_sheet", reveal: @photo_review || @score.present?, editable: true %>
+
+    <% Array(@presented).reject { |row| row.item.objective? }.each do |row| %>
       <% item = row.item %>
       <fieldset class="correction-item">
         <legend>
           <%= row.number %>. <%= item.prompt %>
-          <% if item.bncc_skill.present? %>
-            <small>BNCC <%= item.bncc_skill %></small>
-          <% end %>
         </legend>
-        <%= render "questions/figure", image: item.image %>
-        <% if item.objective? %>
-          <div class="correction-keys">
-            <% row.pairs.each do |letter, _text| %>
-              <label class="correction-key">
-                <%= radio_button_tag "answers[#{item.id}]",
-                                     letter,
-                                     @answers[item.id.to_s].to_s == letter %>
-                <span><%= letter %></span>
-              </label>
-            <% end %>
-          </div>
-        <% else %>
-          <label class="correction-discursive">
-            Pontos (máx. <%= format("%.1f", item.points).tr(".", ",") %>)
-            <%= number_field_tag "answers[#{item.id}]",
-                                 @answers[item.id.to_s],
-                                 min: 0,
-                                 max: item.points,
-                                 step: 0.1,
-                                 inputmode: "decimal" %>
-          </label>
-        <% end %>
+        <label class="correction-discursive">
+          Pontos (máx. <%= format("%.1f", item.points).tr(".", ",") %>)
+          <%= number_field_tag "answers[#{item.id}]",
+                               @answers[item.id.to_s],
+                               min: 0,
+                               max: item.points,
+                               step: 0.1,
+                               inputmode: "decimal" %>
+        </label>
       </fieldset>
     <% end %>
 

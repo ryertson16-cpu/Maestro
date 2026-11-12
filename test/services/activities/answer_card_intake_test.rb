@@ -122,7 +122,7 @@ class Activities::AnswerCardIntakeTest < ActiveSupport::TestCase
     assert_equal "B", card.answers["1"]
   end
 
-  test "phone photo of a known student launches the grade" do
+  test "phone photo of a known student waits for confirmation when the model reads it" do
     intake = Activities::AnswerCardIntake.new(
       @activity,
       professor: @professor,
@@ -137,13 +137,11 @@ class Activities::AnswerCardIntakeTest < ActiveSupport::TestCase
 
     result = intake.scan_for_student!(upload("alerrandro.jpg"), student: @maria, overwrite: true)
 
-    assert_equal :launched, result.status
-    assert_equal 10.0, result.score
-    submission = ActivitySubmission.find_by!(activity: @activity, student: @maria)
-    assert_equal "A", submission.answers[@item.id.to_s]
+    assert_equal :review, result.status
+    assert_nil ActivitySubmission.find_by(activity: @activity, student: @maria)
   end
 
-  test "phone photo overwrites a previous score for that student" do
+  test "phone photo does not replace a launched score with a different model reading" do
     ActivitySubmission.create!(
       activity: @activity,
       student: @maria,
@@ -166,8 +164,9 @@ class Activities::AnswerCardIntakeTest < ActiveSupport::TestCase
 
     result = intake.scan_for_student!(upload("maria.jpg"), student: @maria, overwrite: true)
 
-    assert_equal :launched, result.status
-    assert_equal 10.0, ActivitySubmission.find_by!(activity: @activity, student: @maria).score
+    assert_equal :review, result.status
+    assert_equal true, result.conflict
+    assert_equal 3.0, ActivitySubmission.find_by!(activity: @activity, student: @maria).score
   end
 
   test "does not overwrite a recorded score" do
@@ -212,11 +211,12 @@ class Activities::AnswerCardIntakeTest < ActiveSupport::TestCase
     result = intake.scan_for_student!(file, student: @maria, overwrite: true)
 
     assert_equal false, called
-    assert_equal :launched, result.status
-    assert_equal 10.0, result.score
+    assert_equal :review, result.status
+    assert_equal "A", result.answers[@item.id.to_s]
+    assert_nil ActivitySubmission.find_by(activity: @activity, student: @maria)
   end
 
-  test "letters read on the phone launch the grade without opening the photo" do
+  test "letters read on the phone wait on the sheet before saving the grade" do
     called = false
     intake = Activities::AnswerCardIntake.new(
       @activity,
@@ -231,12 +231,39 @@ class Activities::AnswerCardIntakeTest < ActiveSupport::TestCase
       upload("vanessa.jpg"),
       student: @maria,
       overwrite: true,
-      position_answers: { "1" => "A" }
+      position_answers: { "1" => "A" },
+      stable: true
     )
 
     assert_equal false, called
-    assert_equal :launched, result.status
-    assert_equal 10.0, result.score
+    assert_equal :review, result.status
+    assert_equal "A", result.answers[@item.id.to_s]
+    assert_nil ActivitySubmission.find_by(activity: @activity, student: @maria)
+  end
+
+  test "a different stable reading does not replace the launched score" do
+    ActivitySubmission.create!(
+      activity: @activity,
+      student: @maria,
+      professor: @professor,
+      score: 8.0,
+      submitted_on: Date.current,
+      answers: { @item.id.to_s => "B" }
+    )
+    intake = Activities::AnswerCardIntake.new(@activity, professor: @professor, vision: ->(_) { nil })
+
+    result = intake.scan_for_student!(
+      upload("ludimila.jpg"),
+      student: @maria,
+      overwrite: true,
+      position_answers: { "1" => "A" },
+      stable: true
+    )
+
+    assert_equal :review, result.status
+    assert_equal true, result.conflict
+    assert_equal 8.0, ActivitySubmission.find_by!(activity: @activity, student: @maria).score
+    assert_equal "B", ActivitySubmission.find_by!(activity: @activity, student: @maria).answers[@item.id.to_s]
   end
 
   private

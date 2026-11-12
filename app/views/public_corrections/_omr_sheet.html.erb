@@ -1,0 +1,84 @@
+<% reveal = local_assigns.fetch(:reveal, false) %>
+<% editable = local_assigns.fetch(:editable, false) %>
+<% rows = Array(@presented).select { |row| row.item.objective? } %>
+<% per_column = [ (rows.size / 2.0).ceil, 1 ].max %>
+<% columns = rows.each_slice(per_column).to_a %>
+<% objective_total = rows.sum { |row| row.item.points.to_f } %>
+<% ceiling = (@activity.maximum_score.presence || 10).to_f %>
+
+<section class="omr-sheet"
+         data-omr-sheet
+         data-omr-reveal="<%= reveal ? "1" : "0" %>"
+         data-objective-total="<%= objective_total %>"
+         data-ceiling="<%= ceiling %>"
+         aria-label="Cartão de <%= @student.name %>">
+  <header class="omr-head">
+    <div>
+      <strong><%= @student.name %></strong>
+      <p>
+        <%= @classroom.name %>
+        <% if @assignment %>
+          · Folha <%= @assignment.slot %>
+        <% end %>
+      </p>
+    </div>
+    <% if reveal && editable %>
+      <div class="omr-preview">
+        <strong data-omr-score>0,0</strong>
+        <span data-omr-count>0 de <%= rows.size %> certas</span>
+      </div>
+    <% end %>
+  </header>
+
+  <div class="omr-columns">
+    <% columns.each do |column| %>
+      <div class="omr-column">
+        <% column.each do |row| %>
+          <% read = @answers[row.item.id.to_s].to_s.upcase %>
+          <% expected = row.printed_correct.to_s.upcase %>
+          <% wrong = reveal && read != expected %>
+          <div class="omr-row<%= " is-blank" if read.blank? %>"
+               data-expected="<%= expected %>"
+               data-read="<%= read %>"
+               data-points="<%= row.item.points.to_f %>">
+            <span class="omr-num<%= " is-wrong" if wrong %>"><%= row.number %></span>
+            <div class="omr-bubbles">
+              <% row.pairs.each do |letter, _text| %>
+                <% choice = letter.to_s.upcase %>
+                <% classes = [ "omr-bubble" ] %>
+                <% classes << "is-key" if reveal && choice == expected %>
+                <% classes << "is-marked" if read == choice %>
+                <% classes << "is-wrong" if reveal && read == choice && choice != expected %>
+                <% if editable %>
+                  <label class="<%= classes.join(" ") %>" data-letter="<%= choice %>">
+                    <%= radio_button_tag "answers[#{row.item.id}]", choice, read == choice %>
+                    <span><%= choice %></span>
+                  </label>
+                <% else %>
+                  <span class="<%= classes.join(" ") %>" data-letter="<%= choice %>"><%= choice %></span>
+                <% end %>
+              <% end %>
+            </div>
+            <p class="omr-status<%= " is-hit" if reveal && read.present? && read == expected %><%= " is-miss" if wrong %>" data-omr-status>
+              <% if read.blank? %>
+                Não li esta questão
+              <% elsif !reveal %>
+                Leu <%= read %>
+              <% elsif read == expected %>
+                Leu <%= read %>
+              <% else %>
+                Leu <%= read %> · certa <%= expected %>
+              <% end %>
+            </p>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <% if reveal %>
+    <p class="omr-legend">Verde: letra certa desta folha. Bolha marcada: o que foi lido. X vermelho: leitura diferente do papel.</p>
+  <% else %>
+    <p class="omr-legend">Toque a letra pintada no cartão. A certa da folha aparece quando a leitura terminar.</p>
+  <% end %>
+</section>

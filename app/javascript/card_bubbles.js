@@ -11,14 +11,12 @@ export function readPrintedCard(canvas, options = {}) {
   if (!image) return null
 
   const qr = locateQr(image, options.jsQR)
+  const qrSpan = qr ? Math.hypot(qr.corners[1][0] - qr.corners[0][0], qr.corners[1][1] - qr.corners[0][1]) : 0
+  const qrWarp = qr && homography(qrCardCorners(qr.version), qr.corners)
+  const snapped = qrWarp && snapFiducials(image, qrWarp, qrSpan)
+  const fromSnap = snapped && sampleGrid(image, snapped, qrSpan * 0.045, questionCount, letterCount)
+  const fromQr = qrWarp && sampleGrid(image, qrWarp, qrSpan * 0.05, questionCount, letterCount)
   const corners = findCorners(image)
-  const fromQr = qr && sampleGrid(
-    image,
-    homography(qrCardCorners(qr.version), qr.corners),
-    Math.hypot(qr.corners[1][0] - qr.corners[0][0], qr.corners[1][1] - qr.corners[0][1]) * 0.05,
-    questionCount,
-    letterCount
-  )
   const fromCorners = corners && sampleGrid(
     image,
     homography(fiducials(), corners),
@@ -26,7 +24,41 @@ export function readPrintedCard(canvas, options = {}) {
     questionCount,
     letterCount
   )
-  return richer(fromQr, fromCorners)
+  const reading = fromSnap || richer(fromQr, fromCorners)
+  if (!reading) return null
+
+  const needed = Math.max(1, Math.ceil(questionCount / 2))
+  reading.stable = Boolean(
+    fromSnap &&
+    reading === fromSnap &&
+    Object.keys(fromSnap.answers).length >= needed &&
+    agrees(fromSnap, fromQr || fromSnap)
+  )
+  return reading
+}
+
+function snapFiducials(image, warp, qrSpan) {
+  const blobs = darkSquares(image)
+  const radius = Math.max(14, qrSpan * 0.2)
+  const snapped = fiducials().map(([ x, y ]) => {
+    const point = warp(x, y)
+    let best = null
+    blobs.forEach((blob) => {
+      const distance = Math.hypot(blob.x - point[0], blob.y - point[1])
+      if (distance > radius) return
+      if (!best || distance < best.distance) best = { blob, distance }
+    })
+    return best ? [ best.blob.x, best.blob.y ] : null
+  })
+  if (snapped.some((point) => !point)) return null
+  return homography(fiducials(), snapped)
+}
+
+function agrees(first, second) {
+  const keys = Object.keys(first.answers)
+  if (!keys.length) return false
+  const same = keys.filter((key) => first.answers[key] === second.answers[key]).length
+  return same >= Math.ceil(keys.length * 0.8)
 }
 
 function sampleGrid(image, warp, spanRadius, questionCount, letterCount) {

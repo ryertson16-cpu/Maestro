@@ -28,9 +28,9 @@ module Activities
       ScanResult.new(launched: launched, pending: pending, skipped: skipped)
     end
 
-    PhoneScan = Struct.new(:status, :score, :answers, keyword_init: true)
+    PhoneScan = Struct.new(:status, :score, :answers, :conflict, keyword_init: true)
 
-    def scan_for_student!(upload, student:, overwrite: true, position_answers: nil)
+    def scan_for_student!(upload, student:, overwrite: true, position_answers: nil, stable: false)
       return PhoneScan.new(status: :missing_photo) unless upload.respond_to?(:original_filename)
 
       path = persist_temp(upload)
@@ -43,21 +43,9 @@ module Activities
       answers = scan&.answers || {}
       filled = scan&.filled_count.to_i
       mapped = answers_for_grader(answers, student: student)
-
-      if confident?(filled) && !mixed_exam?
-        result = apply!(
-          ActivityPendingCard.new(answers: answers),
-          student: student,
-          overwrite: overwrite,
-          photo_path: path,
-          scan: scan
-        )
-        score = ActivitySubmission.find_by(activity: @activity, student: student)&.score
-        return PhoneScan.new(status: result, score: score, answers: mapped)
-      end
-
+      conflict = conflicting_score?(student, mapped)
       status = filled.positive? ? :review : :empty
-      PhoneScan.new(status: status, answers: mapped)
+      PhoneScan.new(status: status, answers: mapped, conflict: conflict && filled.positive?)
     ensure
       File.delete(path) if path && File.exist?(path)
     end
@@ -177,6 +165,13 @@ module Activities
     def confident?(filled)
       needed = [1, (objective_count / 2.0).ceil].max
       filled >= needed
+    end
+
+    def conflicting_score?(student, mapped)
+      submission = ActivitySubmission.find_by(activity: @activity, student: student)
+      return false unless NumericScore.recorded?(submission&.score)
+
+      (submission.answers || {}).stringify_keys != mapped.stringify_keys
     end
 
     def store_pending(upload, path, answers, filled, suggested, student)

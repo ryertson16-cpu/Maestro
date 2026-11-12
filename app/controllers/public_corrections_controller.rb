@@ -65,7 +65,8 @@ class PublicCorrectionsController < ApplicationController
       upload,
       student: student,
       overwrite: true,
-      position_answers: params[:bubble_answers]
+      position_answers: params[:bubble_answers],
+      stable: params[:bubble_stable].to_s == "1"
     )
 
     case result.status
@@ -76,7 +77,7 @@ class PublicCorrectionsController < ApplicationController
     when :review
       session[:gabarito_preview] = { "student_id" => student.id, "answers" => result.answers }
       redirect_to gabarito_aluno_path(@activity.correction_token, student),
-                  alert: "Li as bolhas. Confira as letras e lance a nota. Discursiva você preenche na tela."
+                  alert: "Confira a folha: verde é a certa desta versão e o X vermelho é a letra lida. Acerte o que estiver diferente e lance a nota."
     when :lira_off
       redirect_to gabarito_aluno_path(@activity.correction_token, student),
                   alert: "Não li as bolhas neste cartão. Marque as letras na tela."
