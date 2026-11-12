@@ -27,6 +27,7 @@ module Documents
           Author: @professor.name.presence || "Maestro"
         }
       ) do |document|
+        Documents::PdfFont.apply(document)
         document.font_size 9
         @letterhead.draw(
           document,
@@ -107,23 +108,34 @@ module Documents
         return
       end
 
-      table_rows = [["N.", "Nome", "Situacao", "Data de recebimento"]]
+      headers = ["N.", "Nome", "Situacao", "Data de recebimento", "Nota"]
+      headers << "Resultado" if exam?
+      table_rows = [headers]
       @rows.each_with_index do |row, index|
-        table_rows << [
+        line = [
           (index + 1).to_s,
           ascii(row[:student].name),
           STATUS_LABELS.fetch(row[:status], row[:status].to_s),
-          format_date(row[:submitted_on])
+          format_date(row[:submitted_on]),
+          format_score(row[:score])
         ]
+        line << outcome_label(row[:score]) if exam?
+        table_rows << line
       end
 
       pdf.table(table_rows, header: true, width: pdf.bounds.width) do |table|
         style_table(table)
-        table.column(0).width = 32
+        table.column(0).width = 28
         table.column(0).align = :center
-        table.column(2).width = 120
-        table.column(3).width = 110
+        table.column(2).width = 108
+        table.column(3).width = 92
         table.column(3).align = :center
+        table.column(4).width = 46
+        table.column(4).align = :center
+        if exam?
+          table.column(5).width = 88
+          table.column(5).align = :center
+        end
       end
     end
 
@@ -167,9 +179,26 @@ module Documents
         {
           student: student,
           status: status,
-          submitted_on: submission&.submitted_on
+          submitted_on: submission&.submitted_on,
+          score: submission&.score
         }
       }.sort_by { |row| [rank.fetch(row[:status], 9), row[:student].name.to_s] }
+    end
+
+    def exam?
+      @activity.activity_type.to_s.match?(/prova/i)
+    end
+
+    def format_score(value)
+      return "-" if value.blank?
+
+      format("%.1f", value.to_f).tr(".", ",")
+    end
+
+    def outcome_label(value)
+      return "Recuperação" if value.blank? || value.to_f < 6
+
+      "Aprovado"
     end
 
     def format_date(value)
