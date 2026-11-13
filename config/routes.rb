@@ -236,6 +236,7 @@ Rails.application.routes.draw do
       post :grade, path: "corrigir"
       post :scan_cards, path: "cartoes"
       get :results, path: "resultado"
+      post :close_correction, path: "resultado/concluir"
       get :edit_result, path: "resultado/:student_id/editar"
       patch :update_result, path: "resultado/:student_id"
       delete :clear_student_result, path: "resultado/:student_id"

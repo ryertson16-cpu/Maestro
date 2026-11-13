@@ -6,7 +6,8 @@ module Documents
       delivered: "Entregue",
       delivered_late: "Entregue com atraso",
       in_progress: "Em andamento",
-      not_delivered: "Nao entregou"
+      not_delivered: "Nao entregou",
+      missed_exam: "Aluno faltou a prova"
     }.freeze
 
     def initialize(professor:, classroom:, activity:)
@@ -119,7 +120,7 @@ module Documents
           format_date(row[:submitted_on]),
           format_score(row[:score])
         ]
-        line << outcome_label(row[:score]) if exam?
+        line << (row[:status] == :missed_exam ? "Aluno faltou a prova" : outcome_label(row[:score])) if exam?
         table_rows << line
       end
 

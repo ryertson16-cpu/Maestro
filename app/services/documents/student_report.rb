@@ -439,6 +439,8 @@ module Documents
       overdue = due.present? && due <= Date.current
       scored = NumericScore.recorded?(submission&.score)
 
+      return "Aluno faltou a prova" if submission&.missed_exam? && !scored
+
       if scored
         return "Entregue com atraso" if row[:status_key] == "delivered_late"
 

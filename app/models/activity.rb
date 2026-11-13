@@ -115,6 +115,10 @@ class Activity < ApplicationRecord
     title.to_s.match?(/\bprova\b/i)
   end
 
+  def correction_closed?
+    correction_closed_at.present?
+  end
+
   def regular?
     !adapted?
   end

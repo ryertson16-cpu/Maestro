@@ -5,4 +5,9 @@
   <%= link_to "Resultado",
               results_activity_path(activity),
               class: [ "exam-tab", ("is-active" if current == :resultado) ].compact.join(" ") %>
+  <% if local_assigns[:trailing].present? %>
+    <div class="exam-tabs-trailing">
+      <%= trailing %>
+    </div>
+  <% end %>
 </nav>

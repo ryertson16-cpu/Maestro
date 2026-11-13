@@ -60,6 +60,32 @@ module Activities
       readings.select(&:identified)
     end
 
+    def corrected
+      readings.select { |row| row.submission&.score.present? }
+    end
+
+    def pending
+      readings.reject { |row| row.submission&.score.present? }
+    end
+
+    def missed
+      return pending if @activity.correction_closed?
+
+      readings.select { |row| row.submission&.missed_exam? && row.submission.score.blank? }
+    end
+
+    def corrected_label
+      count_label(corrected.size, "gabarito corrigido", "gabaritos corrigidos")
+    end
+
+    def missed_label
+      count_label(missed.size, "gabarito ficou sem correção", "gabaritos ficaram sem correção")
+    end
+
+    def coverage_complete?
+      students.any? && pending.empty?
+    end
+
     def scored
       readings.select { |row| row.submission&.score.present? }
     end
@@ -129,6 +155,10 @@ module Activities
     end
 
     private
+
+    def count_label(count, singular, plural)
+      "#{count} #{count == 1 ? singular : plural}"
+    end
 
     def reading_for(student)
       submission = by_student[student.id]

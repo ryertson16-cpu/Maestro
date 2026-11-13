@@ -491,7 +491,8 @@ class GradeLevelsController < ApplicationController
       in_progress: 0,
       delivered: 0,
       delivered_late: 0,
-      not_delivered: 0
+      not_delivered: 0,
+      missed_exam: 0
     }
 
     return if @activity.blank? || @classroom.blank?

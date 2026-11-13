@@ -3,7 +3,8 @@ module GradeLevelsHelper
     delivered: "Entregue",
     delivered_late: "Entregue com atraso",
     in_progress: "Em andamento",
-    not_delivered: "Não entregou"
+    not_delivered: "Não entregou",
+    missed_exam: "Aluno faltou a prova"
   }.freeze
 
   def activity_status_label(status)

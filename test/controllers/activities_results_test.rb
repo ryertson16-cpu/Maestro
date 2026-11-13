@@ -62,6 +62,56 @@ class ActivitiesResultsTest < ActionDispatch::IntegrationTest
     assert_match "Identificado", response.body
     assert_match "Editar acertos", response.body
     assert_match "Apagar", response.body
+    assert_match "Todos os gabaritos foram corrigidos", response.body
+    assert_match "Corrigido", response.body
+    assert_match "Correção concluída", response.body
+  end
+
+  test "closing the correction marks students without a card as absent from the exam" do
+    missing = @professor.students.create!(name: "Carla Souza")
+    Enrollment.create!(
+      professor: @professor,
+      student: missing,
+      classroom: @activity.lesson.classroom,
+      enrolled_on: Date.current,
+      status: "active"
+    )
+
+    post close_correction_activity_path(@activity)
+
+    assert_redirected_to results_activity_path(@activity)
+    assert @activity.reload.correction_closed?
+    assert_equal "present", attendance_status_for("Ana Beatriz Rocha")
+    assert_equal "absent", attendance_status_for("Carla Souza")
+    assert ActivitySubmission.find_by!(activity: @activity, student: missing).missed_exam?
+    kept = ActivitySubmission.find_by!(activity: @activity, student: @activity.lesson.classroom.students.find_by!(name: "Ana Beatriz Rocha"))
+    assert_not kept.missed_exam?
+    assert_equal 10, kept.score.to_f
+
+    follow_redirect!
+    assert_match "1 gabarito corrigido", response.body
+    assert_match "1 gabarito ficou sem correção", response.body
+    assert_match "Aluno faltou a prova", response.body
+  end
+
+  test "result page lists students still without a correction" do
+    @professor.students.create!(name: "Carla Souza").tap do |student|
+      Enrollment.create!(
+        professor: @professor,
+        student: student,
+        classroom: @activity.lesson.classroom,
+        enrolled_on: Date.current,
+        status: "active"
+      )
+    end
+
+    get results_activity_path(@activity)
+
+    assert_response :success
+    assert_match "Ainda faltam gabaritos", response.body
+    assert_match "Carla Souza", response.body
+    assert_match "Sem correção", response.body
+    assert_no_match "Todos os gabaritos foram corrigidos", response.body
   end
 
   test "clear results removes the scored correction" do
@@ -117,5 +167,17 @@ class ActivitiesResultsTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "application/pdf", response.media_type
+  end
+
+  private
+
+  def attendance_status_for(name)
+    student = @activity.lesson.classroom.students.find_by!(name: name)
+    enrollment = Enrollment.find_by!(student: student, classroom: @activity.lesson.classroom)
+    AttendanceRecord.find_by!(
+      enrollment: enrollment,
+      lesson: @activity.lesson,
+      attendance_date: @activity.lesson.lesson_date
+    ).status
   end
 end

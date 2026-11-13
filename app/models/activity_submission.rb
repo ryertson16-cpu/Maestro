@@ -21,7 +21,11 @@ class ActivitySubmission < ApplicationRecord
 
   validate :student_belongs_to_activity_classroom
 
+  before_save :clear_missed_exam_when_scored
+
   def status
+    return :missed_exam if missed_exam? && score.blank?
+
     return :delivered if submitted_on.present? &&
                           submitted_on <= activity.due_date
 
@@ -38,11 +42,16 @@ class ActivitySubmission < ApplicationRecord
       delivered: "Entregue",
       delivered_late: "Entregue com Atraso",
       in_progress: "Em Andamento",
-      not_delivered: "Não Entregou"
+      not_delivered: "Não Entregou",
+      missed_exam: "Aluno faltou a prova"
     }.fetch(status)
   end
 
   private
+
+  def clear_missed_exam_when_scored
+    self.missed_exam = false if score.present?
+  end
 
   def student_belongs_to_activity_classroom
     return if activity.blank? || student.blank?

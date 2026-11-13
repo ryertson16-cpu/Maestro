@@ -215,6 +215,38 @@ class ActivitiesController < ApplicationController
     @result = Activities::ExamResult.new(@activity)
   end
 
+  def close_correction
+    corrected = 0
+    missed = 0
+    lesson = @activity.lesson
+    classroom = lesson.classroom
+
+    ActiveRecord::Base.transaction do
+      Activities::ExamResult.new(@activity).students.each do |student|
+        submission = @activity.activity_submissions.find_or_initialize_by(student: student)
+        submission.professor ||= current_professor
+        delivered = submission.score.present?
+        if delivered
+          submission.missed_exam = false
+          corrected += 1
+        else
+          submission.professor = current_professor
+          submission.missed_exam = true
+          missed += 1
+        end
+        submission.save!
+        sync_lesson_attendance!(lesson, classroom, student, delivered)
+      end
+
+      @activity.update!(correction_closed_at: Time.current)
+    end
+
+    redirect_to results_activity_path(@activity),
+                notice: "#{corrected} #{corrected == 1 ? "gabarito corrigido" : "gabaritos corrigidos"}. " \
+                        "#{missed} #{missed == 1 ? "ficou" : "ficaram"} sem correção e #{missed == 1 ? "passou" : "passaram"} para aluno faltou a prova. " \
+                        "A chamada desta aula foi atualizada."
+  end
+
   def edit_result
     @student = @classroom.students.find(params[:student_id])
     @submission = @activity.activity_submissions.find_by(student: @student)
@@ -248,6 +280,7 @@ class ActivitiesController < ApplicationController
   def clear_results
     @activity.activity_submissions.find_each { |submission| discard_submission!(submission) }
     @activity.pending_cards.find_each { |card| discard_card!(card) }
+    @activity.update!(correction_closed_at: nil)
     redirect_to results_activity_path(@activity),
                 notice: "Correção apagada. As notas e os cartões saíram deste resultado."
   end
@@ -408,6 +441,20 @@ class ActivitiesController < ApplicationController
     else
       "atividades-#{Date.current.iso8601}.maestro.json"
     end
+  end
+
+  def sync_lesson_attendance!(lesson, classroom, student, delivered)
+    enrollment = Enrollment.find_by(professor: current_professor, student: student, classroom: classroom)
+    return if enrollment.nil?
+
+    record = AttendanceRecord.find_or_initialize_by(
+      professor: current_professor,
+      enrollment: enrollment,
+      attendance_date: lesson.lesson_date,
+      lesson: lesson
+    )
+    record.status = delivered ? "present" : "absent"
+    record.save!
   end
 
   def discard_submission!(submission)

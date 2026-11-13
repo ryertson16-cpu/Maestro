@@ -275,7 +275,9 @@ class StudentsController < ApplicationController
       due_date = activity.due_date
 
       status_key =
-        if submitted_on.blank?
+        if submission&.missed_exam? && submission.score.blank?
+          "missed_exam"
+        elsif submitted_on.blank?
           "not_delivered"
         elsif due_date.present? && submitted_on > due_date
           "delivered_late"
@@ -289,6 +291,8 @@ class StudentsController < ApplicationController
           "Entregue"
         when "delivered_late"
           "Entregue com atraso"
+        when "missed_exam"
+          "Aluno faltou a prova"
         else
           "Atividade Pendente"
         end

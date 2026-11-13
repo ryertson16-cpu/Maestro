@@ -25,7 +25,59 @@
   </div>
 </div>
 
-<%= render "activities/exam_tabs", activity: @activity, current: :resultado %>
+<% tabs_trailing = capture do %>
+  <% if @activity.correction_closed? %>
+    <p class="exam-tabs-summary">
+      <%= @result.corrected_label %>
+      ·
+      <%= @result.missed_label %>
+    </p>
+  <% else %>
+    <%= button_to "Correção concluída",
+                  close_correction_activity_path(@activity),
+                  method: :post,
+                  class: "button button-primary",
+                  form: { data: { turbo: false, confirm_message: "Concluir a correção? Quem entregou o gabarito fica presente nesta aula. Quem ficou sem gabarito falta a prova e fica ausente na chamada." } } %>
+  <% end %>
+<% end %>
+<%= render "activities/exam_tabs", activity: @activity, current: :resultado, trailing: tabs_trailing %>
+
+<section class="data-card exam-coverage <%= @activity.correction_closed? ? "is-closed" : (@result.coverage_complete? ? "is-complete" : "is-open") %>">
+  <h2>
+    <% if @activity.correction_closed? %>
+      Correção concluída
+    <% elsif @result.students.empty? %>
+      Nenhum aluno nesta turma
+    <% elsif @result.coverage_complete? %>
+      Todos os gabaritos foram corrigidos
+    <% else %>
+      Ainda faltam gabaritos
+    <% end %>
+  </h2>
+  <% if @result.students.any? %>
+    <p class="activity-type-hint">
+      <% if @activity.correction_closed? %>
+        <%= @result.corrected_label %>. <%= @result.missed_label.capitalize %>.
+      <% else %>
+        <%= @result.corrected.size %> de <%= @result.students.size %> alunos com nota lançada.
+      <% end %>
+    </p>
+    <ul class="exam-coverage-list">
+      <% @result.readings.each do |row| %>
+        <li>
+          <span><%= row.student.name %></span>
+          <% if row.submission&.score.present? %>
+            <strong class="exam-coverage-mark is-done">Corrigido</strong>
+          <% elsif @activity.correction_closed? || row.submission&.missed_exam? %>
+            <strong class="exam-coverage-mark is-absent">Aluno faltou a prova</strong>
+          <% else %>
+            <strong class="exam-coverage-mark is-missing">Sem correção</strong>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</section>
 
 <section class="exam-stat-grid">
   <article class="exam-stat-card">
