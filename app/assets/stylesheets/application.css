@@ -11122,10 +11122,55 @@ html.correction-html body.correction-body,
   gap: 10px;
 }
 
-.exam-item-stat {
+a.exam-item-stat {
+  display: block;
+  color: inherit;
+  text-decoration: none;
   background: var(--color-surface-muted);
   border-radius: 12px;
   padding: 10px;
+}
+
+a.exam-item-stat:hover,
+a.exam-item-stat:focus {
+  outline: 2px solid var(--color-primary);
+}
+
+.exam-question-lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.exam-question-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.exam-question-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.exam-question-hit {
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+.exam-question-miss {
+  color: #9a3412;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .exam-question-lists {
+    grid-template-columns: 1fr;
+  }
 }
 
 .exam-item-stat.is-low {

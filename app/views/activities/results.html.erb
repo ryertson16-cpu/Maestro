@@ -175,11 +175,12 @@
   <% if @result.item_stats.any? %>
     <div class="exam-item-grid">
       <% @result.item_stats.each do |stat| %>
-        <article class="exam-item-stat <%= "is-low" if stat.rate < 50 %>">
+        <%= link_to question_result_activity_path(@activity, question_id: stat.item.id),
+                    class: [ "exam-item-stat", ("is-low" if stat.rate < 50) ].compact.join(" ") do %>
           <strong><%= stat.label %></strong>
           <span><%= stat.rate %>%</span>
           <div class="exam-item-bar" style="--rate: <%= stat.rate %>%"></div>
-        </article>
+        <% end %>
       <% end %>
     </div>
     <% if (hard = @result.hardest) %>

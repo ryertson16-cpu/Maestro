@@ -215,6 +215,12 @@ class ActivitiesController < ApplicationController
     @result = Activities::ExamResult.new(@activity)
   end
 
+  def question_result
+    @result = Activities::ExamResult.new(@activity)
+    @question = @activity.activity_questions.find(params[:question_id])
+    @breakdown = @result.breakdown_for(@question)
+  end
+
   def close_correction
     corrected = 0
     missed = 0

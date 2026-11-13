@@ -65,6 +65,52 @@ class ActivitiesResultsTest < ActionDispatch::IntegrationTest
     assert_match "Todos os gabaritos foram corrigidos", response.body
     assert_match "Corrigido", response.body
     assert_match "Correção concluída", response.body
+    assert_match question_result_activity_path(@activity, question_id: @activity.activity_questions.first.id), response.body
+  end
+
+  test "question card lists who got the bank question right and wrong" do
+    wrong = @professor.students.create!(name: "Diego Alves")
+    Enrollment.create!(
+      professor: @professor,
+      student: wrong,
+      classroom: @activity.lesson.classroom,
+      enrolled_on: Date.current,
+      status: "active"
+    )
+    item = @activity.activity_questions.first
+    ActivitySubmission.create!(
+      activity: @activity,
+      student: wrong,
+      professor: @professor,
+      score: 0,
+      submitted_on: Date.current,
+      answers: { item.id.to_s => "B" }
+    )
+    absent = @professor.students.create!(name: "Elena Dias")
+    Enrollment.create!(
+      professor: @professor,
+      student: absent,
+      classroom: @activity.lesson.classroom,
+      enrolled_on: Date.current,
+      status: "active"
+    )
+    ActivitySubmission.create!(
+      activity: @activity,
+      student: absent,
+      professor: @professor,
+      missed_exam: true,
+      answers: {}
+    )
+
+    get question_result_activity_path(@activity, question_id: item.id)
+
+    assert_response :success
+    assert_match "2+2?", response.body
+    assert_match "Gabarito A", response.body
+    assert_match "Ana Beatriz Rocha", response.body
+    assert_match "Diego Alves", response.body
+    assert_match "Marcou B", response.body
+    assert_no_match "Elena Dias", response.body
   end
 
   test "closing the correction marks students without a card as absent from the exam" do

@@ -1,0 +1,71 @@
+<% content_for :title, "#{@breakdown.label} | Resultado | Maestro" %>
+
+<div class="page-header page-header-with-action">
+  <div>
+    <h1><%= @breakdown.label %></h1>
+    <p>
+      <%= @activity.title %>
+      —
+      <%= @activity.lesson.classroom.name %>
+    </p>
+  </div>
+  <%= link_to "Voltar ao resultado",
+              results_activity_path(@activity),
+              class: "button button-secondary" %>
+</div>
+
+<%= render "activities/exam_tabs", activity: @activity, current: :resultado %>
+
+<section class="data-card">
+  <h2><%= @question.prompt %></h2>
+  <p class="activity-type-hint">
+    Gabarito <%= @question.correct_letter %>.
+    A letra é a do banco desta prova. Na folha de cada aluno ela pode ter saído com outra letra e em outro número.
+  </p>
+  <% if @question.choice_pairs.any? %>
+    <ul class="exam-question-list">
+      <% @question.choice_pairs.each do |letter, text| %>
+        <li>
+          <span><%= letter %>. <%= text %></span>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</section>
+
+<section class="exam-question-lists">
+  <article class="data-card">
+    <h2>Acertaram</h2>
+    <p class="activity-type-hint"><%= @breakdown.correct.size %> alunos</p>
+    <% if @breakdown.correct.any? %>
+      <ul class="exam-question-list">
+        <% @breakdown.correct.each do |line| %>
+          <li>
+            <span><%= line.student.name %></span>
+            <strong class="exam-question-hit">Acertou</strong>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p>Nenhum aluno acertou esta questão.</p>
+    <% end %>
+  </article>
+  <article class="data-card">
+    <h2>Erraram</h2>
+    <p class="activity-type-hint"><%= @breakdown.wrong.size %> alunos</p>
+    <% if @breakdown.wrong.any? %>
+      <ul class="exam-question-list">
+        <% @breakdown.wrong.each do |line| %>
+          <li>
+            <span><%= line.student.name %></span>
+            <strong class="exam-question-miss">
+              <%= line.letter.present? ? "Marcou #{line.letter}" : "Em branco" %>
+            </strong>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p>Nenhum aluno errou esta questão.</p>
+    <% end %>
+  </article>
+</section>

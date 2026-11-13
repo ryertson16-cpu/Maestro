@@ -10,6 +10,8 @@ module Activities
       :identified,
       keyword_init: true
     )
+    AnswerLine = Struct.new(:student, :letter, keyword_init: true)
+    Breakdown = Struct.new(:item, :label, :correct, :wrong, keyword_init: true)
     ItemStat = Struct.new(
       :item,
       :label,
@@ -142,6 +144,27 @@ module Activities
 
     def hardest
       item_stats.min_by { |stat| [ stat.rate, stat.item.position ] }
+    end
+
+    def breakdown_for(item)
+      correct = []
+      wrong = []
+      scored.each do |row|
+        value = canonical_for(row.student, item, row.submission)
+        line = AnswerLine.new(student: row.student, letter: value)
+        if value.present? && value == item.correct_letter.to_s.upcase
+          correct << line
+        else
+          wrong << line
+        end
+      end
+      label = item_stats.find { |stat| stat.item.id == item.id }&.label || "Q#{item.position}"
+      Breakdown.new(
+        item: item,
+        label: label,
+        correct: correct.sort_by { |line| line.student.name.to_s },
+        wrong: wrong.sort_by { |line| line.student.name.to_s }
+      )
     end
 
     def canonical_for(student, item, submission)
