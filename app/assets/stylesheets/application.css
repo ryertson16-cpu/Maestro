@@ -11337,9 +11337,13 @@ html.correction-html body.correction-body,
   color: #027a48;
 }
 
-.omr-status.is-miss,
-.omr-row.is-blank .omr-status {
+.omr-status.is-miss {
   color: #b42318;
+}
+
+.omr-status.is-unread,
+.omr-row.is-blank .omr-status {
+  color: #1d4ed8;
 }
 
 .omr-num {
@@ -11351,17 +11355,26 @@ html.correction-html body.correction-body,
   text-align: right;
 }
 
-.omr-num.is-wrong::after {
-  content: "×";
+.omr-num.is-wrong::after,
+.omr-num.is-unread::after {
   position: absolute;
   left: 0;
   right: 0;
   top: -0.45rem;
-  color: #d92d20;
   font-size: 1.35rem;
   font-weight: 700;
   line-height: 1;
   text-align: center;
+}
+
+.omr-num.is-wrong::after {
+  content: "×";
+  color: #d92d20;
+}
+
+.omr-num.is-unread::after {
+  content: "!";
+  color: #1d4ed8;
 }
 
 .omr-bubbles {

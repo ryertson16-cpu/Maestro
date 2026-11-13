@@ -36,12 +36,13 @@
         <% column.each do |row| %>
           <% read = @answers[row.item.id.to_s].to_s.upcase %>
           <% expected = row.printed_correct.to_s.upcase %>
-          <% wrong = reveal && read != expected %>
-          <div class="omr-row<%= " is-blank" if read.blank? %>"
+          <% unread = reveal && read.blank? %>
+          <% wrong = reveal && read.present? && read != expected %>
+          <div class="omr-row<%= " is-blank" if unread %>"
                data-expected="<%= expected %>"
                data-read="<%= read %>"
                data-points="<%= row.item.points.to_f %>">
-            <span class="omr-num<%= " is-wrong" if wrong %>"><%= row.number %></span>
+            <span class="omr-num<%= " is-wrong" if wrong %><%= " is-unread" if unread %>"><%= row.number %></span>
             <div class="omr-bubbles">
               <% row.pairs.each do |letter, _text| %>
                 <% choice = letter.to_s.upcase %>
@@ -59,7 +60,7 @@
                 <% end %>
               <% end %>
             </div>
-            <p class="omr-status<%= " is-hit" if reveal && read.present? && read == expected %><%= " is-miss" if wrong %>" data-omr-status>
+            <p class="omr-status<%= " is-hit" if reveal && read.present? && read == expected %><%= " is-miss" if wrong %><%= " is-unread" if unread %>" data-omr-status>
               <% if read.blank? %>
                 Não li esta questão
               <% elsif !reveal %>
@@ -77,7 +78,7 @@
   </div>
 
   <% if reveal %>
-    <p class="omr-legend">Verde: letra certa desta folha. Bolha marcada: o que foi lido. X vermelho: leitura diferente do papel.</p>
+    <p class="omr-legend">Verde: letra certa desta folha. Bolha marcada: o que foi lido. X vermelho: letra diferente. ! azul: não li a questão.</p>
   <% else %>
     <p class="omr-legend">Toque a letra pintada no cartão. A certa da folha aparece quando a leitura terminar.</p>
   <% end %>

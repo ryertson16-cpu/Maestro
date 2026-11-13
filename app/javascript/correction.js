@@ -33,11 +33,14 @@ function paintRow(sheet, row, chosen) {
     bubble.classList.toggle("is-key", reveal && choice === expected)
     bubble.classList.toggle("is-wrong", reveal && choice === letter && choice !== expected)
   })
-  row.querySelector(".omr-num")?.classList.toggle("is-wrong", reveal && letter !== expected)
+  const number = row.querySelector(".omr-num")
+  number?.classList.toggle("is-wrong", reveal && letter !== "" && letter !== expected)
+  number?.classList.toggle("is-unread", reveal && letter === "")
   const status = row.querySelector("[data-omr-status]")
   if (!status) return
   status.classList.toggle("is-hit", reveal && letter !== "" && letter === expected)
-  status.classList.toggle("is-miss", reveal && letter !== expected)
+  status.classList.toggle("is-miss", reveal && letter !== "" && letter !== expected)
+  status.classList.toggle("is-unread", reveal && letter === "")
   if (letter === "") status.textContent = "Não li esta questão"
   else if (!reveal || letter === expected) status.textContent = `Leu ${letter}`
   else status.textContent = `Leu ${letter} · certa ${expected}`
