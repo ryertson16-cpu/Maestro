@@ -14,13 +14,13 @@ export function readPrintedCard(canvas, options = {}) {
   const qrSpan = qr ? Math.hypot(qr.corners[1][0] - qr.corners[0][0], qr.corners[1][1] - qr.corners[0][1]) : 0
   const qrWarp = qr && homography(qrCardCorners(qr.version), qr.corners)
   const snapped = qrWarp && snapFiducials(image, qrWarp, qrSpan)
-  const fromSnap = snapped && sampleGrid(image, snapped, qrSpan * 0.045, questionCount, letterCount)
-  const fromQr = qrWarp && sampleGrid(image, qrWarp, qrSpan * 0.05, questionCount, letterCount)
+  const fromSnap = snapped && sampleGrid(image, snapped, qrSpan * 0.028, questionCount, letterCount)
+  const fromQr = qrWarp && sampleGrid(image, qrWarp, qrSpan * 0.03, questionCount, letterCount)
   const corners = findCorners(image)
   const fromCorners = corners && sampleGrid(
     image,
     homography(fiducials(), corners),
-    Math.hypot(corners[1][0] - corners[0][0], corners[1][1] - corners[0][1]) * 0.012,
+    Math.hypot(corners[1][0] - corners[0][0], corners[1][1] - corners[0][1]) * 0.008,
     questionCount,
     letterCount
   )
@@ -70,7 +70,8 @@ function sampleGrid(image, warp, spanRadius, questionCount, letterCount) {
   Object.entries(bubblePoints(questionCount, letterCount)).forEach(([ number, letters ]) => {
     const samples = Object.entries(letters).map(([ letter, point ]) => {
       const [ x, y ] = warp(point[0], point[1])
-      return { letter, lum: luminanceAt(image, x, y, radius) }
+      const reading = luminanceAt(image, x, y, radius)
+      return { letter, lum: reading.lum, dark: reading.dark }
     })
     const decision = chosen(samples)
     if (!decision) return
@@ -293,30 +294,37 @@ function darkSquares(image) {
 function chosen(samples) {
   const ordered = samples.slice().sort((a, b) => a.lum - b.lum)
   const best = ordered[0]
-  const rest = ordered.slice(1)
+  const second = ordered[1]
   if (!best) return null
-  const restAverage = rest.reduce((sum, sample) => sum + sample.lum, 0) / Math.max(rest.length, 1)
-  if (best.lum <= 170 && restAverage - best.lum >= 18) return { letter: best.letter }
-  if (ordered.every((sample) => sample.lum >= 185)) return { letter: null }
+
+  const gap = second ? second.lum - best.lum : 255
+  if (best.lum <= 125 && best.dark >= 0.55 && gap >= 45) return { letter: best.letter }
+  if (ordered.every((sample) => sample.lum >= 175 && sample.dark < 0.25)) return { letter: null }
   return null
 }
 
 function luminanceAt(image, x, y, radius) {
   let total = 0
   let count = 0
+  let dark = 0
   const cx = Math.round(x)
   const cy = Math.round(y)
+  const limit = radius * radius
   for (let dy = -radius; dy <= radius; dy += 1) {
     for (let dx = -radius; dx <= radius; dx += 1) {
+      if ((dx * dx) + (dy * dy) > limit) continue
       const px = cx + dx
       const py = cy + dy
       if (px < 0 || py < 0 || px >= image.width || py >= image.height) continue
       const index = ((py * image.width) + px) * 4
-      total += (image.data[index] + image.data[index + 1] + image.data[index + 2]) / 3
+      const lum = (image.data[index] + image.data[index + 1] + image.data[index + 2]) / 3
+      total += lum
       count += 1
+      if (lum <= 140) dark += 1
     }
   }
-  return count ? total / count : 255
+  if (!count) return { lum: 255, dark: 0 }
+  return { lum: total / count, dark: dark / count }
 }
 
 function darkAt(data, pixelIndex) {

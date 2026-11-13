@@ -31,7 +31,8 @@ module Activities
           x, y = warp.image_point(point[0], point[1])
           bubbles[number] ||= {}
           bubbles[number][letter] = [ x / image.width.to_f, y / image.height.to_f ]
-          { letter: letter, lum: luminance_at(image, x, y, sample_radius(corners)) }
+          reading = luminance_at(image, x, y, sample_radius(corners))
+          { letter: letter, lum: reading[:lum], dark: reading[:dark] }
         end
         chosen = chosen_letter(samples)
         answers[number] = chosen if chosen
@@ -185,37 +186,44 @@ module Activities
     def chosen_letter(samples)
       ordered = samples.sort_by { |sample| sample[:lum] }
       best = ordered[0]
-      return if best.nil? || best[:lum] > 170
-      rest = ordered.drop(1)
-      rest_average = rest.sum { |sample| sample[:lum] } / [ rest.size, 1 ].max.to_f
-      return if rest_average - best[:lum] < 18
+      second = ordered[1]
+      return if best.nil?
 
-      best[:letter]
+      gap = second ? second[:lum] - best[:lum] : 255
+      return best[:letter] if best[:lum] <= 125 && best[:dark] >= 0.55 && gap >= 45
+
+      nil
     end
 
     def sample_radius(corners)
       span = Math.hypot(corners[1][0] - corners[0][0], corners[1][1] - corners[0][1])
-      [ (span * 0.012).round, 2 ].max
+      [ (span * 0.008).round, 2 ].max
     end
 
     def luminance_at(image, x, y, radius)
       total = 0
       count = 0
+      dark = 0
       cx = x.round
       cy = y.round
+      limit = radius * radius
       (-radius..radius).each do |dy|
         (-radius..radius).each do |dx|
+          next if (dx * dx) + (dy * dy) > limit
+
           px = cx + dx
           py = cy + dy
           next if px.negative? || py.negative? || px >= image.width || py >= image.height
 
-          total += luminance(image[px, py])
+          value = luminance(image[px, py])
+          total += value
           count += 1
+          dark += 1 if value <= 140
         end
       end
-      return 255 if count.zero?
+      return { lum: 255, dark: 0.0 } if count.zero?
 
-      total / count
+      { lum: total / count, dark: dark.to_f / count }
     end
 
     def dark?(color)
