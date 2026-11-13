@@ -596,12 +596,33 @@ function bindCaptureNow(root) {
   })
 }
 
+function bindManualRead(root) {
+  const button = root.querySelector("[data-manual-read]")
+  if (!button) return
+
+  button.addEventListener("click", () => {
+    const form = document.querySelector(".correction-form")
+    if (form) {
+      form.scrollIntoView({ behavior: "smooth", block: "start" })
+      form.querySelector(".omr-bubble")?.focus()
+      setBanner(root, "Marque na folha abaixo a letra pintada em cada questão. Depois toque em Lançar nota.", "ok")
+      return
+    }
+
+    const list = document.querySelector(".correction-students")
+    list?.scrollIntoView({ behavior: "smooth", block: "start" })
+    document.querySelector("[data-student-filter]")?.focus()
+    setBanner(root, "Escolha o aluno na lista. Na ficha dele, marque as letras do cartão.", "ok")
+  })
+}
+
 function bindScanner(root) {
   if (!root || root.dataset.qrBound) return
   root.dataset.qrBound = "true"
   bindPaste(root)
   bindFileCapture(root)
   bindCaptureNow(root)
+  bindManualRead(root)
 
   const phone = window.matchMedia("(pointer: coarse)").matches
   const start = root.querySelector("[data-qr-start]")

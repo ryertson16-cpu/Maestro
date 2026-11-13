@@ -57,7 +57,8 @@
       <h2>Apontar para o cartão</h2>
       <p>
         Toque em Fotografar cartão. A foto precisa mostrar a folha inteira,
-        com os quatro quadrados pretos. O celular lê as bolhas dessa foto.
+        com os quatro quadrados pretos. Se a foto não ler as bolhas, use
+        Leitura manual e marque as letras do cartão.
         Folha <%= @assignment&.slot || "—" %>.
       </p>
       <div class="qr-scanner-card"
@@ -83,8 +84,8 @@
                    data-qr-file>
           </label>
         <% end %>
-        <button type="button" class="button button-secondary button-block" data-qr-start>
-          Usar câmera na tela
+        <button type="button" class="button button-secondary button-block" data-manual-read>
+          Leitura manual
         </button>
         <video data-qr-video playsinline webkit-playsinline muted hidden></video>
         <button type="button" class="button button-secondary button-block" data-qr-capture>
@@ -167,9 +168,15 @@
                  data-qr-file>
         </label>
       <% end %>
-      <button type="button" class="button button-secondary button-block" data-qr-start>
-        <%= @lira_ready ? "Usar câmera na tela" : "Ler QR da folha do aluno" %>
-      </button>
+      <% if @lira_ready %>
+        <button type="button" class="button button-secondary button-block" data-manual-read>
+          Leitura manual
+        </button>
+      <% else %>
+        <button type="button" class="button button-secondary button-block" data-qr-start>
+          Ler QR da folha do aluno
+        </button>
+      <% end %>
       <video data-qr-video playsinline webkit-playsinline muted hidden></video>
       <p class="correction-scan-banner is-wait" data-qr-status role="status">
         Aponte para o QR do cartão. O Maestro identifica o aluno e lê as bolhas.
