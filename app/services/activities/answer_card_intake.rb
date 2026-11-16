@@ -34,7 +34,16 @@ module Activities
       return PhoneScan.new(status: :missing_photo) unless upload.respond_to?(:original_filename)
 
       path = persist_temp(upload)
-      scan = positioned_scan(position_answers) || read_card(path)
+      phone = positioned_scan(position_answers)
+      local = Activities::CardBubbleReader.read(
+        path,
+        question_count: objective_count,
+        letters: bubble_letters
+      )
+      scan = richer_scan(phone, local)
+      if scan.nil?
+        scan = vision_scan(path)
+      end
       if scan.nil?
         return PhoneScan.new(status: :lira_off) unless @vision || Lira.llm_enabled?
 
@@ -100,6 +109,20 @@ module Activities
       :pending
     ensure
       File.delete(path) if path && File.exist?(path)
+    end
+
+    def richer_scan(phone, local)
+      return local if phone.nil?
+      return phone if local.nil? || local.filled_count <= phone.filled_count
+
+      local
+    end
+
+    def vision_scan(path)
+      return @vision.call(path) if @vision
+      return unless Lira.llm_enabled?
+
+      Activities::AnswerCardVision.scan(path, question_count: card_number_count)
     end
 
     def positioned_scan(raw)

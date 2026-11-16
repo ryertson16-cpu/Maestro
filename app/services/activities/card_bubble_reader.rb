@@ -24,20 +24,19 @@ module Activities
       warp = Homography.between(@grid.fiducials, corners)
       return if warp.nil?
 
+      aligned = align_grid(image, warp)
       answers = {}
       bubbles = {}
       @grid.bubbles.each do |number, letters|
         points = letters.map do |letter, point|
-          x, y = warp.image_point(point[0], point[1])
+          x, y = aligned.image_point(point[0], point[1])
           bubbles[number] ||= {}
           bubbles[number][letter] = [ x / image.width.to_f, y / image.height.to_f ]
           { letter: letter, x: x, y: y }
         end
-        pitch = letter_pitch(points)
-        sample = [ (pitch * 0.12).round, 2 ].max
-        search = [ (pitch * 0.28).round, sample ].max
+        radius = [ (letter_pitch(points) * 0.1).round, 2 ].max
         samples = points.map do |point|
-          reading = darkest_near(image, point[:x], point[:y], sample, search)
+          reading = luminance_at(image, point[:x], point[:y], radius)
           { letter: point[:letter], lum: reading[:lum], dark: reading[:dark] }
         end
         chosen = chosen_letter(samples)
@@ -196,9 +195,66 @@ module Activities
       return if best.nil?
 
       gap = second ? second[:lum] - best[:lum] : 255
-      return best[:letter] if best[:lum] <= 158 && best[:dark] >= 0.5 && gap >= 30
+      return best[:letter] if best[:lum] <= 155 && best[:dark] >= 0.4 && gap >= 20
 
       nil
+    end
+
+    def align_grid(image, warp)
+      rows = @grid.bubbles.values
+      return warp if rows.empty?
+
+      score_at = lambda do |shift_x, shift_y|
+        radius = [ (pitch_at(warp, shift_x, shift_y) * 0.1).round, 2 ].max
+        rows.sum do |letters|
+          values = letters.values.map do |point|
+            x, y = warp.image_point(point[0], point[1])
+            luminance_at(image, x + shift_x, y + shift_y, radius)[:lum]
+          end.sort
+          darkest = values[0]
+          nxt = values[1] || 255
+          darkest && darkest <= 170 ? nxt - darkest : 0
+        end
+      end
+
+      pitch = pitch_at(warp, 0, 0)
+      row_gap = pitch
+      if rows.size > 1
+        first = rows[0].values.first
+        second = rows[1].values.first
+        ax, ay = warp.image_point(first[0], first[1])
+        bx, by = warp.image_point(second[0], second[1])
+        distance = Math.hypot(bx - ax, by - ay)
+        row_gap = distance if distance > 4
+      end
+      limit = [ ( [ pitch, row_gap ].min * 0.4 ).round, 4 ].max
+      step = [ (pitch * 0.08).round, 2 ].max
+      best = { dx: 0, dy: 0, score: score_at.call(0, 0) }
+      (-limit..limit).step(step) do |dy|
+        (-limit..limit).step(step) do |dx|
+          score = score_at.call(dx, dy)
+          best = { dx: dx, dy: dy, score: score } if score > best[:score]
+        end
+      end
+      fine = [ (step / 2.0).round, 1 ].max
+      found = best.dup
+      (found[:dy] - step..found[:dy] + step).step(fine) do |dy|
+        (found[:dx] - step..found[:dx] + step).step(fine) do |dx|
+          next if dx.abs > limit || dy.abs > limit
+
+          score = score_at.call(dx, dy)
+          best = { dx: dx, dy: dy, score: score } if score > best[:score]
+        end
+      end
+      ShiftedWarp.new(warp, best[:dx], best[:dy])
+    end
+
+    def pitch_at(warp, shift_x, shift_y)
+      points = @grid.bubbles.values.first.to_a.map do |letter, point|
+        x, y = warp.image_point(point[0], point[1])
+        { letter: letter, x: x + shift_x, y: y + shift_y }
+      end
+      letter_pitch(points)
     end
 
     def letter_pitch(points)
@@ -210,26 +266,8 @@ module Activities
       pitch || 48.0
     end
 
-    def darkest_near(image, x, y, sample_radius, search_radius)
-      best = luminance_at(image, x, y, sample_radius)
-      return best if search_radius <= sample_radius
-
-      step = [ sample_radius, 2 ].max
-      (-search_radius..search_radius).step(step) do |dy|
-        (-search_radius..search_radius).step(step) do |dx|
-          next if (dx * dx) + (dy * dy) > search_radius * search_radius
-
-          reading = luminance_at(image, x + dx, y + dy, sample_radius)
-          best = reading if reading[:lum] < best[:lum]
-        end
-      end
-      best
-    end
-
     def luminance_at(image, x, y, radius)
-      total = 0
-      count = 0
-      dark = 0
+      values = []
       cx = x.round
       cy = y.round
       limit = radius * radius
@@ -241,15 +279,14 @@ module Activities
           py = cy + dy
           next if px.negative? || py.negative? || px >= image.width || py >= image.height
 
-          value = luminance(image[px, py])
-          total += value
-          count += 1
-          dark += 1 if value <= 165
+          values << luminance(image[px, py])
         end
       end
-      return { lum: 255, dark: 0.0 } if count.zero?
+      return { lum: 255, dark: 0.0 } if values.empty?
 
-      { lum: total / count, dark: dark.to_f / count }
+      values.sort!
+      dark = values.count { |value| value <= 155 }
+      { lum: values[((values.size - 1) * 0.35).round], dark: dark.to_f / values.size }
     end
 
     def dark?(color)
@@ -258,6 +295,19 @@ module Activities
 
     def luminance(color)
       (ChunkyPNG::Color.r(color) + ChunkyPNG::Color.g(color) + ChunkyPNG::Color.b(color)) / 3
+    end
+
+    class ShiftedWarp
+      def initialize(warp, dx, dy)
+        @warp = warp
+        @dx = dx
+        @dy = dy
+      end
+
+      def image_point(x, y)
+        px, py = @warp.image_point(x, y)
+        [ px + @dx, py + @dy ]
+      end
     end
 
     class Homography

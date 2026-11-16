@@ -37,7 +37,11 @@ export function readPrintedCard(canvas, options = {}) {
 }
 
 function snapFiducials(image, warp, qrSpan) {
-  const blobs = darkSquares(image)
+  const expected = qrSpan > 0 ? (qrSpan * 12 / 58) ** 2 : 0
+  const blobs = darkSquares(image).filter((blob) => {
+    if (!expected) return true
+    return blob.area >= expected * 0.25 && blob.area <= expected * 2.8
+  })
   const radius = Math.max(14, qrSpan * 0.2)
   const snapped = fiducials().map(([ x, y ]) => {
     const point = warp(x, y)
@@ -63,18 +67,18 @@ function agrees(first, second) {
 function sampleGrid(image, warp, questionCount, letterCount) {
   if (!warp) return null
 
+  const mapped = bubblePoints(questionCount, letterCount)
+  const aligned = alignGrid(image, warp, mapped)
   const answers = {}
   let covered = 0
-  Object.entries(bubblePoints(questionCount, letterCount)).forEach(([ number, letters ]) => {
+  Object.entries(mapped).forEach(([ number, letters ]) => {
     const points = Object.entries(letters).map(([ letter, point ]) => {
-      const [ x, y ] = warp(point[0], point[1])
+      const [ x, y ] = aligned(point[0], point[1])
       return { letter, x, y }
     })
-    const pitch = letterPitch(points)
-    const sampleRadius = Math.max(2, Math.round(pitch * 0.12))
-    const searchRadius = Math.max(sampleRadius, Math.round(pitch * 0.28))
+    const radius = Math.max(2, Math.round(letterPitch(points) * 0.1))
     const samples = points.map((point) => {
-      const reading = darkestNear(image, point.x, point.y, sampleRadius, searchRadius)
+      const reading = luminanceAt(image, point.x, point.y, radius)
       return { letter: point.letter, lum: reading.lum, dark: reading.dark }
     })
     const decision = chosen(samples)
@@ -87,6 +91,66 @@ function sampleGrid(image, warp, questionCount, letterCount) {
   return { answers, covered }
 }
 
+function alignGrid(image, warp, mapped) {
+  const rows = Object.values(mapped)
+  if (!rows.length) return warp
+
+  const pitchOf = (shiftX, shiftY) => {
+    const points = Object.values(rows[0]).map((point) => {
+      const [ x, y ] = warp(point[0], point[1])
+      return { x: x + shiftX, y: y + shiftY }
+    })
+    return letterPitch(points)
+  }
+  const scoreAt = (shiftX, shiftY) => {
+    const radius = Math.max(2, Math.round(pitchOf(shiftX, shiftY) * 0.1))
+    let score = 0
+    rows.forEach((letters) => {
+      const values = Object.values(letters).map((point) => {
+        const [ x, y ] = warp(point[0], point[1])
+        return luminanceAt(image, x + shiftX, y + shiftY, radius).lum
+      }).sort((a, b) => a - b)
+      const darkest = values[0]
+      const next = values.length > 1 ? values[1] : 255
+      if (darkest <= 170) score += next - darkest
+    })
+    return score
+  }
+
+  const pitch = pitchOf(0, 0)
+  let rowGap = pitch
+  if (rows.length > 1) {
+    const first = Object.values(rows[0])[0]
+    const second = Object.values(rows[1])[0]
+    const [ ax, ay ] = warp(first[0], first[1])
+    const [ bx, by ] = warp(second[0], second[1])
+    const distance = Math.hypot(bx - ax, by - ay)
+    if (distance > 4) rowGap = distance
+  }
+  const limit = Math.max(4, Math.round(Math.min(pitch, rowGap) * 0.4))
+  const step = Math.max(2, Math.round(pitch * 0.08))
+  let best = { dx: 0, dy: 0, score: scoreAt(0, 0) }
+  for (let dy = -limit; dy <= limit; dy += step) {
+    for (let dx = -limit; dx <= limit; dx += step) {
+      const score = scoreAt(dx, dy)
+      if (score > best.score) best = { dx, dy, score }
+    }
+  }
+  const fine = Math.max(1, Math.round(step / 2))
+  const found = { dx: best.dx, dy: best.dy }
+  for (let dy = found.dy - step; dy <= found.dy + step; dy += fine) {
+    for (let dx = found.dx - step; dx <= found.dx + step; dx += fine) {
+      if (Math.abs(dx) > limit || Math.abs(dy) > limit) continue
+      const score = scoreAt(dx, dy)
+      if (score > best.score) best = { dx, dy, score }
+    }
+  }
+  return (x, y) => {
+    const [ px, py ] = warp(x, y)
+    return [ px + best.dx, py + best.dy ]
+  }
+}
+
 function letterPitch(points) {
   let pitch = null
   for (let index = 1; index < points.length; index += 1) {
@@ -94,19 +158,6 @@ function letterPitch(points) {
     if (distance > 4 && (pitch === null || distance < pitch)) pitch = distance
   }
   return pitch || 48
-}
-
-function darkestNear(image, x, y, sampleRadius, searchRadius) {
-  let best = luminanceAt(image, x, y, sampleRadius)
-  const step = Math.max(2, sampleRadius)
-  for (let dy = -searchRadius; dy <= searchRadius; dy += step) {
-    for (let dx = -searchRadius; dx <= searchRadius; dx += step) {
-      if ((dx * dx) + (dy * dy) > searchRadius * searchRadius) continue
-      const reading = luminanceAt(image, x + dx, y + dy, sampleRadius)
-      if (reading.lum < best.lum) best = reading
-    }
-  }
-  return best
 }
 
 function richer(first, second) {
@@ -324,15 +375,13 @@ function chosen(samples) {
   if (!best) return null
 
   const gap = second ? second.lum - best.lum : 255
-  if (best.lum <= 158 && best.dark >= 0.5 && gap >= 30) return { letter: best.letter }
-  if (ordered.every((sample) => sample.lum >= 175 && sample.dark < 0.25)) return { letter: null }
+  if (best.lum <= 155 && best.dark >= 0.4 && gap >= 20) return { letter: best.letter }
+  if (ordered.every((sample) => sample.lum >= 185)) return { letter: null }
   return null
 }
 
 function luminanceAt(image, x, y, radius) {
-  let total = 0
-  let count = 0
-  let dark = 0
+  const values = []
   const cx = Math.round(x)
   const cy = Math.round(y)
   const limit = radius * radius
@@ -343,14 +392,13 @@ function luminanceAt(image, x, y, radius) {
       const py = cy + dy
       if (px < 0 || py < 0 || px >= image.width || py >= image.height) continue
       const index = ((py * image.width) + px) * 4
-      const lum = (image.data[index] + image.data[index + 1] + image.data[index + 2]) / 3
-      total += lum
-      count += 1
-      if (lum <= 165) dark += 1
+      values.push((image.data[index] + image.data[index + 1] + image.data[index + 2]) / 3)
     }
   }
-  if (!count) return { lum: 255, dark: 0 }
-  return { lum: total / count, dark: dark / count }
+  if (!values.length) return { lum: 255, dark: 0 }
+  values.sort((a, b) => a - b)
+  const dark = values.filter((value) => value <= 155).length
+  return { lum: values[Math.round((values.length - 1) * 0.35)], dark: dark / values.length }
 }
 
 function darkAt(data, pixelIndex) {
