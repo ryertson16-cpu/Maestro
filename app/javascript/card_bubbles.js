@@ -14,13 +14,12 @@ export function readPrintedCard(canvas, options = {}) {
   const qrSpan = qr ? Math.hypot(qr.corners[1][0] - qr.corners[0][0], qr.corners[1][1] - qr.corners[0][1]) : 0
   const qrWarp = qr && homography(qrCardCorners(qr.version), qr.corners)
   const snapped = qrWarp && snapFiducials(image, qrWarp, qrSpan)
-  const fromSnap = snapped && sampleGrid(image, snapped, qrSpan * 0.028, questionCount, letterCount)
-  const fromQr = qrWarp && sampleGrid(image, qrWarp, qrSpan * 0.03, questionCount, letterCount)
+  const fromSnap = snapped && sampleGrid(image, snapped, questionCount, letterCount)
+  const fromQr = qrWarp && sampleGrid(image, qrWarp, questionCount, letterCount)
   const corners = findCorners(image)
   const fromCorners = corners && sampleGrid(
     image,
     homography(fiducials(), corners),
-    Math.hypot(corners[1][0] - corners[0][0], corners[1][1] - corners[0][1]) * 0.008,
     questionCount,
     letterCount
   )
@@ -61,17 +60,22 @@ function agrees(first, second) {
   return same >= Math.ceil(keys.length * 0.8)
 }
 
-function sampleGrid(image, warp, spanRadius, questionCount, letterCount) {
+function sampleGrid(image, warp, questionCount, letterCount) {
   if (!warp) return null
 
   const answers = {}
   let covered = 0
-  const radius = Math.max(3, Math.round(spanRadius))
   Object.entries(bubblePoints(questionCount, letterCount)).forEach(([ number, letters ]) => {
-    const samples = Object.entries(letters).map(([ letter, point ]) => {
+    const points = Object.entries(letters).map(([ letter, point ]) => {
       const [ x, y ] = warp(point[0], point[1])
-      const reading = luminanceAt(image, x, y, radius)
-      return { letter, lum: reading.lum, dark: reading.dark }
+      return { letter, x, y }
+    })
+    const pitch = letterPitch(points)
+    const sampleRadius = Math.max(2, Math.round(pitch * 0.12))
+    const searchRadius = Math.max(sampleRadius, Math.round(pitch * 0.28))
+    const samples = points.map((point) => {
+      const reading = darkestNear(image, point.x, point.y, sampleRadius, searchRadius)
+      return { letter: point.letter, lum: reading.lum, dark: reading.dark }
     })
     const decision = chosen(samples)
     if (!decision) return
@@ -81,6 +85,28 @@ function sampleGrid(image, warp, spanRadius, questionCount, letterCount) {
   })
   if (covered < 1) return null
   return { answers, covered }
+}
+
+function letterPitch(points) {
+  let pitch = null
+  for (let index = 1; index < points.length; index += 1) {
+    const distance = Math.hypot(points[index].x - points[index - 1].x, points[index].y - points[index - 1].y)
+    if (distance > 4 && (pitch === null || distance < pitch)) pitch = distance
+  }
+  return pitch || 48
+}
+
+function darkestNear(image, x, y, sampleRadius, searchRadius) {
+  let best = luminanceAt(image, x, y, sampleRadius)
+  const step = Math.max(2, sampleRadius)
+  for (let dy = -searchRadius; dy <= searchRadius; dy += step) {
+    for (let dx = -searchRadius; dx <= searchRadius; dx += step) {
+      if ((dx * dx) + (dy * dy) > searchRadius * searchRadius) continue
+      const reading = luminanceAt(image, x + dx, y + dy, sampleRadius)
+      if (reading.lum < best.lum) best = reading
+    }
+  }
+  return best
 }
 
 function richer(first, second) {
@@ -298,7 +324,7 @@ function chosen(samples) {
   if (!best) return null
 
   const gap = second ? second.lum - best.lum : 255
-  if (best.lum <= 125 && best.dark >= 0.55 && gap >= 45) return { letter: best.letter }
+  if (best.lum <= 158 && best.dark >= 0.5 && gap >= 30) return { letter: best.letter }
   if (ordered.every((sample) => sample.lum >= 175 && sample.dark < 0.25)) return { letter: null }
   return null
 }
@@ -320,7 +346,7 @@ function luminanceAt(image, x, y, radius) {
       const lum = (image.data[index] + image.data[index + 1] + image.data[index + 2]) / 3
       total += lum
       count += 1
-      if (lum <= 140) dark += 1
+      if (lum <= 165) dark += 1
     }
   }
   if (!count) return { lum: 255, dark: 0 }

@@ -27,12 +27,18 @@ module Activities
       answers = {}
       bubbles = {}
       @grid.bubbles.each do |number, letters|
-        samples = letters.map do |letter, point|
+        points = letters.map do |letter, point|
           x, y = warp.image_point(point[0], point[1])
           bubbles[number] ||= {}
           bubbles[number][letter] = [ x / image.width.to_f, y / image.height.to_f ]
-          reading = luminance_at(image, x, y, sample_radius(corners))
-          { letter: letter, lum: reading[:lum], dark: reading[:dark] }
+          { letter: letter, x: x, y: y }
+        end
+        pitch = letter_pitch(points)
+        sample = [ (pitch * 0.12).round, 2 ].max
+        search = [ (pitch * 0.28).round, sample ].max
+        samples = points.map do |point|
+          reading = darkest_near(image, point[:x], point[:y], sample, search)
+          { letter: point[:letter], lum: reading[:lum], dark: reading[:dark] }
         end
         chosen = chosen_letter(samples)
         answers[number] = chosen if chosen
@@ -190,14 +196,34 @@ module Activities
       return if best.nil?
 
       gap = second ? second[:lum] - best[:lum] : 255
-      return best[:letter] if best[:lum] <= 125 && best[:dark] >= 0.55 && gap >= 45
+      return best[:letter] if best[:lum] <= 158 && best[:dark] >= 0.5 && gap >= 30
 
       nil
     end
 
-    def sample_radius(corners)
-      span = Math.hypot(corners[1][0] - corners[0][0], corners[1][1] - corners[0][1])
-      [ (span * 0.008).round, 2 ].max
+    def letter_pitch(points)
+      pitch = nil
+      points.each_cons(2) do |first, second|
+        distance = Math.hypot(second[:x] - first[:x], second[:y] - first[:y])
+        pitch = distance if distance > 4 && (pitch.nil? || distance < pitch)
+      end
+      pitch || 48.0
+    end
+
+    def darkest_near(image, x, y, sample_radius, search_radius)
+      best = luminance_at(image, x, y, sample_radius)
+      return best if search_radius <= sample_radius
+
+      step = [ sample_radius, 2 ].max
+      (-search_radius..search_radius).step(step) do |dy|
+        (-search_radius..search_radius).step(step) do |dx|
+          next if (dx * dx) + (dy * dy) > search_radius * search_radius
+
+          reading = luminance_at(image, x + dx, y + dy, sample_radius)
+          best = reading if reading[:lum] < best[:lum]
+        end
+      end
+      best
     end
 
     def luminance_at(image, x, y, radius)
@@ -218,7 +244,7 @@ module Activities
           value = luminance(image[px, py])
           total += value
           count += 1
-          dark += 1 if value <= 140
+          dark += 1 if value <= 165
         end
       end
       return { lum: 255, dark: 0.0 } if count.zero?

@@ -28,6 +28,26 @@ class Activities::CardBubbleReaderTest < ActiveSupport::TestCase
     File.delete(path) if path && File.exist?(path)
   end
 
+  test "reads a filled bubble that sits a little off the expected center" do
+    grid = Activities::BubbleGrid.new(1, %w[A B])
+    width = 420
+    height = (width * Activities::BubbleGrid::CARD_H / Activities::BubbleGrid::CARD_W).round
+    image = ChunkyPNG::Image.new(width, height, ChunkyPNG::Color::WHITE)
+    grid.fiducials.each do |nx, ny|
+      paint_square(image, nx * width, ny * height, 16)
+    end
+    ax, ay = grid.bubbles.fetch("1").fetch("A")
+    paint_disk(image, (ax * width) + 12, ay * height, 9)
+
+    path = Rails.root.join("tmp/bubble-offset-#{SecureRandom.hex(4)}.png").to_s
+    image.save(path)
+    result = Activities::CardBubbleReader.read(path, question_count: 1, letters: %w[A B])
+
+    assert_equal "A", result.answers["1"]
+  ensure
+    File.delete(path) if path && File.exist?(path)
+  end
+
   test "does not read a light smudge as a filled bubble" do
     grid = Activities::BubbleGrid.new(1, %w[A B])
     width = 420
