@@ -192,6 +192,7 @@ hr {
   position: sticky;
   top: 0;
   z-index: 20;
+  overflow: visible;
   border-bottom: 1px solid var(--glass-stroke);
   background: var(--color-header);
   box-shadow: var(--glass-inset);
@@ -302,6 +303,11 @@ html[data-theme="night"] .auth-logo {
   color: var(--color-primary);
 }
 
+.nav-details {
+  display: flex;
+  align-items: center;
+}
+
 .nav-caret {
   display: grid;
   width: 28px;
@@ -315,6 +321,12 @@ html[data-theme="night"] .auth-logo {
   font-size: 0.7rem;
   line-height: 1;
   box-shadow: none;
+  list-style: none;
+  cursor: pointer;
+}
+
+.nav-caret::-webkit-details-marker {
+  display: none;
 }
 
 .nav-caret:hover {
@@ -343,7 +355,8 @@ html[data-theme="night"] .auth-logo {
   -webkit-backdrop-filter: blur(18px);
 }
 
-.nav-item.is-open .nav-panel {
+.nav-item.is-open .nav-panel,
+.nav-details[open] .nav-panel {
   display: grid;
 }
 

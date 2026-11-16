@@ -12,17 +12,15 @@
       <% end %>
 
       <% if panel_items.any? %>
-      <button type="button"
-              class="nav-caret"
-              data-nav-caret
-              data-skip-confirm
-              aria-expanded="false"
-              aria-haspopup="true"
-              aria-label="Abrir menu <%= group[:label] %>">
+      <details class="nav-details">
+      <summary class="nav-caret"
+               data-nav-caret
+               data-skip-confirm
+               aria-label="Abrir menu <%= group[:label] %>">
         <span aria-hidden="true">▾</span>
-      </button>
+      </summary>
 
-      <div class="nav-panel" hidden data-nav-panel>
+      <div class="nav-panel" data-nav-panel>
         <% panel_items.each do |item| %>
           <%= link_to item[:href],
                       class: ["nav-panel-link", ("is-emphasis" if item[:emphasis])].compact.join(" ") do %>
@@ -40,6 +38,7 @@
           <% end %>
         <% end %>
       </div>
+      </details>
       <% end %>
     </div>
   <% end %>

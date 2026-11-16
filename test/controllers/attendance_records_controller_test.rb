@@ -22,6 +22,8 @@ class AttendanceRecordsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "Diário de classe"
+    assert_includes response.body, "nav-details"
+    assert_includes response.body, "Abrir menu Diário"
     assert_includes response.body, "Livro SIAGE"
     assert_includes response.body, "Calendário"
     assert_includes response.body, "Planos"
