@@ -5,29 +5,18 @@ function rowStatus(row) {
 
   if (justified?.checked) return "justified"
   if (late?.checked) return "late"
-  return sw?.getAttribute("aria-checked") === "true" ? "present" : "absent"
+  return sw?.checked ? "present" : "absent"
 }
 
 function paintRow(row, status) {
-  const hidden = row.querySelector("[data-attendance-status]")
   const cell = row.querySelector(".attendance-status-cell")
   const sw = row.querySelector("[data-attendance-switch]")
   const late = row.querySelector("[data-attendance-late]")
   const justified = row.querySelector("[data-attendance-justified]")
 
-  if (hidden) hidden.value = status
   if (late) late.checked = status === "late"
   if (justified) justified.checked = status === "justified"
-  if (sw) {
-    const on = status !== "absent"
-    sw.setAttribute("aria-checked", on ? "true" : "false")
-    sw.setAttribute("aria-label", {
-      present: "Presente",
-      absent: "Falta",
-      justified: "Falta justificada",
-      late: "Atrasado"
-    }[status] || "Presença")
-  }
+  if (sw) sw.checked = status !== "absent"
   if (cell) {
     cell.classList.remove(
       "status-present",
@@ -61,7 +50,7 @@ function updateSummaryIn(root) {
 
   root.querySelectorAll("[data-attendance-row]").forEach((row) => {
     counts.total += 1
-    const status = row.querySelector("[data-attendance-status]")?.value || rowStatus(row)
+    const status = rowStatus(row)
     if (status === "present" || status === "absent" || status === "justified" || status === "late") {
       counts[status] += 1
     }
@@ -73,60 +62,47 @@ function updateSummaryIn(root) {
   })
 }
 
-function syncRow(row) {
-  paintRow(row, rowStatus(row))
-  updateSummary()
-}
-
 document.addEventListener("click", (event) => {
-  const sw = event.target.closest("[data-attendance-switch]")
-  if (sw) {
-    event.preventDefault()
-    const row = sw.closest("[data-attendance-row]")
-    if (!row) return
-    const late = row.querySelector("[data-attendance-late]")
-    const justified = row.querySelector("[data-attendance-justified]")
-    if (late) late.checked = false
-    if (justified) justified.checked = false
-    const on = sw.getAttribute("aria-checked") === "true"
-    sw.setAttribute("aria-checked", on ? "false" : "true")
-    syncRow(row)
-    return
-  }
-
   const marcarTodos = event.target.closest("[data-attendance-mark-all]")
-  if (marcarTodos) {
-    event.preventDefault()
-    const root = marcarTodos.closest("[data-attendance-block]") || document
-    root.querySelectorAll("[data-attendance-row]").forEach((row) => {
-      paintRow(row, "present")
-    })
-    updateSummary()
-  }
+  if (!marcarTodos) return
+
+  event.preventDefault()
+  const root = marcarTodos.closest("[data-attendance-block]") || document
+  root.querySelectorAll("[data-attendance-row]").forEach((row) => {
+    paintRow(row, "present")
+  })
+  updateSummary()
 })
 
 document.addEventListener("change", (event) => {
-  const late = event.target.closest("[data-attendance-late]")
-  const justified = event.target.closest("[data-attendance-justified]")
-  if (!late && !justified) return
-
   const row = event.target.closest("[data-attendance-row]")
   if (!row) return
 
-  if (late?.checked) {
-    const other = row.querySelector("[data-attendance-justified]")
-    if (other) other.checked = false
+  const sw = row.querySelector("[data-attendance-switch]")
+  const late = row.querySelector("[data-attendance-late]")
+  const justified = row.querySelector("[data-attendance-justified]")
+  const target = event.target
+
+  if (target === sw && !sw.checked) {
+    if (late) late.checked = false
+    if (justified) justified.checked = false
   }
-  if (justified?.checked) {
-    const other = row.querySelector("[data-attendance-late]")
-    if (other) other.checked = false
+  if (target === late && late.checked) {
+    if (justified) justified.checked = false
+    if (sw) sw.checked = true
+  }
+  if (target === justified && justified.checked) {
+    if (late) late.checked = false
+    if (sw) sw.checked = true
   }
 
-  const sw = row.querySelector("[data-attendance-switch]")
-  if ((late?.checked || justified?.checked) && sw) {
-    sw.setAttribute("aria-checked", "true")
+  const cell = row.querySelector(".attendance-status-cell")
+  const status = rowStatus(row)
+  if (cell) {
+    cell.classList.remove("status-present", "status-absent", "status-justified", "status-late")
+    cell.classList.add(`status-${status}`)
   }
-  syncRow(row)
+  updateSummary()
 })
 
 function triggerSiageDownload() {

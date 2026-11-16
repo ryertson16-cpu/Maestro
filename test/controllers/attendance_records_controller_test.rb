@@ -47,8 +47,61 @@ class AttendanceRecordsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "2ª F"
     assert_includes response.body, "Carregar diário"
     assert_includes response.body, "Salvar frequência de todos os tempos"
+
+    student = @professor.students.create!(name: "Carla Souza")
+    Enrollment.create!(
+      professor: @professor,
+      student: student,
+      classroom: classroom,
+      enrolled_on: Date.new(2026, 10, 9),
+      status: "active"
+    )
+
+    get attendance_records_path(classroom_id: classroom.id, attendance_date: "2026-10-09")
+
+    assert_response :success
+    assert_includes response.body, "Carla Souza"
+    assert_includes response.body, 'data-attendance-switch="true"'
+    assert_includes response.body, 'type="checkbox"'
     assert_includes response.body, "Histórico da turma"
     refute_includes response.body, "Aulas deste dia"
+  end
+
+  test "saving the call keeps absence and lateness" do
+    grade = @professor.grade_levels.create!(name: "2º ano")
+    classroom = @professor.classrooms.create!(
+      name: "2ª F",
+      school_year: 2026,
+      grade_level: grade,
+      active: true
+    )
+    student = @professor.students.create!(name: "Carla Souza")
+    enrollment = Enrollment.create!(
+      professor: @professor,
+      student: student,
+      classroom: classroom,
+      enrolled_on: Date.new(2026, 10, 9),
+      status: "active"
+    )
+
+    post save_attendance_records_path, params: {
+      classroom_id: classroom.id,
+      attendance_date: "2026-10-09",
+      lessons: { "new" => { siage_time_slot: "1º tempo", theme: "Aula" } },
+      attendance: { "new" => { enrollment.id.to_s => { status: "absent" } } }
+    }
+
+    assert_redirected_to attendance_records_path(classroom_id: classroom.id, attendance_date: "2026-10-09")
+    assert_equal "absent", AttendanceRecord.find_by!(enrollment: enrollment).status
+
+    post save_attendance_records_path, params: {
+      classroom_id: classroom.id,
+      attendance_date: "2026-10-09",
+      lessons: { "new" => { siage_time_slot: "1º tempo", theme: "Aula" } },
+      attendance: { "new" => { enrollment.id.to_s => { status: "late" } } }
+    }
+
+    assert_equal "late", AttendanceRecord.find_by!(enrollment: enrollment).status
   end
 
   test "diary pdf download uses official letterhead payload" do

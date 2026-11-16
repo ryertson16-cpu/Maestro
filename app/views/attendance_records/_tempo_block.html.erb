@@ -177,40 +177,43 @@
                 <td class="attendance-status-cell status-<%= status %>">
                   <%= hidden_field_tag(
                     "attendance[#{slot_key}][#{enrollment.id}][status]",
-                    status,
-                    data: { attendance_status: true }
+                    "absent",
+                    id: "attendance_absent_#{slot_key}_#{enrollment.id}"
                   ) %>
-                  <button
-                    type="button"
-                    class="attendance-switch"
-                    role="switch"
-                    aria-checked="<%= status == "absent" ? "false" : "true" %>"
-                    aria-label="Presença"
-                    data-attendance-switch
-                  >
+                  <label class="attendance-switch" for="attendance_switch_<%= slot_key %>_<%= enrollment.id %>">
+                    <%= check_box_tag(
+                      "attendance[#{slot_key}][#{enrollment.id}][status]",
+                      "present",
+                      status != "absent",
+                      id: "attendance_switch_#{slot_key}_#{enrollment.id}",
+                      data: { attendance_switch: true },
+                      aria: { label: "Presença" }
+                    ) %>
                     <span class="attendance-switch-track"></span>
                     <span class="attendance-switch-knob"></span>
-                  </button>
+                  </label>
                 </td>
                 <td>
                   <label class="attendance-flag" for="attendance_late_<%= slot_key %>_<%= enrollment.id %>">
-                    <input
-                      type="checkbox"
-                      id="attendance_late_<%= slot_key %>_<%= enrollment.id %>"
-                      <%= "checked" if status == "late" %>
-                      data-attendance-late
-                    >
+                    <%= check_box_tag(
+                      "attendance[#{slot_key}][#{enrollment.id}][status]",
+                      "late",
+                      status == "late",
+                      id: "attendance_late_#{slot_key}_#{enrollment.id}",
+                      data: { attendance_late: true }
+                    ) %>
                     Atrasado
                   </label>
                 </td>
                 <td>
                   <label class="attendance-flag" for="attendance_justified_<%= slot_key %>_<%= enrollment.id %>">
-                    <input
-                      type="checkbox"
-                      id="attendance_justified_<%= slot_key %>_<%= enrollment.id %>"
-                      <%= "checked" if status == "justified" %>
-                      data-attendance-justified
-                    >
+                    <%= check_box_tag(
+                      "attendance[#{slot_key}][#{enrollment.id}][status]",
+                      "justified",
+                      status == "justified",
+                      id: "attendance_justified_#{slot_key}_#{enrollment.id}",
+                      data: { attendance_justified: true }
+                    ) %>
                     Falta justificada
                   </label>
                 </td>
