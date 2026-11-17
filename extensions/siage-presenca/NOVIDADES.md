@@ -1,3 +1,19 @@
+# Novidades: versão 4.9.9 (17/11/2026)
+
+- Depois do ícone da coluna Ação, a extensão não grava na ficha Visualizar Turma. Clica na aba Frequência e só então preenche data, período e tempo da aula do Maestro.
+
+# Novidades: versão 4.9.8 (17/11/2026)
+
+- Para abrir uma turma, a extensão volta à Listagem de Turmas e clica no ícone de prancheta da coluna Ação. Não tenta lançar a frequência numa página de turma vazia.
+
+# Novidades: versão 4.9.7 (17/11/2026)
+
+- Troca de turma: o painel da extensão não conta mais como nome da turma. Se a página aberta não for a próxima (por exemplo a última da 1ª série), a extensão volta à listagem e abre a turma seguinte.
+
+# Novidades: versão 4.9.6 (16/11/2026)
+
+- Frequência: se o SIAGE recusar a aula porque o professor não é o da turma, a extensão mostra **professor incompatível** em laranja e segue para a próxima frequência. Não repete a mesma aula.
+
 # Novidades: versão 4.9.5 (04/11/2026)
 
 - Frequência e Trazer turmas viram filas separadas. Uma não cancela a outra. Trazer alunos só quando o Maestro pede; a chamada só quando há aula para lançar. O pedido de lista some ao terminar ou ao iniciar uma chamada.

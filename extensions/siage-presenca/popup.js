@@ -299,13 +299,20 @@ function textoFilaChamada(job) {
   const ok = todas.filter((a) => a.estado === "ok").length;
   const ja = todas.filter((a) => a.estado === "ja").length;
   const erro = todas.filter((a) => a.estado === "erro").length;
+  const incompativeis = todas.filter((a) => a.estado === "incompativel");
   const pend = todas.filter((a) => a.estado === "pendente").length;
   const nome = { rodando: "Em andamento", parado: "Parado", concluido: "Concluído" }[job.status] || job.status;
   const partes = [`${ok} salvas`];
   if (ja) partes.push(`${ja} já no SIAGE`);
+  if (incompativeis.length) partes.push(`<b style="color:#ea580c">${incompativeis.length} professor incompatível</b>`);
   if (erro) partes.push(`${erro} com erro`);
   if (pend) partes.push(`${pend} pendentes`);
-  return { html: `<div><b>Frequência · ${escHtml(nome)}</b>: ${partes.join(", ")}${job.teste ? " (modo teste)" : ""}.</div>`, pend, ativo: job.status !== "rodando" && pend };
+  const linhasInc = incompativeis.slice(-8).map((aula) => {
+    const grupo = (job.grupos || []).find((g) => (g.aulas || []).includes(aula));
+    const rotulo = `${grupo && grupo.turma ? grupo.turma + " " : ""}${dataBR(aula.data)}`;
+    return `<div style="color:#ea580c;font-weight:600">${escHtml(rotulo)}: professor incompatível</div>`;
+  }).join("");
+  return { html: `<div><b>Frequência · ${escHtml(nome)}</b>: ${partes.join(", ")}${job.teste ? " (modo teste)" : ""}.</div>${linhasInc}`, pend, ativo: job.status !== "rodando" && pend };
 }
 
 function textoFilaRoster(job) {

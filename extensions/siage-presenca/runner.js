@@ -112,6 +112,14 @@
     if (estado === "ja") return "already_registered";
     return "failed";
   }
+  function professorIncompativel(texto) {
+    const t = norm(texto);
+    if (/professor incompativel/.test(t)) return true;
+    if (/incompativel/.test(t) && /professor/.test(t)) return true;
+    if (/professor nao (esta|encontra|possui) (vincul|lotad|habilit)/.test(t)) return true;
+    if (/nao possui vinculo|sem vinculo com (a |esta )?(turma|disciplina|componente)/.test(t)) return true;
+    return /nao e o professor (desta|da) (turma|disciplina|componente)/.test(t);
+  }
   function avisarMaestro(job, aula, status) {
     if (!job || job.teste) return;
     const ids = (aula.maestroIds || []).map((x) => parseInt(x, 10)).filter((n) => n > 0);
@@ -245,18 +253,34 @@
   const reComp = (comp) => new RegExp(`(^|[^a-z])${norm(comp).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z]|$)`);
 
   function cabecalhoTurma() {
-    return q("h1, h2, h3, h4, h5").map((e) => e.innerText || e.textContent).join(" | ");
+    return q("h1, h2, h3, h4, h5").filter((e) => !e.closest("#siage-fila-painel")).map((e) => e.innerText || e.textContent).join(" | ");
+  }
+
+  function textoDaPagina(limite) {
+    const painel = document.getElementById("siage-fila-painel");
+    const display = painel ? painel.style.display : "";
+    if (painel) painel.style.display = "none";
+    const texto = (document.body?.innerText || "").slice(0, limite || 2500);
+    if (painel) painel.style.display = display;
+    return texto;
   }
 
   function paginaDaTurma(grupo) {
-    const bloco = cabecalhoTurma() || (document.body?.innerText || "").slice(0, 1800);
-    const t = norm(bloco);
+    if (ehListagemTurmas()) return false;
+    const t = norm(`${cabecalhoTurma()} ${textoDaPagina(2500)}`);
     if (!reTurma(grupo.turma).test(t)) return false;
     if (!grupo.componente) return true;
-    const compTxt = q("strong, b, span, p, div").filter(visivel)
-      .filter((s) => /componente curricular/.test(norm(s.textContent)))
-      .map((s) => norm((s.parentElement || s).innerText || s.textContent)).join(" | ") || t;
-    return reComp(nomeComponente(grupo.componente)).test(compTxt) || reComp(nomeComponente(grupo.componente)).test(t);
+    return reComp(nomeComponente(grupo.componente)).test(t);
+  }
+
+  function idTurmaNaUrl() {
+    return (location.pathname.match(/\/turma\/([0-9a-f-]{8,})/i) || [])[1] || "";
+  }
+
+  function idDeOutroGrupo(job, gi) {
+    const id = idTurmaNaUrl();
+    if (!id || !job || !Array.isArray(job.grupos)) return false;
+    return job.grupos.some((grupo, index) => index !== gi && grupo.turmaId === id);
   }
   const naPaginaDeFrequencia = () => /\/(frequencia|registro-aula|registro_aula)(\/|$)/i.test(location.pathname);
   const naAbaRegistroDeAula = () => {
@@ -274,11 +298,13 @@
       (/active|current|selected/.test(`${a.className} ${a.parentElement?.className || ""}`) || a.getAttribute("aria-selected") === "true")
     );
   }
+  function telaDeGravacaoFrequencia() {
+    if (naFormularioFrequencia() || naTelaDeCadastro() || botaoRegistrarFrequencia()) return true;
+    const t = norm(textoDaPagina(2500));
+    return /buscar por/.test(t) && /\bperiodo\b/.test(t) && /\btempo\b/.test(t) && /dd.?mm/.test(t);
+  }
   function naAbaFrequencia() {
-    if (/\/frequencia(\/|$)/i.test(location.pathname)) return true;
-    const titulo = q("h1, h2, h3, .breadcrumb, nav").map((e) => e.innerText || e.textContent).join(" ");
-    if (/frequencia/.test(norm(titulo)) && !/registro de aula/.test(norm(titulo))) return true;
-    return abaAtiva(/^frequencia$/);
+    return telaDeGravacaoFrequencia();
   }
   function naFormularioFrequencia() {
     const t = norm((document.body?.innerText || "").slice(0, 3500));
@@ -298,9 +324,11 @@
   }
 
   function ehListagemTurmas() {
-    if (/listagem-turmas\/?$/.test(location.pathname)) return true;
+    if (/\/listagem-turmas\/?($|\?)/.test(location.pathname)) return true;
+    const topo = norm(textoDaPagina(1200));
+    if (/listagem de turmas/.test(topo) && !/\/turma\//.test(location.pathname)) return true;
     const cab = q("th, thead td, [role=columnheader]").map((el) => norm(el.textContent)).join(" ");
-    return /turma/.test(cab) && /componente/.test(cab) && /acao/.test(cab);
+    return /turma/.test(cab) && /componente/.test(cab) && !/\/turma\//.test(location.pathname);
   }
 
   function ehPaginaTurmaAberta() {
@@ -384,17 +412,32 @@
     return chegouNoDiario() ? "ok" : "navegando";
   }
 
+  function celulaAcao(linha) {
+    const ths = q("th, thead td, [role=columnheader]");
+    const idx = ths.findIndex((el) => /acao/.test(norm(el.textContent)));
+    const tds = q("td", linha);
+    if (idx >= 0 && tds[idx]) return tds[idx];
+    return [...tds].reverse().find((td) => q("button, a, i, svg, img, span", td).some(visivel)) || tds[tds.length - 1] || linha;
+  }
+
   function botaoPrancheta(linha) {
-    const celulas = q("td", linha);
-    const acao = celulas[celulas.length - 1] || linha;
-    const porTitulo = q("button, a", acao).find((b) => {
+    const acao = celulaAcao(linha);
+    const porTitulo = q("button, a, [role=button]", acao).find((b) => {
       const rotulo = `${b.title || ""} ${b.getAttribute("aria-label") || ""} ${b.textContent || ""}`;
       return /visualizar|diario|prancheta|clipboard|abrir/i.test(rotulo);
     });
     if (porTitulo) return porTitulo;
-    const icone = acao.querySelector("#btn-visualizar, button[title=Visualizar], a[title=Visualizar], i, svg, span.pi, span.fa, span.p-button-icon");
-    if (icone) return icone.closest("button, a") || icone;
-    return q("button, a", acao).find(visivel) || q("button, a", linha).find(visivel);
+    const icone = q("button, a, [role=button], i, svg, img, span", acao).find((el) => visivel(el) && el.getBoundingClientRect().width > 0);
+    return icone ? (icone.closest("button, a, [role=button]") || icone) : acao;
+  }
+
+  function clicarIconeAcao(el) {
+    if (!el) return;
+    const alvo = el.closest("button, a, [role=button]") || el;
+    alvo.scrollIntoView({ block: "center", inline: "center" });
+    const caixa = alvo.getBoundingClientRect();
+    clicarNaPagina(caixa.left + (caixa.width / 2), caixa.top + (caixa.height / 2));
+    clicarNativo(alvo);
   }
 
   function contarEstados(job) {
@@ -404,6 +447,7 @@
       ok: aulas.filter((a) => a.estado === "ok").length,
       ja: aulas.filter((a) => a.estado === "ja").length,
       erro: aulas.filter((a) => a.estado === "erro").length,
+      incompativel: aulas.filter((a) => a.estado === "incompativel").length,
       falta: aulas.filter((a) => a.estado === "pendente")
     };
   }
@@ -504,19 +548,22 @@
       const ok = g.aulas.filter((a) => a.estado === "ok").length;
       const ja = g.aulas.filter((a) => a.estado === "ja").length;
       const erro = g.aulas.filter((a) => a.estado === "erro").length;
+      const inc = g.aulas.filter((a) => a.estado === "incompativel").length;
       const falta = g.aulas.filter((a) => a.estado === "pendente").length;
       const nome = g.turma ? `${g.turma}${g.componente ? " · " + g.componente : ""}` : "Turma aberta";
-      return `<div style="padding:3px 0;border-top:1px solid #f3f4f6">${nome}: <b style="color:#15803d">${ok} feitas</b>${ja ? ` · <b style="color:#5b4bdb">${ja} já no SIAGE</b>` : ""}${falta ? ` · <b>${falta} faltam</b>` : ""}${erro ? ` · <b style="color:#b91c1c">${erro} falhou</b>` : ""} <span style="color:#6b7280">/ ${g.aulas.length}</span></div>`;
+      return `<div style="padding:3px 0;border-top:1px solid #f3f4f6">${nome}: <b style="color:#15803d">${ok} feitas</b>${ja ? ` · <b style="color:#5b4bdb">${ja} já no SIAGE</b>` : ""}${inc ? ` · <b style="color:#ea580c">${inc} professor incompatível</b>` : ""}${falta ? ` · <b>${falta} faltam</b>` : ""}${erro ? ` · <b style="color:#b91c1c">${erro} falhou</b>` : ""} <span style="color:#6b7280">/ ${g.aulas.length}</span></div>`;
     }).join("");
     const faltaTxt = c.falta.slice(0, 6).map((a) => dataBR(a.data) + (a.tempos && a.tempos.length ? " t." + a.tempos.join(",") : "")).join(" · ");
     const erros = job.grupos.flatMap((g) => g.aulas.filter((a) => a.estado === "erro").map((a) => `${g.turma || ""} ${dataBR(a.data)}: ${a.msg}`)).slice(-8);
+    const incAvisos = job.grupos.flatMap((g) => g.aulas.filter((a) => a.estado === "incompativel").map((a) => `${g.turma || ""} ${dataBR(a.data)}: professor incompatível`)).slice(-8);
     const jaAvisos = job.grupos.flatMap((g) => g.aulas.filter((a) => a.estado === "ja").map((a) => `${g.turma || ""} ${dataBR(a.data)}: ${a.msg || "já consta na Frequência"}`)).slice(-8);
     painel.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
       <b>${rodando ? "Frequência" : job.status === "concluido" ? "Concluído" : "Parado"}</b>
       <button type="button" id="siage-fila-botao" style="pointer-events:auto;border:1px solid ${rodando ? "#b91c1c" : "#6b7280"};color:${rodando ? "#b91c1c" : "#374151"};background:#fff;border-radius:6px;padding:2px 8px;cursor:pointer">${rodando ? "Parar" : "Fechar"}</button></div>
-      <div style="margin-bottom:6px;font-size:12px;color:#374151"><b>${c.ok + c.ja}</b> de <b>${c.total}</b> · ${c.ok} feitas agora · ${c.ja} já estavam · ${c.falta.length} faltam</div>
+      <div style="margin-bottom:6px;font-size:12px;color:#374151"><b>${c.ok + c.ja}</b> de <b>${c.total}</b> · ${c.ok} feitas agora · ${c.ja} já estavam · ${c.falta.length} faltam${c.incompativel ? ` · <b style="color:#ea580c">${c.incompativel} professor incompatível</b>` : ""}</div>
       <div style="color:#1d4ed8;margin-bottom:6px">${atual || ""}</div>${linhas}
       ${c.falta.length ? `<div style="margin-top:6px;color:#4b5563;font-size:12px">Ainda faltam: ${faltaTxt}${c.falta.length > 6 ? "…" : ""}</div>` : ""}
+      ${incAvisos.length ? `<div style="margin-top:6px;color:#ea580c;font-size:12px">${incAvisos.map((e) => "● " + e.replace(/</g, "&lt;")).join("<br>")}</div>` : ""}
       ${jaAvisos.length ? `<div style="margin-top:6px;color:#5b4bdb;font-size:12px">${jaAvisos.map((e) => "● " + e.replace(/</g, "&lt;")).join("<br>")}</div>` : ""}
       ${erros.length ? `<div style="margin-top:6px;color:#b91c1c;font-size:12px">${erros.map((e) => "✖ " + e.replace(/</g, "&lt;")).join("<br>")}</div>` : ""}`;
     painel.querySelector("#siage-fila-botao").onclick = async () => {
@@ -578,84 +625,46 @@
       }
       return "ok";
     }
-    const id = grupo.turmaId || (location.pathname.match(/\/turma\/([0-9a-f-]{8,})/i) || [])[1];
-    if (id && !/\/frequencia/i.test(location.pathname)) {
-      location.href = `${URL_LISTAGEM}/turma/${id}/frequencia`;
-      return "navegando";
-    }
-    if (naLista() || naTelaDeCadastro() || naFormularioFrequencia() || naAbaFrequencia() || botaoRegistrarFrequencia()) return "ok";
-    const aba = q("a#frequencia, a.nav-link, [role=tab]").find((a) => visivel(a) && /^frequencia$/.test(norm(a.textContent)));
+    if (telaDeGravacaoFrequencia()) return "ok";
+    const aba = q("a, button, .nav-link, [role=tab], li").filter(visivel).find((el) => {
+      if (el.closest("#siage-fila-painel")) return false;
+      return /^frequencia$/.test(norm(el.textContent));
+    });
     if (aba) {
       clicarPaginaEl(aba);
-      await aguardar(() => naLista() || naAbaFrequencia() || naFormularioFrequencia(), 10000);
-      return "ok";
+      if (await aguardar(() => telaDeGravacaoFrequencia(), 10000)) return "ok";
     }
-    if (id) {
-      location.href = `${URL_LISTAGEM}/turma/${id}/frequencia`;
+    const id = grupo.turmaId || idTurmaNaUrl();
+    if (id && !telaDeGravacaoFrequencia()) {
+      location.assign(`${URL_LISTAGEM}/turma/${id}/frequencia`);
       return "navegando";
     }
-    return paginaDaTurma(grupo) ? "ok" : "errada";
+    return telaDeGravacaoFrequencia() ? "ok" : "errada";
   }
 
   async function abrirTurma(job, gi, destino = "frequencia") {
     const grupo = job.grupos[gi];
-    if (naDestinoTurma(grupo, destino)) return "ok";
+    if (paginaDaTurma(grupo)) return abrirAbaDaTurma(grupo, destino);
 
-    const passo = await entrarNoDiario();
-    if (passo === "login" || passo === "navegando") return "navegando";
-
-    if (ehPaginaTurmaAberta() && !paginaDaTurma(grupo) && !ehListagemTurmas()) {
-      location.href = URL_LISTAGEM;
+    if (!ehListagemTurmas()) {
+      location.assign(URL_LISTAGEM);
       return "navegando";
     }
 
-    if (ehPaginaTurmaAberta() && paginaDaTurma(grupo)) {
-      return abrirAbaDaTurma(grupo, destino);
-    }
-
-    const chaveAbrindo = "siageAbrindo:" + norm(grupo.turma) + "|" + norm(grupo.componente);
-    const idNaUrl = (location.pathname.match(/\/turma\/([0-9a-f-]{8,})/i) || [])[1];
-    if (idNaUrl && !grupo.turmaId) {
-      await aguardar(() => paginaDaTurma(grupo), 6000);
-      if (paginaDaTurma(grupo) || sessionStorage.getItem(chaveAbrindo)) {
-        grupo.turmaId = idNaUrl;
-        sessionStorage.removeItem(chaveAbrindo);
-        await gravarJob(job);
-      }
-    }
-    if (grupo.turmaId && destino === "frequencia") {
-      if (!/\/frequencia/i.test(location.pathname)) {
-        location.href = `${URL_LISTAGEM}/turma/${grupo.turmaId}/frequencia`;
-        return "navegando";
-      }
-      await aguardar(() => paginaDaTurma(grupo) || naLista() || naTelaDeCadastro(), 10000);
-      if (paginaDaTurma(grupo) || naLista() || naTelaDeCadastro()) return "ok";
-    }
-    if (grupo.turmaId && ehPaginaTurmaAberta() && paginaDaTurma(grupo)) {
-      return abrirAbaDaTurma(grupo, destino);
-    }
-    if (!ehListagemTurmas()) {
-      const extra = await entrarNoDiario();
-      if (extra === "navegando" || extra === "login") return "navegando";
-      if (!ehListagemTurmas()) {
-        location.href = URL_LISTAGEM;
-        return "navegando";
-      }
-    }
     const linha = await acharNaListagem(grupo);
     if (!linha) return "nao-achou";
-    const link = botaoPrancheta(linha)
-      || linha.querySelector("#btn-visualizar, button[title=Visualizar]")
-      || q("a[href*='/turma/']", linha)[0]
-      || q("button, a", linha)[0]
-      || linha;
-    sessionStorage.setItem(chaveAbrindo, "1");
-    link.click();
-    const abriu = await aguardar(() => ehPaginaTurmaAberta() || (location.pathname.match(/\/turma\/([0-9a-f-]{8,})/i) || [])[1], 10000);
+    const icone = botaoPrancheta(linha);
+    if (!icone) return "nao-abriu";
+    const idAntes = idTurmaNaUrl();
+    clicarIconeAcao(icone);
+    const abriu = await aguardar(() => {
+      if (paginaDaTurma(grupo)) return true;
+      const id = idTurmaNaUrl();
+      return !!(id && id !== idAntes && !ehListagemTurmas());
+    }, 12000);
     if (!abriu) return "nao-abriu";
-    const id = (location.pathname.match(/\/turma\/([0-9a-f-]{8,})/i) || [])[1];
-    if (id) grupo.turmaId = id;
-    sessionStorage.removeItem(chaveAbrindo);
+    const id = idTurmaNaUrl();
+    if (id && !ehListagemTurmas()) grupo.turmaId = id;
     await gravarJob(job);
     return abrirAbaDaTurma(grupo, destino);
   }
@@ -1739,6 +1748,7 @@
   }
   function tipoDoAviso(texto) {
     const t = norm(texto);
+    if (professorIncompativel(t)) return "incompativel";
     if (/ja exist|ja registr|ja possui|ja foi|duplic/.test(t)) return "repetida";
     if ((/senha/.test(t) && /incorret|invalid|errad|nao confere|nao corresponde/.test(t)) || /credenc/.test(t)) return "senha";
     if (/sucesso|salv[oa] com|registrad[oa] com|realizad[oa] com/.test(t)) return "sucesso";
@@ -1781,6 +1791,12 @@
     while (Date.now() < fim) {
       if (naLista()) return { ok: true };
       const aviso = avisoNaTela();
+      const textoSistema = `${aviso} ${mensagemDoSistema()}`;
+      if (professorIncompativel(textoSistema)) {
+        fecharAviso();
+        await esperar(400);
+        return { ok: false, incompativel: true, msg: "professor incompatível" };
+      }
       if (aviso) {
         const tipo = tipoDoAviso(aviso);
         if (tipo === "senha") return { ok: false, msg: "senha não aceita: " + aviso, parar: true };
@@ -2152,7 +2168,7 @@
         if (linha) {
           const btn = botaoPrancheta(linha);
           if (btn) {
-            clicarNativo(btn);
+            clicarIconeAcao(btn);
             await esperar(800);
             return;
           }
@@ -2285,6 +2301,16 @@
             avisarMaestro(job, a2, "already_registered");
             continue;
           }
+          if (r.incompativel || professorIncompativel(`${r.aviso || ""} ${avisoNaTela()} ${mensagemDoSistema()}`)) {
+            fecharAviso();
+            a2.estado = "incompativel";
+            a2.msg = "professor incompatível";
+            await gravarJob(job);
+            avisarMaestro(job, a2, "failed");
+            desenharPainel(job, `${nome}: professor incompatível. Seguindo para a próxima.`);
+            await voltarParaLista();
+            continue;
+          }
           a2.estado = "erro";
           a2.msg = r.aviso || (r.temposFalha && r.temposFalha.length ? `tempo ${r.temposFalha.join(", ")} não existe` : "não salva");
           await gravarJob(job);
@@ -2295,9 +2321,31 @@
         const c = await confirmarSalvamento(await lerSenha());
         job = await lerJob();
         const a3 = job.grupos[gi].aulas[ai];
+        if (c.incompativel) {
+          a3.estado = "incompativel";
+          a3.msg = "professor incompatível";
+          job.travamentos = 0;
+          await gravarJob(job);
+          avisarMaestro(job, a3, "failed");
+          desenharPainel(job, `${nome}: professor incompatível. Seguindo para a próxima.`);
+          await voltarParaLista();
+          await esperar(800);
+          continue;
+        }
         a3.estado = c.ok ? "ok" : (c.repetida ? "ja" : "erro");
         a3.msg = c.repetida ? (c.msg || "já existe no SIAGE") : (c.msg || "");
         if (c.parar) job.status = "parado";
+        if (c.travou && professorIncompativel(c.msg || "")) {
+          a3.estado = "incompativel";
+          a3.msg = "professor incompatível";
+          job.travamentos = 0;
+          await gravarJob(job);
+          avisarMaestro(job, a3, "failed");
+          desenharPainel(job, `${nome}: professor incompatível. Seguindo para a próxima.`);
+          await voltarParaLista();
+          await esperar(800);
+          continue;
+        }
         if (c.travou) {
           // Faz sozinho o que o professor faria: F5 e continuar, repetindo a aula que travou.
           job.travamentos = (job.travamentos || 0) + 1;
