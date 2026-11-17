@@ -81,6 +81,54 @@ class Activities::CardBubbleReaderTest < ActiveSupport::TestCase
     File.delete(path) if path && File.exist?(path)
   end
 
+  test "does not read a printed ring as a marked bubble" do
+    letters = %w[A B C D E]
+    grid = Activities::BubbleGrid.new(4, letters)
+    width = 640
+    height = (width * Activities::BubbleGrid::CARD_H / Activities::BubbleGrid::CARD_W).round
+    image = ChunkyPNG::Image.new(width, height, ChunkyPNG::Color::WHITE)
+    grid.fiducials.each do |nx, ny|
+      paint_square(image, nx * width, ny * height, 18)
+    end
+    first = grid.bubbles.fetch("1")
+    pitch = ((first.fetch("B")[0] - first.fetch("A")[0]).abs * width)
+    ring = pitch * 0.21
+    grid.bubbles.each_value do |points|
+      points.each_value do |nx, ny|
+        paint_ring(image, (nx * width) + 8, ny * height, ring)
+      end
+    end
+
+    path = Rails.root.join("tmp/bubble-empty-rings-#{SecureRandom.hex(4)}.png").to_s
+    image.save(path)
+    result = Activities::CardBubbleReader.read(path, question_count: 4, letters: letters)
+
+    assert_nil result
+  ensure
+    File.delete(path) if path && File.exist?(path)
+  end
+
+  test "does not choose a letter when two bubbles in the same question are filled" do
+    grid = Activities::BubbleGrid.new(1, %w[A B])
+    width = 420
+    height = (width * Activities::BubbleGrid::CARD_H / Activities::BubbleGrid::CARD_W).round
+    image = ChunkyPNG::Image.new(width, height, ChunkyPNG::Color::WHITE)
+    grid.fiducials.each do |nx, ny|
+      paint_square(image, nx * width, ny * height, 16)
+    end
+    grid.bubbles.fetch("1").each_value do |nx, ny|
+      paint_disk(image, nx * width, ny * height, 9)
+    end
+
+    path = Rails.root.join("tmp/bubble-double-#{SecureRandom.hex(4)}.png").to_s
+    image.save(path)
+    result = Activities::CardBubbleReader.read(path, question_count: 1, letters: %w[A B])
+
+    assert_nil result
+  ensure
+    File.delete(path) if path && File.exist?(path)
+  end
+
   test "does not read a light smudge as a filled bubble" do
     grid = Activities::BubbleGrid.new(1, %w[A B])
     width = 420

@@ -34,10 +34,10 @@ module Activities
           bubbles[number][letter] = [ x / image.width.to_f, y / image.height.to_f ]
           { letter: letter, x: x, y: y }
         end
-        radius = sample_radius(letter_pitch(points), image.width)
+        radius = core_radius(image.width)
         samples = points.map do |point|
           reading = luminance_at(image, point[:x], point[:y], radius)
-          { letter: point[:letter], lum: reading[:lum], dark: reading[:dark] }
+          { letter: point[:letter], lum: reading[:lum], ink: reading[:ink] }
         end
         chosen = chosen_letter(samples)
         answers[number] = chosen if chosen
@@ -189,13 +189,13 @@ module Activities
     end
 
     def chosen_letter(samples)
-      ordered = samples.sort_by { |sample| sample[:lum] }
+      ordered = samples.sort_by { |sample| [ -sample[:ink], sample[:lum] ] }
       best = ordered[0]
       second = ordered[1]
       return if best.nil?
 
-      gap = second ? second[:lum] - best[:lum] : 255
-      return best[:letter] if best[:lum] <= 155 && best[:dark] >= 0.4 && gap >= 20
+      gap = best[:ink] - (second ? second[:ink] : 0)
+      return best[:letter] if best[:ink] >= 0.62 && gap >= 0.22
 
       nil
     end
@@ -205,15 +205,14 @@ module Activities
       return warp if rows.empty?
 
       score_at = lambda do |shift_x, shift_y|
-        radius = sample_radius(pitch_at(warp, shift_x, shift_y), image.width)
+        radius = core_radius(image.width)
         rows.sum do |letters|
-          values = letters.values.map do |point|
+          inks = letters.values.map do |point|
             x, y = warp.image_point(point[0], point[1])
-            luminance_at(image, x + shift_x, y + shift_y, radius)[:lum]
-          end.sort
-          darkest = values[0]
-          nxt = values[1] || 255
-          darkest && darkest <= 170 ? nxt - darkest : 0
+            luminance_at(image, x + shift_x, y + shift_y, radius)[:ink]
+          end.sort.reverse
+          filled = inks.count { |ink| ink >= 0.62 }
+          (filled * 2) + ((inks[0] || 0) - (inks[1] || 0))
         end
       end
 
@@ -257,9 +256,9 @@ module Activities
       letter_pitch(points)
     end
 
-    def sample_radius(pitch, width)
+    def core_radius(width)
       bubble = (3.8 / BubbleGrid::CARD_W) * width
-      [ [ (pitch * 0.1).round, (bubble * 0.85).round ].min, 2 ].max
+      [ (bubble * 0.55).round, 2 ].max
     end
 
     def letter_pitch(points)
@@ -273,6 +272,7 @@ module Activities
 
     def luminance_at(image, x, y, radius)
       values = []
+      quads = Array.new(4) { [] }
       cx = x.round
       cy = y.round
       limit = radius * radius
@@ -284,14 +284,19 @@ module Activities
           py = cy + dy
           next if px.negative? || py.negative? || px >= image.width || py >= image.height
 
-          values << luminance(image[px, py])
+          value = luminance(image[px, py])
+          values << value
+          quads[(dx >= 0 ? 1 : 0) + (dy >= 0 ? 2 : 0)] << value
         end
       end
-      return { lum: 255, dark: 0.0 } if values.empty?
+      return { lum: 255, ink: 0.0 } if values.empty?
 
       values.sort!
-      dark = values.count { |value| value <= 155 }
-      { lum: values[((values.size - 1) * 0.35).round], dark: dark.to_f / values.size }
+      dark_share = ->(bucket) { bucket.empty? ? 0.0 : bucket.count { |item| item <= 155 }.to_f / bucket.size }
+      dark = dark_share.call(values)
+      lum = values[((values.size - 1) * 0.35).round]
+      filled = lum <= 150 && dark >= 0.62 && quads.all? { |bucket| !bucket.empty? && dark_share.call(bucket) >= 0.45 }
+      { lum: lum, ink: filled ? dark : 0.0 }
     end
 
     def dark?(color)

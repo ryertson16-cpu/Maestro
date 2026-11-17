@@ -76,10 +76,10 @@ function sampleGrid(image, warp, questionCount, letterCount) {
       const [ x, y ] = aligned(point[0], point[1])
       return { letter, x, y }
     })
-    const radius = sampleRadius(letterPitch(points), image.width)
+    const radius = coreRadius(image.width)
     const samples = points.map((point) => {
       const reading = luminanceAt(image, point.x, point.y, radius)
-      return { letter: point.letter, lum: reading.lum, dark: reading.dark }
+      return { letter: point.letter, lum: reading.lum, ink: reading.ink }
     })
     const decision = chosen(samples)
     if (!decision) return
@@ -103,16 +103,15 @@ function alignGrid(image, warp, mapped) {
     return letterPitch(points)
   }
   const scoreAt = (shiftX, shiftY) => {
-    const radius = sampleRadius(pitchOf(shiftX, shiftY), image.width)
+    const radius = coreRadius(image.width)
     let score = 0
     rows.forEach((letters) => {
-      const values = Object.values(letters).map((point) => {
+      const inks = Object.values(letters).map((point) => {
         const [ x, y ] = warp(point[0], point[1])
-        return luminanceAt(image, x + shiftX, y + shiftY, radius).lum
-      }).sort((a, b) => a - b)
-      const darkest = values[0]
-      const next = values.length > 1 ? values[1] : 255
-      if (darkest <= 170) score += next - darkest
+        return luminanceAt(image, x + shiftX, y + shiftY, radius).ink
+      }).sort((a, b) => b - a)
+      const filled = inks.filter((ink) => ink >= 0.62).length
+      score += (filled * 2) + ((inks[0] || 0) - (inks[1] || 0))
     })
     return score
   }
@@ -151,9 +150,9 @@ function alignGrid(image, warp, mapped) {
   }
 }
 
-function sampleRadius(pitch, width) {
+function coreRadius(width) {
   const bubble = (3.8 / CARD_W) * width
-  return Math.max(2, Math.min(Math.round(pitch * 0.1), Math.round(bubble * 0.85)))
+  return Math.max(2, Math.round(bubble * 0.55))
 }
 
 function letterPitch(points) {
@@ -381,19 +380,20 @@ function darkSquares(image) {
 }
 
 function chosen(samples) {
-  const ordered = samples.slice().sort((a, b) => a.lum - b.lum)
+  const ordered = samples.slice().sort((a, b) => (b.ink - a.ink) || (a.lum - b.lum))
   const best = ordered[0]
   const second = ordered[1]
   if (!best) return null
 
-  const gap = second ? second.lum - best.lum : 255
-  if (best.lum <= 155 && best.dark >= 0.4 && gap >= 20) return { letter: best.letter }
-  if (ordered.every((sample) => sample.lum >= 185)) return { letter: null }
+  const gap = best.ink - (second ? second.ink : 0)
+  if (best.ink >= 0.62 && gap >= 0.22) return { letter: best.letter }
+  if (ordered.every((sample) => sample.ink === 0 && sample.lum >= 185)) return { letter: null }
   return null
 }
 
 function luminanceAt(image, x, y, radius) {
   const values = []
+  const quads = [ [], [], [], [] ]
   const cx = Math.round(x)
   const cy = Math.round(y)
   const limit = radius * radius
@@ -404,13 +404,18 @@ function luminanceAt(image, x, y, radius) {
       const py = cy + dy
       if (px < 0 || py < 0 || px >= image.width || py >= image.height) continue
       const index = ((py * image.width) + px) * 4
-      values.push((image.data[index] + image.data[index + 1] + image.data[index + 2]) / 3)
+      const lum = (image.data[index] + image.data[index + 1] + image.data[index + 2]) / 3
+      values.push(lum)
+      quads[(dx >= 0 ? 1 : 0) + (dy >= 0 ? 2 : 0)].push(lum)
     }
   }
-  if (!values.length) return { lum: 255, dark: 0 }
+  if (!values.length) return { lum: 255, ink: 0 }
   values.sort((a, b) => a - b)
-  const dark = values.filter((value) => value <= 155).length
-  return { lum: values[Math.round((values.length - 1) * 0.35)], dark: dark / values.length }
+  const darkShare = (bucket) => (bucket.length ? bucket.filter((value) => value <= 155).length / bucket.length : 0)
+  const dark = darkShare(values)
+  const lum = values[Math.round((values.length - 1) * 0.35)]
+  const filled = lum <= 150 && dark >= 0.62 && quads.every((bucket) => bucket.length > 0 && darkShare(bucket) >= 0.45)
+  return { lum, ink: filled ? dark : 0 }
 }
 
 function darkAt(data, pixelIndex) {
