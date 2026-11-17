@@ -213,7 +213,7 @@ module Documents
 
     def draw_assembled_item(pdf, item, index)
       pdf.fill_color "20263D"
-      pdf.text "#{index + 1}. #{item.prompt}", size: 10, leading: 3, inline_format: false
+      pdf.text "#{index + 1}. #{Questions::PromptText.prawn(item.prompt)}", size: 10, leading: 3, inline_format: Questions::PromptText.rich?(item.prompt)
       if item.bncc_skill.present?
         pdf.fill_color "707891"
         pdf.text "BNCC: #{item.bncc_skill}", size: 8
@@ -415,7 +415,8 @@ module Documents
       grid_top = height - 88
       grid_bottom = qr_size + 22
       grid_height = grid_top - grid_bottom
-      per_col = (rows.size / 2.0).ceil
+      columns = Activities::BubbleGrid.columns_for(rows.size)
+      per_col = (rows.size / columns.to_f).ceil
       row_h = [ grid_height / [ per_col + 1, 1 ].max, 9 ].max
       row_h = [ row_h, 13 ].min
 
@@ -426,7 +427,7 @@ module Documents
         top: grid_top,
         width: width - (inset * 2),
         layout: {
-          columns: 2,
+          columns: columns,
           row_h: row_h,
           radius: [ row_h / 2.6, 3.8 ].min,
           fiducial: 0,
@@ -547,7 +548,7 @@ module Documents
     def draw_presented_item(pdf, presented, show_key:)
       item = presented.item
       pdf.fill_color "20263D"
-      pdf.text "#{presented.number}. #{item.prompt}", size: 9, leading: 2, inline_format: false
+      pdf.text "#{presented.number}. #{Questions::PromptText.prawn(item.prompt)}", size: 9, leading: 2, inline_format: Questions::PromptText.rich?(item.prompt)
       if show_key && item.bncc_skill.present?
         pdf.fill_color "707891"
         pdf.text "BNCC: #{item.bncc_skill}", size: 7
@@ -630,7 +631,7 @@ module Documents
       elsif count <= 36
         { columns: 2, qr_size: 88, row_h: 18, radius: 6, fiducial: 11 }
       else
-        { columns: 3, qr_size: 72, row_h: 16, radius: 5, fiducial: 10 }
+        { columns: 2, qr_size: 72, row_h: 16, radius: 5, fiducial: 10 }
       end
     end
 

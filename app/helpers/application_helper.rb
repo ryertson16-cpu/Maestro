@@ -1,4 +1,12 @@
 module ApplicationHelper
+  def question_prompt(text)
+    Questions::PromptText.html(text)
+  end
+
+  def question_prompt_plain(text)
+    Questions::PromptText.plain(text)
+  end
+
   def maestro_toasts
     toasts = []
     recap = maestro_recap_toast

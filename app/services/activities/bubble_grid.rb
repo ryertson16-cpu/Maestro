@@ -18,10 +18,19 @@ module Activities
       ]
     end
 
+    def self.columns_for(count)
+      count = count.to_i
+      return 1 if count <= 1
+
+      grid_height = CARD_H - 168.0
+      one_column = (grid_height / 9.0).floor - 1
+      count <= [ one_column, 1 ].max ? 1 : 2
+    end
+
     def bubbles
       return {} if @count <= 0
 
-      columns = 2
+      columns = self.class.columns_for(@count)
       per_col = (@count / columns.to_f).ceil
       grid_height = CARD_H - 168.0
       row_h = [ [ grid_height / [ per_col + 1, 1 ].max, 9 ].max, 13 ].min

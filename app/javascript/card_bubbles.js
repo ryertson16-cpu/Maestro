@@ -76,7 +76,7 @@ function sampleGrid(image, warp, questionCount, letterCount) {
       const [ x, y ] = aligned(point[0], point[1])
       return { letter, x, y }
     })
-    const radius = Math.max(2, Math.round(letterPitch(points) * 0.1))
+    const radius = sampleRadius(letterPitch(points), image.width)
     const samples = points.map((point) => {
       const reading = luminanceAt(image, point.x, point.y, radius)
       return { letter: point.letter, lum: reading.lum, dark: reading.dark }
@@ -103,7 +103,7 @@ function alignGrid(image, warp, mapped) {
     return letterPitch(points)
   }
   const scoreAt = (shiftX, shiftY) => {
-    const radius = Math.max(2, Math.round(pitchOf(shiftX, shiftY) * 0.1))
+    const radius = sampleRadius(pitchOf(shiftX, shiftY), image.width)
     let score = 0
     rows.forEach((letters) => {
       const values = Object.values(letters).map((point) => {
@@ -151,6 +151,11 @@ function alignGrid(image, warp, mapped) {
   }
 }
 
+function sampleRadius(pitch, width) {
+  const bubble = (3.8 / CARD_W) * width
+  return Math.max(2, Math.min(Math.round(pitch * 0.1), Math.round(bubble * 0.85)))
+}
+
 function letterPitch(points) {
   let pitch = null
   for (let index = 1; index < points.length; index += 1) {
@@ -170,11 +175,18 @@ function richer(first, second) {
   return (second.covered || 0) > (first.covered || 0) ? second : first
 }
 
+function columnsFor(count) {
+  if (count <= 1) return 1
+  const oneColumn = Math.floor((CARD_H - 168) / 9) - 1
+  return count <= Math.max(oneColumn, 1) ? 1 : 2
+}
+
 function bubblePoints(count, letterCount) {
   const letters = LETTERS.slice(0, letterCount)
-  const perColumn = Math.ceil(count / 2)
+  const columns = columnsFor(count)
+  const perColumn = Math.ceil(count / columns)
   const rowH = Math.min(Math.max((CARD_H - 168) / Math.max(perColumn + 1, 1), 9), 13)
-  const columnWidth = (CARD_W - 36) / 2
+  const columnWidth = (CARD_W - 36) / columns
   const step = (columnWidth - 8 - 18) / Math.max(letters.length, 1)
   const mapped = {}
 

@@ -17,7 +17,7 @@
 <%= render "activities/exam_tabs", activity: @activity, current: :resultado %>
 
 <section class="data-card">
-  <h2><%= @question.prompt %></h2>
+  <h2><%= question_prompt(@question.prompt) %></h2>
   <p class="activity-type-hint">
     Gabarito <%= @question.correct_letter %>.
     A letra é a do banco desta prova. Na folha de cada aluno ela pode ter saído com outra letra e em outro número.

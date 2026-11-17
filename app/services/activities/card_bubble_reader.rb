@@ -34,7 +34,7 @@ module Activities
           bubbles[number][letter] = [ x / image.width.to_f, y / image.height.to_f ]
           { letter: letter, x: x, y: y }
         end
-        radius = [ (letter_pitch(points) * 0.1).round, 2 ].max
+        radius = sample_radius(letter_pitch(points), image.width)
         samples = points.map do |point|
           reading = luminance_at(image, point[:x], point[:y], radius)
           { letter: point[:letter], lum: reading[:lum], dark: reading[:dark] }
@@ -205,7 +205,7 @@ module Activities
       return warp if rows.empty?
 
       score_at = lambda do |shift_x, shift_y|
-        radius = [ (pitch_at(warp, shift_x, shift_y) * 0.1).round, 2 ].max
+        radius = sample_radius(pitch_at(warp, shift_x, shift_y), image.width)
         rows.sum do |letters|
           values = letters.values.map do |point|
             x, y = warp.image_point(point[0], point[1])
@@ -255,6 +255,11 @@ module Activities
         { letter: letter, x: x + shift_x, y: y + shift_y }
       end
       letter_pitch(points)
+    end
+
+    def sample_radius(pitch, width)
+      bubble = (3.8 / BubbleGrid::CARD_W) * width
+      [ [ (pitch * 0.1).round, (bubble * 0.85).round ].min, 2 ].max
     end
 
     def letter_pitch(points)

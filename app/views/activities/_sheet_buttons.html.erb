@@ -1,12 +1,9 @@
 <% css_class = local_assigns[:css_class].presence || "button button-secondary button-small" %>
-<%= link_to "Folha do aluno",
-            sheet_activity_path(activity, format: :pdf),
-            class: css_class,
-            target: "_blank",
-            rel: "noopener",
-            title: "Cada aluno recebe questões e alternativas em ordem diferente. O grupo não aparece no papel." %>
-<%= link_to "Gabarito do professor",
-            key_sheet_activity_path(activity, format: :pdf),
-            class: css_class,
-            target: "_blank",
-            rel: "noopener" %>
+<%= form_with url: sheet_activity_path(activity), method: :get, data: { turbo: false }, html: { class: "sheet-export", target: "_blank" } do %>
+  <label class="sheet-export-file">
+    Arquivo
+    <%= select_tag :file, options_for_select([["PDF", "pdf"], ["Word", "docx"]], "pdf") %>
+  </label>
+  <%= submit_tag "Folha do aluno", class: css_class, title: "Cada aluno recebe questões e alternativas em ordem diferente." %>
+  <%= submit_tag "Gabarito do professor", class: css_class, formaction: key_sheet_activity_path(activity) %>
+<% end %>

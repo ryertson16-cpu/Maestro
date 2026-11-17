@@ -14,7 +14,7 @@
     <div class="form-grid">
       <div class="form-field form-field-wide">
         <%= form.label :prompt, "Enunciado" %>
-        <%= form.text_area :prompt, rows: 4, required: true %>
+        <%= form.text_area :prompt, rows: 4, required: true, data: { prompt_source: true } %>
       </div>
 
       <div class="form-field form-field-wide">

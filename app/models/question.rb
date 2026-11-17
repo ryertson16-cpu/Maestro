@@ -12,6 +12,7 @@ class Question < ApplicationRecord
   has_one_attached :image
 
   validate :image_must_be_picture
+  before_validation :sanitize_prompt
 
   validates :prompt, presence: true
   validates :kind, presence: true, inclusion: { in: KINDS.keys }
@@ -29,6 +30,10 @@ class Question < ApplicationRecord
     needle = "%#{query.to_s.strip}%"
     where("prompt LIKE ? OR tag LIKE ? OR bncc_skill LIKE ?", needle, needle, needle)
   }
+
+  def sanitize_prompt
+    self.prompt = Questions::PromptText.sanitized(prompt)
+  end
 
   def objective?
     kind.to_s == "objective"

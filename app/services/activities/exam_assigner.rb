@@ -20,13 +20,14 @@ module Activities
       items = catalog
       return ActivityExamAssignment.none if items.empty? || roster.empty?
 
-      if stale?(roster, items)
+      versions = version_count(roster.size, items.size)
+      if stale?(roster, items, versions)
         @activity.exam_assignments.delete_all
       end
       existing = @activity.exam_assignments.includes(:student).to_a
-      return existing if existing.size == roster.size && existing.all?(&:student)
+      return existing if existing.size == roster.size && existing.map(&:slot).uniq.size == versions && existing.all?(&:student)
 
-      packs = build_packs(slot_count(roster.size), items)
+      packs = build_packs(versions, items)
       roster.sort_by { |student| [ student.name.to_s, student.id ] }.each_with_index do |student, index|
         pack = packs[index % packs.size]
         assignment = @activity.exam_assignments.find_or_initialize_by(student: student)
@@ -64,6 +65,17 @@ module Activities
       end
     end
 
+    def self.maximum_versions(student_count, item_count)
+      cap = [ student_count.to_i, item_count.to_i ].min
+      [ cap, 1 ].max
+    end
+
+    def version_count(student_count, item_count)
+      chosen = @activity.exam_version_count.to_i
+      chosen = DEFAULT_SLOTS if chosen < 1
+      chosen.clamp(1, self.class.maximum_versions(student_count, item_count))
+    end
+
     def map_answers(answers, assignment:)
       answers = stringify(answers)
       maps = (assignment&.choice_maps || {}).stringify_keys
@@ -79,16 +91,13 @@ module Activities
       @catalog ||= @activity.activity_questions.with_attached_image.to_a
     end
 
-    def stale?(roster, items)
+    def stale?(roster, items, versions)
       current_ids = items.map(&:id).sort
       assigned = @activity.exam_assignments.to_a
       return true if assigned.map(&:student_id).sort != roster.map(&:id).sort
+      return true if assigned.map(&:slot).uniq.size != versions
 
       assigned.any? { |row| Array(row.item_order).map(&:to_i).sort != current_ids }
-    end
-
-    def slot_count(student_count)
-      [ [ student_count, DEFAULT_SLOTS ].min, 1 ].max
     end
 
     def build_packs(count, items)

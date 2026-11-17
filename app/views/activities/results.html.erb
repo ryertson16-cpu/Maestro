@@ -185,7 +185,7 @@
     </div>
     <% if (hard = @result.hardest) %>
       <p class="activity-type-hint">
-        <%= hard.label %> · <%= truncate(hard.prompt, length: 120) %>
+        <%= hard.label %> · <%= truncate(question_prompt_plain(hard.prompt), length: 120) %>
         Gabarito <%= hard.item.correct_letter %>.
         <% if hard.wrong_letter.present? %>
           <%= hard.rate %>% acertaram.

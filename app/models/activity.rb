@@ -60,6 +60,9 @@ class Activity < ApplicationRecord
   validates :title,
             presence: true
 
+  validates :exam_version_count,
+            numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: 40 }
+
   validates :activity_type,
             presence: true,
             inclusion: {

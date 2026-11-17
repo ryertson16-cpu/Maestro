@@ -35,7 +35,7 @@
           <% @questions.each do |question| %>
             <tr>
               <td>
-                <strong><%= truncate(question.prompt, length: 140) %></strong>
+                <strong><%= truncate(question_prompt_plain(question.prompt), length: 140) %></strong>
                 <% if question.image.attached? %>
                   <div class="activity-type-hint">Com figura</div>
                 <% end %>

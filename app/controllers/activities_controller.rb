@@ -54,39 +54,27 @@ class ActivitiesController < ApplicationController
 
   def sheet
     @activity.ensure_correction_pin!
-    students = exam_roster
-    Activities::ExamAssigner.new(@activity).ensure!(students)
-    pdf = Documents::ActivitySheet.new(
-      professor: current_professor,
-      activity: @activity,
-      correction_url: gabarito_public_url(@activity),
-      students: students,
-      student_url: ->(student) { gabarito_student_url(@activity, student) }
-    ).render
-
-    send_data pdf,
-              filename: sheet_filename,
-              type: "application/pdf",
-              disposition: "attachment"
+    send_exam_file(:student)
   rescue StandardError => error
     redirect_activity_alert("Não consegui gerar a folha do aluno.", error)
   end
 
   def key_sheet
     @activity.ensure_correction_token!
-    Activities::ExamAssigner.new(@activity).ensure!(exam_roster)
-    pdf = Documents::ActivitySheet.new(
-      professor: current_professor,
-      activity: @activity,
-      mode: :answer_key
-    ).render
-
-    send_data pdf,
-              filename: sheet_filename(prefix: "gabarito-"),
-              type: "application/pdf",
-              disposition: "attachment"
+    send_exam_file(:answer_key)
   rescue StandardError => error
     redirect_activity_alert("Não consegui gerar o gabarito do professor.", error)
+  end
+
+  def exam_versions
+    roster = exam_roster
+    cap = Activities::ExamAssigner.maximum_versions(roster.size, @activity.activity_questions.size)
+    chosen = params[:versions].to_i
+    chosen = Activities::ExamAssigner::DEFAULT_SLOTS if chosen < 1
+    @activity.update!(exam_version_count: chosen.clamp(1, cap))
+    Activities::ExamAssigner.new(@activity).ensure!(roster)
+    redirect_to assemble_activity_path(@activity),
+                notice: "A prova terá #{@activity.exam_version_count} versões. Cada uma troca a ordem das questões e das alternativas."
   end
 
   def assemble
@@ -119,6 +107,8 @@ class ActivitiesController < ApplicationController
     @lira_ready = Lira.llm_enabled?
     @pending_cards = @activity.pending_cards.includes(:student)
     @students = exam_roster
+    @version_maximum = Activities::ExamAssigner.maximum_versions(@students.size, @items.size)
+    @version_count = Activities::ExamAssigner.new(@activity).version_count(@students.size, @items.size)
     @card_readings = @activity
                     .activity_submissions
                     .with_attached_marked_photo
@@ -568,14 +558,39 @@ class ActivitiesController < ApplicationController
     )
   end
 
-  def sheet_filename(prefix: nil)
+  def send_exam_file(mode)
+    students = exam_roster
+    Activities::ExamAssigner.new(@activity).ensure!(students)
+    docx = params[:file].to_s == "docx"
+    options = {
+      professor: current_professor,
+      activity: @activity,
+      mode: mode
+    }
+    if mode == :student
+      options[:correction_url] = gabarito_public_url(@activity)
+      options[:students] = students
+      options[:student_url] = ->(student) { gabarito_student_url(@activity, student) }
+    end
+    data = if docx
+             Documents::ActivityDocx.new(**options).render
+           else
+             Documents::ActivitySheet.new(**options).render
+           end
+    send_data data,
+              filename: sheet_filename(prefix: mode == :answer_key ? "gabarito-" : nil, extension: docx ? "docx" : "pdf"),
+              type: docx ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "application/pdf",
+              disposition: "attachment"
+  end
+
+  def sheet_filename(prefix: nil, extension: "pdf")
     classroom_slug = @classroom.name.to_s.parameterize(separator: "-").presence || "turma"
     title_slug = @activity.title.to_s.parameterize(separator: "-").presence || "atividade"
     type_slug = @activity.activity_type.to_s.parameterize(separator: "-").presence || "folha"
     adapted = @activity.adapted? ? "adaptada-" : ""
     extra = prefix.to_s
 
-    "#{extra}#{adapted}#{type_slug}-#{title_slug}-#{classroom_slug}.pdf"
+    "#{extra}#{adapted}#{type_slug}-#{title_slug}-#{classroom_slug}.#{extension}"
   end
 
   def scan_notice(result)

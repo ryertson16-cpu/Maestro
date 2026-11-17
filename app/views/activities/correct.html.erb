@@ -32,7 +32,7 @@
         <% Array(@presented).each do |row| %>
           <% item = row.item %>
           <li>
-            <p><strong><%= row.number %>. <%= item.prompt %></strong></p>
+            <p><strong><%= row.number %>. <%= question_prompt(item.prompt) %></strong></p>
             <%= render "questions/figure", image: item.image %>
             <% if item.objective? %>
               <div class="correction-bubbles">

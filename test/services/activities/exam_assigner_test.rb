@@ -124,4 +124,43 @@ class Activities::ExamAssignerTest < ActiveSupport::TestCase
     assert_equal 5, map.size
     assert_equal %w[A B C D E], map.keys.sort
   end
+
+  test "the chosen version count reshuffles questions and alternatives" do
+    @activity.update!(exam_version_count: 1)
+    one = Activities::ExamAssigner.new(@activity).ensure!([ @ana, @bia ])
+    assert_equal [ 1 ], one.map(&:slot).uniq
+
+    @activity.update!(exam_version_count: 2)
+    rows = Activities::ExamAssigner.new(@activity).ensure!([ @ana, @bia ])
+    assert_equal [ 1, 2 ], rows.map(&:slot).uniq.sort
+
+    first, second = rows.sort_by(&:slot)
+    assert_equal [ @first.id, @second.id ].sort, first.item_order.map(&:to_i).sort
+    assert_equal [ @first.id, @second.id ].sort, second.item_order.map(&:to_i).sort
+    map = first.choice_maps[@first.id.to_s]
+    assert_equal %w[A B], map.keys.sort
+    assert_equal %w[A B], map.values.sort
+    refute_equal [ first.item_order, first.choice_maps ], [ second.item_order, second.choice_maps ]
+  end
+
+  test "gabarito uses one column when the questions fit and two when they do not" do
+    assert_equal 1, Activities::BubbleGrid.columns_for(10)
+    assert_equal 2, Activities::BubbleGrid.columns_for(30)
+  end
+
+  test "word file keeps the heading and a one column gabarito" do
+    Activities::ExamAssigner.new(@activity).ensure!([ @ana ])
+    binary = Documents::ActivityDocx.new(
+      professor: @professor,
+      activity: @activity,
+      students: [ @ana ]
+    ).render
+    Zip::File.open_buffer(binary) do |zip|
+      xml = zip.read("word/document.xml")
+      assert_includes xml, "Prova"
+      assert_includes xml, "Ana"
+      assert_includes xml, "(A)"
+      assert_includes xml, "(B)"
+    end
+  end
 end

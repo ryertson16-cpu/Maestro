@@ -120,7 +120,7 @@
       <% @items.each do |item| %>
         <li>
           <div class="assembled-question-body">
-            <strong><%= item.prompt %></strong>
+            <strong><%= question_prompt(item.prompt) %></strong>
             <%= render "questions/figure", image: item.image %>
             <div class="activity-type-hint">
               <%= item.objective? ? "Objetiva · gabarito #{item.correct_letter}" : "Discursiva" %>
@@ -158,8 +158,17 @@
   <section class="data-card">
     <h2>Folhas da turma</h2>
     <p class="activity-type-hint">
-      A folha do aluno não traz o grupo. O QR e esta lista dizem ao professor qual embaralhamento cada um recebeu.
+      Cada versão troca a ordem das questões e a ordem das alternativas. A folha do aluno não traz o grupo. O QR e esta lista dizem qual versão cada um recebeu.
     </p>
+    <%= form_with url: exam_versions_activity_path(@activity), method: :post, local: true, class: "exam-version-form" do %>
+      <label>
+        Provas diferentes
+        <%= select_tag :versions,
+                       options_for_select((1..@version_maximum).map { |count| [count, count] }, @version_count) %>
+      </label>
+      <%= submit_tag "Aplicar", class: "button button-secondary button-small" %>
+      <span class="activity-type-hint">O máximo é <%= @version_maximum %>, porque a prova tem <%= @items.size %> <%= @items.size == 1 ? "questão" : "questões" %> e a turma tem <%= @students.size %> <%= @students.size == 1 ? "aluno" : "alunos" %>.</span>
+    <% end %>
     <div class="table-wrapper">
       <table>
         <thead>
@@ -208,7 +217,7 @@
           <% @bank.each do |question| %>
             <tr>
               <td>
-                <%= truncate(question.prompt, length: 160) %>
+                <%= truncate(question_prompt_plain(question.prompt), length: 160) %>
                 <% if question.image.attached? %>
                   <div class="activity-type-hint">Com figura</div>
                 <% end %>

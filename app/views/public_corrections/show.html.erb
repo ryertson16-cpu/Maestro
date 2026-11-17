@@ -114,7 +114,7 @@
       <% item = row.item %>
       <fieldset class="correction-item">
         <legend>
-          <%= row.number %>. <%= item.prompt %>
+          <%= row.number %>. <%= question_prompt(item.prompt) %>
         </legend>
         <label class="correction-discursive">
           Pontos (máx. <%= format("%.1f", item.points).tr(".", ",") %>)
