@@ -7,6 +7,7 @@ class LessonsController < ApplicationController
     @classrooms = current_professor.classrooms.order(:name)
 
     @lessons = current_professor.lessons
+                                .where(individual: false)
                                 .includes(:classroom, :course, :activity)
                                 .order(lesson_date: :desc, created_at: :desc)
 
@@ -237,6 +238,7 @@ class LessonsController < ApplicationController
 
   def exportable_lessons
     scope = current_professor.lessons
+                             .where(individual: false)
                              .includes(
                                :classroom,
                                :course,

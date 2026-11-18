@@ -5,7 +5,12 @@
     <h1>Banco de questões</h1>
     <p>Questões suas, para montar atividades com o timbrado da escola e corrigir pelo QR Code.</p>
   </div>
-  <%= link_to "Nova questão", new_question_path, class: "button button-primary" %>
+  <div class="page-header-actions">
+    <%= form_with url: new_individual_activity_path, method: :get, html: { id: "individual-activity-form" } do %>
+      <%= submit_tag "Atividade para um aluno", class: "button button-secondary" %>
+    <% end %>
+    <%= link_to "Nova questão", new_question_path, class: "button button-primary" %>
+  </div>
 </div>
 
 <section class="data-card">
@@ -24,6 +29,7 @@
       <table>
         <thead>
           <tr>
+            <th></th>
             <th>Questão</th>
             <th>Tipo</th>
             <th>Disciplina</th>
@@ -34,6 +40,14 @@
         <tbody>
           <% @questions.each do |question| %>
             <tr>
+              <td>
+                <%= check_box_tag "question_ids[]",
+                                  question.id,
+                                  false,
+                                  form: "individual-activity-form",
+                                  id: "question-pick-#{question.id}",
+                                  aria: { label: "Selecionar questão" } %>
+              </td>
               <td>
                 <strong><%= truncate(question_prompt_plain(question.prompt), length: 140) %></strong>
                 <% if question.image.attached? %>

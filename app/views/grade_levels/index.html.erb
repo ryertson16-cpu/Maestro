@@ -254,6 +254,8 @@
                 </p>
                 <% if activity.adapted? && activity.parent_activity.present? %>
                   <p>A partir de <%= activity.parent_activity.title %></p>
+                <% elsif activity.adapted? && activity.recipient_students.any? %>
+                  <p><%= activity.recipient_students.map(&:name).to_sentence %></p>
                 <% end %>
               </div>
 

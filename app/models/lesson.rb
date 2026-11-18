@@ -43,6 +43,8 @@ class Lesson < ApplicationRecord
     ]
   end
 
+  attr_accessor :skip_attendance_link
+
   belongs_to :professor
   belongs_to :classroom
   belongs_to :course, optional: true
@@ -82,6 +84,8 @@ class Lesson < ApplicationRecord
   private
 
   def link_existing_attendance_records
+    return if skip_attendance_link || individual?
+
     AttendanceRecord
       .joins(:enrollment)
       .where(enrollments: { classroom_id: classroom_id })

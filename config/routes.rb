@@ -181,6 +181,7 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :individual_activities, only: %i[new create]
   resources :questions, except: :show
 
   get "/correcoes",

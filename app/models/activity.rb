@@ -176,7 +176,7 @@ class Activity < ApplicationRecord
       destroy!
       leftover = lesson_record.activities.reload
       if leftover.none?
-        if generated
+        if generated || lesson_record.individual?
           lesson_record.destroy!
         else
           lesson_record.update!(has_activity: false)

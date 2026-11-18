@@ -391,6 +391,7 @@ class GradeLevelsController < ApplicationController
         :parent_activity,
         :activity_submissions,
         :activity_recipients,
+        :recipient_students,
         adapted_versions: :activity_recipients
       )
       .order("activities.due_date DESC", "activities.created_at DESC")

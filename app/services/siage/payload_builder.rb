@@ -76,7 +76,7 @@ module Siage
     def lessons_list_payload
       records =
         if export_all_lessons
-          professor.lessons.where(classroom: classroom).order(lesson_date: :desc, created_at: :desc)
+          professor.lessons.where(classroom: classroom, individual: false).order(lesson_date: :desc, created_at: :desc)
         elsif lesson
           [lesson]
         else
@@ -204,7 +204,7 @@ module Siage
     def lessons_for_date
       return Lesson.none if date.blank?
 
-      professor.lessons.where(classroom: classroom, lesson_date: date).order(:created_at)
+      professor.lessons.where(classroom: classroom, lesson_date: date, individual: false).order(:created_at)
     end
 
     def unit_activities

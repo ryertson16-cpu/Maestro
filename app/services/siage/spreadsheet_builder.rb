@@ -121,7 +121,7 @@ module Siage
         if @lessons
           Array(@lessons)
         else
-          professor.lessons.where(classroom: classroom).includes(:course, :classroom).order(:lesson_date, :created_at).to_a
+          professor.lessons.where(classroom: classroom, individual: false).includes(:course, :classroom).order(:lesson_date, :created_at).to_a
         end
 
       records.sort_by { |lesson| [lesson.classroom.name.to_s, lesson.lesson_date, lesson.created_at] }

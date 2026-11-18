@@ -384,7 +384,10 @@ class ActivitiesController < ApplicationController
   private
 
   def exam_roster
-    @classroom.students.merge(Enrollment.where(status: "active")).distinct.order(:name).to_a
+    students = @classroom.students.merge(Enrollment.where(status: "active")).distinct.order(:name)
+    return students.to_a unless @activity&.adapted?
+
+    students.where(id: @activity.recipient_student_ids).to_a
   end
 
   def redirect_activity_alert(message, error = nil)

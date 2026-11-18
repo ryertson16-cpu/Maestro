@@ -44,7 +44,7 @@ module Siage
 
     def lessons
       @lessons ||= begin
-        scope = @professor.lessons.includes(:classroom, :course).where("lesson_date >= ?", 120.days.ago)
+        scope = @professor.lessons.where(individual: false).includes(:classroom, :course).where("lesson_date >= ?", 120.days.ago)
         scope = scope.where(classroom: @classroom) if @classroom
         scope.order(lesson_date: :desc).to_a
       end

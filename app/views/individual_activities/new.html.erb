@@ -1,0 +1,52 @@
+<% content_for :title, "Atividade para um aluno | Maestro" %>
+
+<div class="page-header page-header-with-action">
+  <div>
+    <h1>Atividade para um aluno</h1>
+    <p><%= @questions.size %> <%= @questions.size == 1 ? "questão selecionada" : "questões selecionadas" %>. Escolha a turma e, em seguida, o aluno.</p>
+  </div>
+  <%= link_to "Voltar ao banco", questions_path, class: "button button-secondary" %>
+</div>
+
+<section class="data-card">
+  <h2>Questões</h2>
+  <ol class="assembled-questions">
+    <% @questions.each do |question| %>
+      <li><strong><%= question_prompt(question.prompt) %></strong></li>
+    <% end %>
+  </ol>
+</section>
+
+<section class="data-card">
+  <h2>Turma e aluno</h2>
+  <% if @classrooms.empty? %>
+    <p>Não há turma ativa para receber esta atividade.</p>
+  <% else %>
+    <%= form_with url: new_individual_activity_path, method: :get, local: true, class: "question-bank-filters" do %>
+      <% @questions.each do |question| %>
+        <%= hidden_field_tag "question_ids[]", question.id %>
+      <% end %>
+      <label>
+        Turma
+        <%= select_tag :classroom_id,
+                       options_from_collection_for_select(@classrooms, :id, :name, @classroom&.id),
+                       onchange: "this.form.requestSubmit()" %>
+      </label>
+    <% end %>
+
+    <%= form_with url: individual_activities_path, method: :post, local: true, class: "question-bank-filters" do %>
+      <% @questions.each do |question| %>
+        <%= hidden_field_tag "question_ids[]", question.id %>
+      <% end %>
+      <%= hidden_field_tag :classroom_id, @classroom.id %>
+      <label>
+        Aluno
+        <%= select_tag :student_id,
+                       options_from_collection_for_select(@students, :id, :name),
+                       include_blank: @students.empty? ? "Nenhum aluno ativo" : "Escolha o aluno",
+                       required: true %>
+      </label>
+      <%= submit_tag "Criar atividade", class: "button button-primary" %>
+    <% end %>
+  <% end %>
+</section>

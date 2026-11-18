@@ -113,7 +113,7 @@ class SiageExportsController < ApplicationController
     classroom = current_professor.classrooms.find(params[:classroom_id])
     filename = "siage-aulas-#{classroom.name.parameterize}"
 
-    current_professor.lessons.where(classroom: classroom).find_each do |lesson|
+    current_professor.lessons.where(classroom: classroom, individual: false).find_each do |lesson|
       record_shipment(
         classroom: classroom,
         kind: "classroom_lessons",
