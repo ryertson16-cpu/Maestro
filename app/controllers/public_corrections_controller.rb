@@ -1,6 +1,6 @@
 class PublicCorrectionsController < ApplicationController
   skip_before_action :require_maestro_subscription
-  before_action :set_activity, except: %i[gate enter]
+  before_action :set_activity, except: %i[gate enter open_printed_card]
   layout "correction"
 
   def gate
@@ -15,6 +15,21 @@ class PublicCorrectionsController < ApplicationController
     end
 
     redirect_to correction_gate_path, alert: "Este código não confere. Digite os 6 números da tela do computador."
+  end
+
+  def open_printed_card
+    parsed = Corrections::CardCode.parse(params[:card_code])
+    activity = parsed && Activity.find_by(correction_pin: parsed[:pin])
+    unless activity
+      redirect_to correction_gate_path, alert: "Este código não confere com uma prova."
+      return
+    end
+
+    if parsed[:student_id].present?
+      redirect_to gabarito_aluno_path(activity.correction_token, parsed[:student_id], folha: parsed[:slot].presence)
+    else
+      redirect_to gabarito_path(activity.correction_token)
+    end
   end
 
   def show

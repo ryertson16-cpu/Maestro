@@ -196,6 +196,10 @@ Rails.application.routes.draw do
   get "/c/:pin",
       to: "public_corrections#enter",
       as: :correction_pin
+  get "/:card_code",
+      to: "public_corrections#open_printed_card",
+      constraints: { card_code: /M\d{6}(?:A\d+)?(?:F\d+)?/i },
+      as: :printed_card
 
   get "/g/:token",
       to: "public_corrections#show",

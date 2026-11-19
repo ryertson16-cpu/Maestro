@@ -69,10 +69,18 @@ class PublicCorrectionsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/câmera do celular não liga/i, response.body)
   end
 
+  test "the code printed on an old card opens that student" do
+    pin = @activity.ensure_correction_pin!
+    get "/M#{pin}A#{@student.id}"
+
+    assert_redirected_to gabarito_aluno_path(@activity.correction_token, @student)
+  end
+
   test "student qr opens that pupil and posts the grade" do
     get gabarito_aluno_path(@activity.correction_token, @student)
     assert_response :success
-    assert_match "Mitocôndria", response.body
+    assert_match "João", response.body
+    assert_match "Gabarito A", response.body
 
     post gabarito_grade_path(@activity.correction_token), params: {
       student_id: @student.id,
@@ -87,7 +95,7 @@ class PublicCorrectionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 10.0, submission.score
   end
 
-  test "phone photo of the student card launches the grade" do
+  test "phone photo of the student card waits for the printed key" do
     file = Tempfile.new(["card", ".jpg"])
     file.binmode
     file.write("fake-photo")
@@ -108,10 +116,8 @@ class PublicCorrectionsControllerTest < ActionDispatch::IntegrationTest
       card: Rack::Test::UploadedFile.new(file.path, "image/jpeg")
     }
 
-    assert_redirected_to gabarito_aluno_path(@activity.correction_token, @student, ok: 1)
-    submission = ActivitySubmission.find_by!(activity: @activity, student: @student)
-    assert_equal 10.0, submission.score
-    assert submission.card_photo.attached?
+    assert_redirected_to gabarito_aluno_path(@activity.correction_token, @student)
+    assert_nil ActivitySubmission.find_by(activity: @activity, student: @student)
   ensure
     Lira.define_singleton_method(:llm_enabled?, lira) if lira
     Activities::AnswerCardVision.define_singleton_method(:scan, scan) if scan
