@@ -59,7 +59,8 @@ class Documents::ActivityDeliveryReportTest < ActiveSupport::TestCase
     text = PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
     assert_includes text, "Maria Silva"
     assert_includes text, "8,0"
-    assert_not_includes text, "Aprovado"
+    assert_includes text, "Situação"
+    assert_includes text, "Aprovado"
   end
 
   test "prova report marks six or more as aprovado and the rest as recuperacao" do
@@ -104,6 +105,8 @@ class Documents::ActivityDeliveryReportTest < ActiveSupport::TestCase
     )
     ActivitySubmission.create!(activity: activity, student: passed, professor: professor, score: 6, submitted_on: Date.current)
     ActivitySubmission.create!(activity: activity, student: failed, professor: professor, score: 5.9, submitted_on: Date.current)
+    ActivityExamAssignment.create!(activity: activity, student: passed, slot: 2)
+    ActivityExamAssignment.create!(activity: activity, student: failed, slot: 3)
 
     pdf = Documents::ActivityDeliveryReport.new(
       professor: professor,
@@ -116,5 +119,7 @@ class Documents::ActivityDeliveryReportTest < ActiveSupport::TestCase
     assert_includes text, "5,9"
     assert_includes text, "Aprovado"
     assert_includes text, "Recuperação"
+    assert_includes text, "Tipo 2"
+    assert_includes text, "Tipo 3"
   end
 end

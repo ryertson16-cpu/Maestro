@@ -221,7 +221,7 @@ module Documents
               "No lançamento, marque entrega (data de recebimento) e nota de 0 a 10. Situações: em andamento, entregue, entregue com atraso, não entregou. Entrega depois do limite é atraso de atividade — não é falta na chamada.",
               "REC, quando a atividade é prova, entra neste lançamento por aluno — não existe tela de REC GLOBAL no Maestro.",
               "Versão adaptada: escolha os alunos e se substitui a da turma (entra na média) ou complementa (não entra). Quem substitui some do lançamento da atividade original.",
-              "Relatório da atividade: PDF com o mesmo cabeçalho do relatório do aluno (professor · data) e a tabela Nome / Situação / Data de recebimento."
+              "Relatório da atividade: PDF com o mesmo cabeçalho do relatório do aluno (professor · data) e a tabela Nome, Situação, Data de recebimento, Nota, Resultado e Tipo de prova."
             ]),
             h3("Aviso para o WhatsApp da turma"),
             steps([

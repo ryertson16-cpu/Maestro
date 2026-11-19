@@ -109,34 +109,30 @@ module Documents
         return
       end
 
-      headers = ["N.", "Nome", "Situacao", "Data de recebimento", "Nota"]
-      headers << "Resultado" if exam?
+      headers = ["Nome", "Situação", "Data de recebimento", "Nota", "Resultado", "Tipo de prova"]
       table_rows = [headers]
-      @rows.each_with_index do |row, index|
-        line = [
-          (index + 1).to_s,
+      @rows.each do |row|
+        table_rows << [
           ascii(row[:student].name),
           STATUS_LABELS.fetch(row[:status], row[:status].to_s),
           format_date(row[:submitted_on]),
-          format_score(row[:score])
+          format_score(row[:score]),
+          row[:status] == :missed_exam ? "Aluno faltou a prova" : outcome_label(row[:score]),
+          exam_type_label(row[:exam_slot])
         ]
-        line << (row[:status] == :missed_exam ? "Aluno faltou a prova" : outcome_label(row[:score])) if exam?
-        table_rows << line
       end
 
       pdf.table(table_rows, header: true, width: pdf.bounds.width) do |table|
         style_table(table)
-        table.column(0).width = 28
-        table.column(0).align = :center
-        table.column(2).width = 108
-        table.column(3).width = 92
+        table.column(1).width = 96
+        table.column(2).width = 86
+        table.column(2).align = :center
+        table.column(3).width = 40
         table.column(3).align = :center
-        table.column(4).width = 46
+        table.column(4).width = 78
         table.column(4).align = :center
-        if exam?
-          table.column(5).width = 88
-          table.column(5).align = :center
-        end
+        table.column(5).width = 62
+        table.column(5).align = :center
       end
     end
 
@@ -156,6 +152,9 @@ module Documents
       end
 
       submissions = ActivitySubmission
+                    .where(activity: activity, student_id: students.map(&:id))
+                    .index_by(&:student_id)
+      assignments = ActivityExamAssignment
                     .where(activity: activity, student_id: students.map(&:id))
                     .index_by(&:student_id)
 
@@ -181,13 +180,16 @@ module Documents
           student: student,
           status: status,
           submitted_on: submission&.submitted_on,
-          score: submission&.score
+          score: submission&.score,
+          exam_slot: assignments[student.id]&.slot
         }
       }.sort_by { |row| [rank.fetch(row[:status], 9), row[:student].name.to_s] }
     end
 
-    def exam?
-      @activity.activity_type.to_s.match?(/prova/i)
+    def exam_type_label(slot)
+      return "-" if slot.blank?
+
+      "Tipo #{slot.to_i}"
     end
 
     def format_score(value)
