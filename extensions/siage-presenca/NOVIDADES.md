@@ -1,3 +1,19 @@
+# Novidades: versão 4.9.13 (19/11/2026)
+
+- O CPF e a senha do perfil entram no formulário real do SIAGE (login e password). O botão ACESSAR só envia esse formulário; preencher o campo na tela não bastava.
+
+# Novidades: versão 4.9.12 (19/11/2026)
+
+- Primeiro acesso pelo Maestro: a extensão espera o formulário Usuário/Senha, digita o CPF e a senha do perfil e só segue depois que o SIAGE sai da tela de login. Se o portal pedir senha nova, ela para e avisa para salvar essa senha no perfil.
+
+# Novidades: versão 4.9.11 (19/11/2026)
+
+- Professor novo no SIAGE: ao trazer a lista, a extensão fecha o aviso de boas-vindas, escolhe o ano letivo e a matrícula e só então abre Diário → Visualizar Minhas Turmas.
+
+# Novidades: versão 4.9.10 (19/11/2026)
+
+- Trazer alunos: quando o Maestro pede a lista, a extensão entra no SIAGE e lê as turmas mesmo que ainda exista uma chamada pendente. A chamada continua depois, sem apagar o pedido da lista.
+
 # Novidades: versão 4.9.9 (17/11/2026)
 
 - Depois do ícone da coluna Ação, a extensão não grava na ficha Visualizar Turma. Clica na aba Frequência e só então preenche data, período e tempo da aula do Maestro.

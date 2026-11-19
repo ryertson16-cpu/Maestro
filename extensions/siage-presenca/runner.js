@@ -159,17 +159,63 @@
   }
 
   function ehTelaAnoLetivo() {
-    const t = (document.body?.innerText || "").slice(0, 3000);
-    if (!/ano letivo/i.test(t) || !/matr[ií]cula/i.test(t)) return false;
+    const t = norm(textoDaPagina(4000));
+    if (!/ano letivo/.test(t) || !/matricula/.test(t)) return false;
     if (q("input[type=password]").some(visivel)) return false;
-    return !!botaoPorRotulo(/selecionar/);
+    return true;
+  }
+
+  function fecharBoasVindas() {
+    const dialog = q(".p-dialog, .p-confirm-dialog, [role=dialog]").filter(visivel).find((caixa) => {
+      const t = norm(caixa.innerText || "");
+      return /bem-vindo|primeiro acesso|termo|ciencia|seja bem|atualize seus dados/.test(t);
+    });
+    if (!dialog) return false;
+    const btn = q("button, a, [role=button]", dialog).filter(visivel).find((b) =>
+      /concordo|continuar|entendi|aceito|^ok$|fechar/.test(norm(b.textContent || b.value || ""))
+    );
+    if (!btn) return false;
+    clicarNativo(btn);
+    return true;
+  }
+
+  async function escolherAnoEMatricula() {
+    const resposta = await pedirPaginaDetalhe("confirmarAno", {}, 4000);
+    if (resposta && resposta.ok) return;
+    const combos = q(".p-dropdown, p-dropdown, .p-select, p-select, ng-select").filter(visivel);
+    for (const combo of combos) {
+      const rotulo = norm(combo.innerText || "");
+      if (/20\d{2}/.test(rotulo) && !/selecione|escolha/.test(rotulo)) continue;
+      if (rotulo.length > 12 && !/selecione|escolha|ano letivo|matricula/.test(rotulo)) continue;
+      const gatilho = combo.querySelector(".p-dropdown-trigger, .p-select-dropdown, .ng-arrow-wrapper, .p-dropdown-label") || combo;
+      clicarNativo(gatilho);
+      await esperar(450);
+      const painelLista = q(".p-dropdown-panel, .p-select-overlay, .ng-dropdown-panel, .p-dropdown-items").filter(visivel).pop();
+      if (!painelLista) continue;
+      const opcoes = q("li, .p-dropdown-item, .p-select-option, .ng-option", painelLista).filter(visivel);
+      const anos = opcoes.filter((opcao) => /20\d{2}/.test(opcao.textContent || ""));
+      const alvo = (anos.length ? anos : opcoes).slice().sort((a, b) => {
+        const anoA = Number((String(a.textContent).match(/20\d{2}/) || ["0"])[0]);
+        const anoB = Number((String(b.textContent).match(/20\d{2}/) || ["0"])[0]);
+        return anoB - anoA;
+      }).find((opcao) => !/selecione|escolha/.test(norm(opcao.textContent)));
+      if (alvo) clicarNativo(alvo);
+      await esperar(350);
+    }
+    const btn = botaoPorRotulo(/^selecionar$/) ||
+      botaoPorRotulo(/selecionar/) ||
+      botaoPorRotulo(/^confirmar$|^continuar$|^acessar$|^entrar$/) ||
+      botaoComTexto(/selecionar|confirmar|continuar/);
+    if (btn && !btn.disabled) clicarNativo(btn);
   }
 
   function ehTelaDeLogin() {
-    if (ehTelaAnoLetivo()) return false;
+    if (document.querySelector("app-primeiro-acesso") || /primeiro-acesso/.test(location.pathname)) return false;
+    if (ehTelaAnoLetivo() || /selecionar-ano-matricula/.test(location.pathname)) return false;
+    if (document.querySelector("app-login")) return true;
     const t = (document.body?.innerText || "").slice(0, 1200);
-    if (q("input[type=password]").some(visivel) && (/fa[cç]a login/i.test(t) || /\/auth(\/|$)/i.test(location.pathname))) return true;
-    return /fa[cç]a login/i.test(t) && q("input[type=password]").some(visivel);
+    if (q("input[type=password]").some(visivel) && /fa[cç]a login/i.test(t)) return true;
+    return /\/auth\/?$/.test(location.pathname) && q("input[type=password]").some(visivel);
   }
 
   function campoUsuarioLogin() {
@@ -183,9 +229,26 @@
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
     if (setter) setter.call(campo, valor);
     else campo.value = valor;
-    for (const tipo of ["input", "keyup", "change", "blur"]) {
-      campo.dispatchEvent(new Event(tipo, { bubbles: true }));
+    try {
+      campo.dispatchEvent(new InputEvent("input", { bubbles: true, data: valor, inputType: "insertText" }));
+    } catch (e) {
+      campo.dispatchEvent(new Event("input", { bubbles: true }));
     }
+    campo.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  async function digitarNoCampo(campo, valor) {
+    if (!campo) return;
+    campo.focus();
+    preencherCampoNativo(campo, "");
+    let atual = "";
+    for (const letra of String(valor)) {
+      atual += letra;
+      preencherCampoNativo(campo, atual);
+      campo.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: letra }));
+      await esperar(20);
+    }
+    campo.dispatchEvent(new Event("blur", { bubbles: true }));
   }
 
   function pedirSenhaPainel() {
@@ -196,7 +259,7 @@
       box.id = "siage-login-senha";
       box.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:2147483647;width:340px;background:#fff;color:#1f2937;border:1px solid #d1d5db;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.2);font:13px system-ui,sans-serif;padding:12px";
       box.innerHTML = `<b>Senha do SIAGE</b>
-        <p style="margin:6px 0;color:#4b5563">O Maestro não guarda essa senha. Digite aqui para entrar e enviar a frequência.</p>
+        <p style="margin:6px 0;color:#4b5563">A senha do perfil do Maestro não veio nesta abertura. Digite a senha do SIAGE para entrar. Depois, salve a mesma senha no perfil para a próxima vez.</p>
         <input id="siage-login-campo" type="password" autocomplete="off" style="width:100%;box-sizing:border-box;padding:8px;margin:4px 0 8px">
         <button type="button" id="siage-login-ok" style="width:100%;padding:8px;border:0;border-radius:8px;background:#15803d;color:#fff;font-weight:600;cursor:pointer">Entrar no SIAGE</button>`;
       document.body.appendChild(box);
@@ -213,23 +276,44 @@
     });
   }
 
+  function botaoAcessar() {
+    return botaoPorRotulo(/^acessar$/) ||
+      botaoPorRotulo(/^entrar$/) ||
+      botaoPorRotulo(/acessar|entrar/) ||
+      botaoComTexto(/acessar|entrar/);
+  }
+
+  function ehTrocaDeSenha() {
+    if (document.querySelector("app-primeiro-acesso") || /primeiro-acesso/.test(location.pathname)) return true;
+    if (ehTelaDeLogin()) return false;
+    const senhas = q("input[type=password]").filter(visivel).length;
+    if (!senhas) return false;
+    const t = norm(textoDaPagina(3000));
+    return /informe uma nova senha|nova senha|senha atual/.test(t);
+  }
+
   async function preencherLogin(handoff) {
+    await aguardar(() => document.querySelector("app-login, app-primeiro-acesso") || ehTelaDeLogin() || ehTrocaDeSenha(), 12000);
     const cpf = String(handoff.cpf || "").replace(/\D/g, "");
-    const user = campoUsuarioLogin();
-    if (user && cpf) preencherCampoNativo(user, cpf);
     let senha = String(handoff.senha || "").trim();
     if (!senha) senha = await lerSenha();
-    if (!senha) senha = await pedirSenhaPainel();
+    if (!senha && ehTelaDeLogin()) senha = await pedirSenhaPainel();
     if (!senha) return false;
     await chrome.storage.session.set({ senha });
-    const pass = q("input[type=password]").find(visivel);
-    if (pass) preencherCampoNativo(pass, senha);
-    await esperar(200);
-    const acessar = botaoComTexto(/acessar|entrar/) ||
-      q("button").filter(visivel).find((b) => /acessar|entrar/i.test(b.textContent || b.value || ""));
-    if (acessar && !acessar.disabled) clicarNativo(acessar);
+    const resposta = await pedirPaginaDetalhe("loginPerfil", { cpf, senha }, 8000);
+    if (resposta && resposta.aviso === "definir-senha") return "definir-senha";
+    if (!resposta || !resposta.ok) {
+      const user = campoUsuarioLogin();
+      if (user && cpf) await digitarNoCampo(user, cpf);
+      const pass = q("input[type=password]").find(visivel);
+      if (pass) await digitarNoCampo(pass, senha);
+      const acessar = botaoAcessar();
+      if (acessar && !acessar.disabled) clicarNativo(acessar);
+    }
+    await aguardar(() => ehTelaAnoLetivo() || ehTrocaDeSenha() || !ehTelaDeLogin() || mensagemDoSistema(), 15000);
+    if (ehTrocaDeSenha()) return "definir-senha";
+    if (ehTelaDeLogin()) return false;
     await marcarLoginFeito();
-    await aguardar(() => ehTelaAnoLetivo() || !ehTelaDeLogin(), 20000);
     return true;
   }
 
@@ -378,11 +462,16 @@
   async function entrarNoDiario() {
     for (let i = 0; i < 24; i++) {
       if (ehTelaDeLogin()) return "login";
+      if (ehTrocaDeSenha()) return "definir-senha";
       if (chegouNoDiario()) return "ok";
 
+      if (fecharBoasVindas()) {
+        await esperar(600);
+        continue;
+      }
+
       if (ehTelaAnoLetivo()) {
-        const btn = botaoPorRotulo(/^selecionar$/) || botaoPorRotulo(/selecionar/) || botaoComTexto(/selecionar/);
-        if (btn && !btn.disabled) clicarNativo(btn);
+        await escolherAnoEMatricula();
         await aguardar(() => !ehTelaAnoLetivo() || ehHubDiario() || chegouNoDiario(), 12000);
         await esperar(400);
         continue;
@@ -397,13 +486,13 @@
         continue;
       }
 
-      if (clicarNav(/^diario$/)) {
+      if (clicarNav(/^diario\b/) || clicarNav(/diario de classe/)) {
         await aguardar(() => ehHubDiario() || ehListagemTurmas() || chegouNoDiario(), 12000);
         await esperar(400);
         continue;
       }
 
-      if (!/listagem-turmas/.test(location.pathname) && i > 2) {
+      if (!/listagem-turmas/.test(location.pathname) && i > 8) {
         location.href = URL_LISTAGEM;
         return "navegando";
       }
@@ -2067,21 +2156,55 @@
       const extra = await chrome.storage.local.get(["rosterHandoff", "handoff"]);
       const handoff = extra.rosterHandoff || (extra.handoff && extra.handoff.mode === "roster" ? extra.handoff : null);
       let job = await lerRosterJob();
-      if (!job && handoff && handoff.job) job = handoff.job;
+      const pedido = handoff && handoff.job;
+      const mesmoPedido = pedido && job && Number(pedido.criado || 0) === Number(job.criado || 0);
+      if (mesmoPedido && (job.status === "parado" || job.status === "concluido")) return;
+      const pedidoNovo = pedido && (!job || job.status === "concluido" || job.status === "parado" ||
+        Number(pedido.criado || 0) > Number(job.criado || 0));
+      if (pedidoNovo) job = pedido;
+      if (!job && pedido) job = pedido;
       if (!job) return;
       job.kind = "roster";
       await gravarRosterJob(job);
       if (ehTelaDeLogin()) {
-        await preencherLogin(handoff || { cpf: "" });
-        job = await lerRosterJob();
+        desenharPainel(job, "Entrando no SIAGE com o CPF e a senha do perfil…");
+        const entrou = await preencherLogin(handoff || { cpf: "" });
+        job = await lerRosterJob() || job;
+        if (entrou === "definir-senha") {
+          job.status = "parado";
+          await gravarRosterJob(job);
+          desenharPainel(job, "A senha do perfil entrou em Senha Atual. O SIAGE está pedindo uma senha nova. Crie essa senha no portal, salve a mesma no perfil do Maestro e peça a lista de novo.");
+          return;
+        }
+        if (!entrou || ehTelaDeLogin()) {
+          job.loginTentativas = (job.loginTentativas || 0) + 1;
+          const aviso = mensagemDoSistema();
+          if (job.loginTentativas >= 2) {
+            job.status = "parado";
+            await gravarRosterJob(job);
+            desenharPainel(job, aviso
+              ? `O SIAGE não entrou: ${aviso}`
+              : "O SIAGE não aceitou o acesso. Confira o CPF e a senha no perfil do Maestro. Se a conta ainda não tem senha, use Esqueci a minha senha no portal, salve a nova senha no perfil e peça a lista de novo.");
+            return;
+          }
+          await gravarRosterJob(job);
+          desenharPainel(job, aviso ? `O SIAGE respondeu: ${aviso}. Tentando de novo…` : "O portal ainda está na tela de login. Tentando de novo…");
+          return;
+        }
       }
       if (job.status === "aguardando-login" && !ehTelaDeLogin()) {
         job.status = "rodando";
         await gravarRosterJob(job);
       }
       if (job.status !== "rodando") return;
-      desenharPainel(job, "Lendo turmas do SIAGE…");
+      desenharPainel(job, "Entrando no SIAGE: ano letivo, matrícula e Visualizar Minhas Turmas…");
       const entrada = await entrarNoDiario();
+      if (entrada === "definir-senha") {
+        job.status = "parado";
+        await gravarRosterJob(job);
+        desenharPainel(job, "O SIAGE pediu para criar ou trocar a senha. Faça isso uma vez no portal, salve a nova senha no perfil do Maestro e peça a lista de novo.");
+        return;
+      }
       if (entrada === "login" || entrada === "navegando") return;
       if (!Array.isArray(job.turmas) || !job.turmas.length) {
         if (!ehListagemTurmas()) {
@@ -2194,13 +2317,12 @@
     const jobAtual = extra.job;
     const rosterJob = extra.rosterJob;
     const pediuLista = !!(extra.rosterHandoff || (extra.handoff && extra.handoff.mode === "roster"));
-    if (chamadaAtiva(jobAtual) || temAulasPendentes(jobAtual)) {
-      await limparHandoffLista();
-      const limpo = await chrome.storage.local.get(["handoff", "job"]);
-      return trabalharChamada(limpo);
-    }
     if (rosterAtivo(rosterJob) || pediuLista) {
       return trabalharRoster();
+    }
+    if (chamadaAtiva(jobAtual) || temAulasPendentes(jobAtual)) {
+      const limpo = await chrome.storage.local.get(["handoff", "job"]);
+      return trabalharChamada(limpo);
     }
     if (jobAtual && jobAtual.kind !== "roster" && (jobAtual.status === "rodando" || jobAtual.status === "aguardando-login")) {
       return trabalharChamada(extra);
@@ -2228,9 +2350,17 @@
       while (job && job.status === "rodando") {
         if (ehTelaAnoLetivo()) desenharPainel(job, "Selecionando ano letivo e matrícula…");
         const entrada = await entrarNoDiario();
+        if (entrada === "definir-senha") {
+          desenharPainel(job, "A senha do perfil entrou em Senha Atual. Crie a senha nova no SIAGE, salve a mesma no perfil do Maestro e abra o portal de novo.");
+          return;
+        }
         if (entrada === "login") {
           if (!precisaLogin) return;
-          await preencherLogin(handoff || { cpf: "" });
+          const entrou = await preencherLogin(handoff || { cpf: "" });
+          if (entrou === "definir-senha") {
+            desenharPainel(job, "A senha do perfil entrou em Senha Atual. Crie a senha nova no SIAGE, salve a mesma no perfil do Maestro e abra o portal de novo.");
+            return;
+          }
           job = await lerJob();
           continue;
         }

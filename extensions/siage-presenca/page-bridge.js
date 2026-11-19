@@ -866,6 +866,66 @@
     return { ok: true, escolhido: substituto || Number(String(trecho).match(/\d+/) || [0]), substituto: !!substituto };
   }
 
+  function componenteAngular(seletor) {
+    const el = document.querySelector(seletor);
+    const ctx = el && el.__ngContext__;
+    if (window.ng && typeof window.ng.getComponent === "function" && el) {
+      const peloNg = window.ng.getComponent(el);
+      if (peloNg && peloNg.form) return peloNg;
+    }
+    if (!Array.isArray(ctx)) return null;
+    return ctx.find((item) => item && item.form && typeof item.form.get === "function") || null;
+  }
+
+  function entrarComPerfil(cpf, senha) {
+    const primeiro = componenteAngular("app-primeiro-acesso");
+    if (primeiro && primeiro.form.get("senhaAtual")) {
+      primeiro.form.get("senhaAtual").setValue(String(senha || ""));
+      primeiro.form.get("senhaAtual").updateValueAndValidity();
+      return { ok: false, aviso: "definir-senha" };
+    }
+    const cmp = componenteAngular("app-login");
+    if (!cmp) return { ok: false, aviso: "tela-ausente" };
+    const digitos = String(cpf || "").replace(/\D/g, "");
+    const login = cmp.form.get("login");
+    const password = cmp.form.get("password");
+    if (login) {
+      login.setValue(digitos);
+      login.markAsDirty();
+      login.updateValueAndValidity();
+    }
+    if (password) {
+      password.setValue(String(senha || ""));
+      password.markAsDirty();
+      password.updateValueAndValidity();
+    }
+    if (typeof cmp.form.updateValueAndValidity === "function") cmp.form.updateValueAndValidity();
+    if (!cmp.form.valid || typeof cmp.submit !== "function") {
+      return { ok: false, aviso: "O SIAGE não aceitou o CPF ou a senha no formulário." };
+    }
+    cmp.submit();
+    return { ok: true };
+  }
+
+  function confirmarAnoMatricula() {
+    const cmp = componenteAngular("app-selecionar-ano-matricula");
+    if (!cmp || typeof cmp.next !== "function") return { ok: false, aviso: "tela-ausente" };
+    const ano = cmp.form.get("anoLetivo");
+    const matricula = cmp.form.get("matricula");
+    const anos = Array.isArray(cmp.anosLetivosAutocomplete) ? cmp.anosLetivosAutocomplete : [];
+    const matriculas = Array.isArray(cmp.matriculasAutocomplete) ? cmp.matriculasAutocomplete : [];
+    if (ano && !ano.value && anos.length) {
+      const atual = String(new Date().getFullYear());
+      ano.setValue(anos.find((item) => String(item.nome) === atual || String(item.descricao) === atual) || anos[0]);
+    }
+    if (matricula && !matricula.value && matriculas.length === 1) {
+      matricula.setValue(matriculas[0]);
+    }
+    if (!cmp.form.valid) return { ok: false, aviso: "aguardando" };
+    cmp.next();
+    return { ok: true };
+  }
+
   window.addEventListener("message", (ev) => {
     if (ev.source !== window || !ev.data || ev.data.__siage !== 1) return;
     const d = ev.data;
@@ -882,6 +942,14 @@
       const opts = { bubbles: true, cancelable: true, key: "Enter", code: "Enter", keyCode: 13, which: 13 };
       el.dispatchEvent(new KeyboardEvent("keydown", opts));
       el.dispatchEvent(new KeyboardEvent("keyup", opts));
+    }
+    if (d.acao === "loginPerfil") {
+      const r = entrarComPerfil(d.cpf, d.senha);
+      window.postMessage({ __siage: 2, acao: "loginPerfil:ok", ok: !!(r && r.ok), aviso: (r && r.aviso) || "" }, "*");
+    }
+    if (d.acao === "confirmarAno") {
+      const r = confirmarAnoMatricula();
+      window.postMessage({ __siage: 2, acao: "confirmarAno:ok", ok: !!(r && r.ok), aviso: (r && r.aviso) || "" }, "*");
     }
     if (d.acao === "fecharAlerta") {
       const ok = fecharAlerta();
