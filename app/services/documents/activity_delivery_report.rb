@@ -38,6 +38,7 @@ module Documents
         draw_context(document)
         draw_summary(document)
         draw_students(document)
+        draw_keys(document)
       end
 
       pdf.render
@@ -133,6 +134,32 @@ module Documents
         table.column(4).align = :center
         table.column(5).width = 62
         table.column(5).align = :center
+      end
+    end
+
+    def draw_keys(pdf)
+      keys = official_keys
+      return if keys.empty?
+
+      pdf.move_down 14
+      pdf.fill_color "1F4E79"
+      pdf.text "Gabaritos oficiais", size: 11, style: :bold
+      pdf.move_down 6
+      pdf.fill_color "20263D"
+      keys.each do |slot, letters|
+        pdf.text "Tipo #{slot}: #{letters.join(' · ')}", size: 10
+        pdf.move_down 4
+      end
+    end
+
+    def official_keys
+      assigner = Activities::ExamAssigner.new(@activity)
+      @activity.exam_assignments.group_by(&:slot).sort.filter_map do |slot, rows|
+        letters = assigner.present(rows.first).filter_map do |item|
+          letter = item.printed_correct.to_s.upcase
+          "#{item.number} #{letter}" if letter.present?
+        end
+        [ slot, letters ] if letters.any?
       end
     end
 

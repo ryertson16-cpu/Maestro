@@ -103,10 +103,34 @@ class Documents::ActivityDeliveryReportTest < ActiveSupport::TestCase
       weight: 1,
       maximum_score: 10
     )
+    question = activity.activity_questions.create!(
+      prompt: "Qual e o resultado?",
+      kind: "objective",
+      position: 1,
+      points: 1,
+      correct_letter: "A",
+      choices: [
+        { "letter" => "A", "text" => "Certo" },
+        { "letter" => "B", "text" => "Errado" },
+        { "letter" => "C", "text" => "Outro" }
+      ]
+    )
     ActivitySubmission.create!(activity: activity, student: passed, professor: professor, score: 6, submitted_on: Date.current)
     ActivitySubmission.create!(activity: activity, student: failed, professor: professor, score: 5.9, submitted_on: Date.current)
-    ActivityExamAssignment.create!(activity: activity, student: passed, slot: 2)
-    ActivityExamAssignment.create!(activity: activity, student: failed, slot: 3)
+    ActivityExamAssignment.create!(
+      activity: activity,
+      student: passed,
+      slot: 2,
+      item_order: [ question.id ],
+      choice_maps: { question.id.to_s => { "C" => "A", "A" => "B", "B" => "C" } }
+    )
+    ActivityExamAssignment.create!(
+      activity: activity,
+      student: failed,
+      slot: 3,
+      item_order: [ question.id ],
+      choice_maps: { question.id.to_s => { "B" => "A", "A" => "C", "C" => "B" } }
+    )
 
     pdf = Documents::ActivityDeliveryReport.new(
       professor: professor,
@@ -121,5 +145,8 @@ class Documents::ActivityDeliveryReportTest < ActiveSupport::TestCase
     assert_includes text, "Recuperação"
     assert_includes text, "Tipo 2"
     assert_includes text, "Tipo 3"
+    assert_includes text, "Gabaritos oficiais"
+    assert_includes text, "Tipo 2: 1 C"
+    assert_includes text, "Tipo 3: 1 B"
   end
 end
