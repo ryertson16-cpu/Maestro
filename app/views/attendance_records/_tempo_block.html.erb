@@ -120,30 +120,33 @@
     <p class="timetable-status" data-timetable-status hidden></p>
   <% end %>
 
-  <% if summary %>
-    <section class="attendance-summary" aria-label="Resumo deste tempo">
-      <article class="summary-card summary-total">
-        <span class="summary-label">Total</span>
-        <strong data-summary-count="total"><%= summary[:total] %></strong>
-      </article>
-      <article class="summary-card summary-present">
-        <span class="summary-label">Presentes</span>
-        <strong data-summary-count="present"><%= summary[:present] %></strong>
-      </article>
-      <article class="summary-card summary-absent">
-        <span class="summary-label">Ausentes</span>
-        <strong data-summary-count="absent"><%= summary[:absent] %></strong>
-      </article>
-      <article class="summary-card summary-justified">
-        <span class="summary-label">Justificados</span>
-        <strong data-summary-count="justified"><%= summary[:justified] %></strong>
-      </article>
-      <article class="summary-card summary-late">
-        <span class="summary-label">Atraso</span>
-        <strong data-summary-count="late"><%= summary[:late] %></strong>
-      </article>
-    </section>
-  <% end %>
+<% card_counts = { total: enrollments.size, present: 0, absent: 0, justified: 0, late: 0 } %>
+<% enrollments.each do |enrollment| %>
+  <% mark = (records[enrollment.id]&.status || "present").to_s %>
+  <% card_counts[mark.to_sym] += 1 if card_counts.key?(mark.to_sym) %>
+<% end %>
+  <section class="attendance-summary" aria-label="Resumo deste tempo">
+    <article class="summary-card summary-total">
+      <span class="summary-label">Total</span>
+      <strong data-summary-count="total"><%= card_counts[:total] %></strong>
+    </article>
+    <article class="summary-card summary-present">
+      <span class="summary-label">Presentes</span>
+      <strong data-summary-count="present"><%= card_counts[:present] %></strong>
+    </article>
+    <article class="summary-card summary-absent">
+      <span class="summary-label">Ausentes</span>
+      <strong data-summary-count="absent"><%= card_counts[:absent] %></strong>
+    </article>
+    <article class="summary-card summary-justified">
+      <span class="summary-label">Justificados</span>
+      <strong data-summary-count="justified"><%= card_counts[:justified] %></strong>
+    </article>
+    <article class="summary-card summary-late">
+      <span class="summary-label">Atraso</span>
+      <strong data-summary-count="late"><%= card_counts[:late] %></strong>
+    </article>
+  </section>
 
   <div class="attendance-list">
     <div class="attendance-list-header">
@@ -257,4 +260,73 @@
       </div>
     <% end %>
   </div>
+
+<script>
+(function () {
+  var block = document.currentScript && document.currentScript.closest("[data-attendance-block]")
+  if (!block) return
+
+  function statusOf(row) {
+    var justified = row.querySelector("[data-attendance-justified]")
+    var late = row.querySelector("[data-attendance-late]")
+    var sw = row.querySelector("[data-attendance-switch]")
+    if (justified && justified.checked) return "justified"
+    if (late && late.checked) return "late"
+    return sw && sw.checked ? "present" : "absent"
+  }
+
+  function paint(row, status) {
+    var cell = row.querySelector(".attendance-status-cell")
+    var sw = row.querySelector("[data-attendance-switch]")
+    var late = row.querySelector("[data-attendance-late]")
+    var justified = row.querySelector("[data-attendance-justified]")
+    if (late) late.checked = status === "late"
+    if (justified) justified.checked = status === "justified"
+    if (sw) sw.checked = status !== "absent"
+    if (cell) {
+      cell.classList.remove("status-present", "status-absent", "status-justified", "status-late")
+      cell.classList.add("status-" + status)
+    }
+  }
+
+  function recount() {
+    var counts = { total: 0, present: 0, absent: 0, justified: 0, late: 0 }
+    block.querySelectorAll("[data-attendance-row]").forEach(function (row) {
+      counts.total += 1
+      var status = statusOf(row)
+      if (Object.prototype.hasOwnProperty.call(counts, status)) counts[status] += 1
+    })
+    block.querySelectorAll("[data-summary-count]").forEach(function (el) {
+      var key = el.getAttribute("data-summary-count")
+      if (Object.prototype.hasOwnProperty.call(counts, key)) el.textContent = String(counts[key])
+    })
+  }
+
+  block.addEventListener("change", function (event) {
+    var row = event.target.closest && event.target.closest("[data-attendance-row]")
+    if (!row || !block.contains(row)) return
+    var sw = row.querySelector("[data-attendance-switch]")
+    var late = row.querySelector("[data-attendance-late]")
+    var justified = row.querySelector("[data-attendance-justified]")
+    var target = event.target
+    if (target === sw && sw && !sw.checked) {
+      if (late) late.checked = false
+      if (justified) justified.checked = false
+    }
+    if (target === late && late && late.checked) {
+      if (justified) justified.checked = false
+      if (sw) sw.checked = true
+    }
+    if (target === justified && justified && justified.checked) {
+      if (late) late.checked = false
+      if (sw) sw.checked = true
+    }
+    paint(row, statusOf(row))
+    recount()
+  })
+
+  recount()
+})()
+</script>
+
 </section>
