@@ -43,16 +43,28 @@
     <li><strong><%= @resumo[:notas] %></strong> turma(s) com nota para a aba Registro de Avaliações.</li>
   </ul>
 
-  <p>
-    <%= link_to "Abrir SIAGE",
-                Siage::ORIGIN + "/auth",
-                class: "button button-primary",
-                data: { siage_open: true },
-                target: "_blank",
-                rel: "noopener" %>
-  </p>
+  <% if @resumo[:cpf] && @resumo[:senha] %>
+    <p>
+      <%= link_to "Abrir SIAGE",
+                  Siage::ORIGIN + "/auth",
+                  class: "button button-primary",
+                  data: { siage_open: true },
+                  target: "_blank",
+                  rel: "noopener" %>
+    </p>
+    <p class="classroom-pending-help" data-siage-extension-missing hidden>
+      A extensão não está ativa neste navegador. Sem ela o SIAGE abre com usuário e senha vazios.
+      <%= link_to "Baixe o ZIP", download_siage_extension_path %>,
+      carregue a pasta no Chrome e recarregue esta página antes de clicar de novo.
+    </p>
+  <% else %>
+    <p>
+      <%= link_to "Informar CPF e senha do SIAGE",
+                  edit_profile_path,
+                  class: "button button-primary" %>
+    </p>
+  <% end %>
   <p class="classroom-pending-help">
-    Com a extensão <%= Siage::EXTENSION_VERSION %> carregada, este botão abre o portal, preenche CPF e senha, chega na turma e usa a aba <strong>Frequência</strong> para a chamada.
-    Sem a extensão, só abre a tela de login.
+    Com a extensão <%= Siage::EXTENSION_VERSION %> carregada, este botão abre o portal, preenche o CPF e a senha do perfil, chega na turma e usa a aba <strong>Frequência</strong> para a chamada.
   </p>
 </section>

@@ -868,43 +868,117 @@
 
   function componenteAngular(seletor) {
     const el = document.querySelector(seletor);
-    const ctx = el && el.__ngContext__;
-    if (window.ng && typeof window.ng.getComponent === "function" && el) {
-      const peloNg = window.ng.getComponent(el);
-      if (peloNg && peloNg.form) return peloNg;
+    if (!el) return null;
+    if (window.ng && typeof window.ng.getComponent === "function") {
+      try {
+        const peloNg = window.ng.getComponent(el);
+        if (peloNg && peloNg.form) return peloNg;
+      } catch (e) {}
     }
-    if (!Array.isArray(ctx)) return null;
-    return ctx.find((item) => item && item.form && typeof item.form.get === "function") || null;
+    const vistos = new Set();
+    const fila = [el];
+    while (fila.length && vistos.size < 40) {
+      const node = fila.shift();
+      if (!node || vistos.has(node)) continue;
+      vistos.add(node);
+      const ctx = node.__ngContext__;
+      if (Array.isArray(ctx)) {
+        const achado = ctx.find((item) => item && item.form && typeof item.form.get === "function");
+        if (achado) return achado;
+      }
+      if (node.parentElement) fila.push(node.parentElement);
+      if (node.parentNode && node.parentNode !== node.parentElement) fila.push(node.parentNode);
+    }
+    return null;
   }
 
-  function entrarComPerfil(cpf, senha) {
+  async function escreverComoTeclado(campo, texto) {
+    if (!campo) return;
+    campo.focus();
+    try { campo.click(); } catch (e) {}
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+    if (setter) setter.call(campo, "");
+    else campo.value = "";
+    campo.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "deleteContentBackward" }));
+    for (const letra of String(texto)) {
+      let escrito = false;
+      try { escrito = document.execCommand("insertText", false, letra); } catch (e) {}
+      if (!escrito) {
+        const atual = `${campo.value || ""}${letra}`;
+        if (setter) setter.call(campo, atual);
+        else campo.value = atual;
+        campo.dispatchEvent(new InputEvent("input", { bubbles: true, data: letra, inputType: "insertText" }));
+      }
+      await dormir(20);
+    }
+    campo.dispatchEvent(new Event("change", { bubbles: true }));
+    campo.dispatchEvent(new Event("blur", { bubbles: true }));
+  }
+
+  function campoLogin(nome, placeholder) {
+    return document.querySelector(`input[formcontrolname="${nome}"]`) ||
+      [...document.querySelectorAll("input")].find((el) => (el.getAttribute("placeholder") || "") === placeholder);
+  }
+
+  function aplicarControle(input, valor) {
+    const ctx = input && input.__ngContext__;
+    if (!Array.isArray(ctx)) return;
+    for (const item of ctx) {
+      const controle = item && item.control && typeof item.control.setValue === "function" ? item.control : null;
+      if (!controle) continue;
+      controle.setValue(valor);
+      if (typeof controle.markAsDirty === "function") controle.markAsDirty();
+      if (typeof controle.updateValueAndValidity === "function") controle.updateValueAndValidity();
+      return;
+    }
+  }
+
+  async function entrarComPerfil(cpf, senha) {
     const primeiro = componenteAngular("app-primeiro-acesso");
     if (primeiro && primeiro.form.get("senhaAtual")) {
+      const atual = document.querySelector('input[formcontrolname="senhaAtual"]') ||
+        document.querySelectorAll("app-primeiro-acesso input[type=password]")[0];
+      await escreverComoTeclado(atual, senha);
       primeiro.form.get("senhaAtual").setValue(String(senha || ""));
       primeiro.form.get("senhaAtual").updateValueAndValidity();
       return { ok: false, aviso: "definir-senha" };
     }
-    const cmp = componenteAngular("app-login");
-    if (!cmp) return { ok: false, aviso: "tela-ausente" };
     const digitos = String(cpf || "").replace(/\D/g, "");
-    const login = cmp.form.get("login");
-    const password = cmp.form.get("password");
-    if (login) {
-      login.setValue(digitos);
-      login.markAsDirty();
-      login.updateValueAndValidity();
+    const campoCpf = campoLogin("login", "CPF");
+    const campoSenha = campoLogin("password", "Senha");
+    if (!campoCpf && !document.querySelector("app-login")) return { ok: false, aviso: "tela-ausente" };
+    if (campoCpf && digitos) await escreverComoTeclado(campoCpf, digitos);
+    if (campoSenha && senha) await escreverComoTeclado(campoSenha, senha);
+    if (campoCpf) aplicarControle(campoCpf, digitos);
+    if (campoSenha) aplicarControle(campoSenha, String(senha || ""));
+    const cmp = componenteAngular("app-login");
+    if (cmp) {
+      const login = cmp.form.get("login");
+      const password = cmp.form.get("password");
+      if (login && String(login.value || "").replace(/\D/g, "") !== digitos) {
+        login.setValue(digitos);
+        login.markAsDirty();
+        login.updateValueAndValidity();
+      }
+      if (password && password.value !== String(senha || "")) {
+        password.setValue(String(senha || ""));
+        password.markAsDirty();
+        password.updateValueAndValidity();
+      }
+      if (typeof cmp.form.updateValueAndValidity === "function") cmp.form.updateValueAndValidity();
+      if (cmp.form.valid && typeof cmp.submit === "function") {
+        cmp.submit();
+        return { ok: true };
+      }
     }
-    if (password) {
-      password.setValue(String(senha || ""));
-      password.markAsDirty();
-      password.updateValueAndValidity();
+    const botao = [...document.querySelectorAll("button, input[type=submit]")].find((el) =>
+      /acessar|entrar/i.test(el.textContent || el.value || "") && !el.disabled
+    );
+    if (botao) {
+      botao.click();
+      return { ok: true };
     }
-    if (typeof cmp.form.updateValueAndValidity === "function") cmp.form.updateValueAndValidity();
-    if (!cmp.form.valid || typeof cmp.submit !== "function") {
-      return { ok: false, aviso: "O SIAGE não aceitou o CPF ou a senha no formulário." };
-    }
-    cmp.submit();
-    return { ok: true };
+    return { ok: false, aviso: "O SIAGE não aceitou o CPF ou a senha no formulário." };
   }
 
   function confirmarAnoMatricula() {
@@ -944,8 +1018,9 @@
       el.dispatchEvent(new KeyboardEvent("keyup", opts));
     }
     if (d.acao === "loginPerfil") {
-      const r = entrarComPerfil(d.cpf, d.senha);
-      window.postMessage({ __siage: 2, acao: "loginPerfil:ok", ok: !!(r && r.ok), aviso: (r && r.aviso) || "" }, "*");
+      entrarComPerfil(d.cpf, d.senha).then((r) => {
+        window.postMessage({ __siage: 2, acao: "loginPerfil:ok", ok: !!(r && r.ok), aviso: (r && r.aviso) || "" }, "*");
+      });
     }
     if (d.acao === "confirmarAno") {
       const r = confirmarAnoMatricula();

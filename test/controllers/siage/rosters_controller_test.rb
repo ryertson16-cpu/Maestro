@@ -17,12 +17,24 @@ class Siage::RostersControllerTest < ActionDispatch::IntegrationTest
     sign_in @professor
   end
 
+  test "roster page asks for the SIAGE login before opening the portal" do
+    get siage_roster_path
+
+    assert_response :success
+    assert_includes response.body, "Informar CPF e senha do SIAGE"
+    assert_not_includes response.body, "professor.see.pb.gov.br/auth"
+  end
+
   test "open page exposes roster handoff" do
+    @professor.update!(cpf: "52998224725", siage_password: "portal-siage")
+
     get siage_roster_path
 
     assert_response :success
     assert_includes response.body, "maestro-siage-handoff"
     assert_includes response.body, "Ler turmas no SIAGE"
+    assert_includes response.body, "52998224725"
+    assert_includes response.body, "portal-siage"
     payload = JSON.parse(css_handoff)
     assert_equal "roster", payload["mode"]
     assert_equal "roster", payload.dig("job", "kind")

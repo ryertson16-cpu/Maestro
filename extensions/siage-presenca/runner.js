@@ -300,7 +300,11 @@
     if (!senha && ehTelaDeLogin()) senha = await pedirSenhaPainel();
     if (!senha) return false;
     await chrome.storage.session.set({ senha });
-    const resposta = await pedirPaginaDetalhe("loginPerfil", { cpf, senha }, 8000);
+    let resposta = await pedirPaginaDetalhe("loginPerfil", { cpf, senha }, 15000);
+    if (resposta && resposta.aviso === "tela-ausente") {
+      await aguardar(() => document.querySelector("app-login input, app-primeiro-acesso input"), 10000);
+      resposta = await pedirPaginaDetalhe("loginPerfil", { cpf, senha }, 15000);
+    }
     if (resposta && resposta.aviso === "definir-senha") return "definir-senha";
     if (!resposta || !resposta.ok) {
       const user = campoUsuarioLogin();
@@ -2336,8 +2340,14 @@
       const { handoff } = extra || {};
       let job = extra && extra.job;
       const precisaLogin = !!(handoff || (job && job.status !== "concluido" && job.status !== "parado"));
-      if (ehTelaDeLogin() && precisaLogin) {
-        await preencherLogin(handoff || { cpf: "" });
+      if ((ehTelaDeLogin() || ehTrocaDeSenha()) && precisaLogin) {
+        if (job) desenharPainel(job, "Entrando com o CPF e a senha do perfil. Em seguida, a chamada e as notas.");
+        const entrou = await preencherLogin(handoff || { cpf: "" });
+        if (entrou === "definir-senha") {
+          if (job) desenharPainel(job, "A senha do perfil entrou em Senha Atual. Crie a senha nova no SIAGE, salve a mesma no perfil do Maestro e abra o portal de novo.");
+          return;
+        }
+        if (!entrou || ehTelaDeLogin()) return;
         job = await lerJob();
       }
 
@@ -2346,7 +2356,11 @@
         await gravarJob(job);
       }
       if (!job || job.kind === "roster" || !Array.isArray(job.grupos)) return;
-      const trabalhou = !!(job && job.status === "rodando");
+      if (job.status !== "rodando") {
+        if (!chegouNoDiario()) await entrarNoDiario();
+        return;
+      }
+      const trabalhou = true;
       while (job && job.status === "rodando") {
         if (ehTelaAnoLetivo()) desenharPainel(job, "Selecionando ano letivo e matrícula…");
         const entrada = await entrarNoDiario();

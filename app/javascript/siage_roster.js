@@ -1,3 +1,18 @@
+function guardSiageExtension() {
+  document.addEventListener("click", (event) => {
+    const botao = event.target.closest("[data-siage-open]")
+    if (!botao) return
+    if (document.documentElement.dataset.siageExtensao === "pronta") return
+    event.preventDefault()
+    event.stopPropagation()
+    document.querySelector("[data-siage-extension-missing]")?.removeAttribute("hidden")
+  }, true)
+
+  document.addEventListener("maestro-siage-falhou", () => {
+    document.querySelector("[data-siage-extension-missing]")?.removeAttribute("hidden")
+  })
+}
+
 function startSiageRosterPoll() {
   const root = document.querySelector("[data-siage-roster-poll]")
   if (!root) return
@@ -24,4 +39,5 @@ function startSiageRosterPoll() {
 }
 
 document.addEventListener("turbo:load", startSiageRosterPoll)
+guardSiageExtension()
 startSiageRosterPoll()

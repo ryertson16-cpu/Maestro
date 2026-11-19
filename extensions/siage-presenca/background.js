@@ -91,22 +91,22 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     const handoff = msg.handoff || {};
     const senha = String(handoff.senha || "").trim();
     const ehRoster = handoff.mode === "roster" || (handoff.job && handoff.job.kind === "roster");
-    const gravar = (async () => {
-      if (senha) await chrome.storage.session.set({ senha });
+    (async () => {
+      try {
+        if (senha) await chrome.storage.session.set({ senha });
+      } catch (e) {}
       if (ehRoster) {
         await chrome.storage.local.set({
           rosterHandoff: handoff,
           rosterJob: handoff.job || null
         });
-        return;
+      } else {
+        await chrome.storage.local.set({ handoff, job: handoff.job || null });
+        await chrome.storage.local.remove("rosterHandoff");
       }
-      await chrome.storage.local.set({ handoff, job: handoff.job || null });
-      await chrome.storage.local.remove("rosterHandoff");
-    })();
-    gravar.then(() => {
-      chrome.tabs.create({ url: "https://professor.see.pb.gov.br/auth" });
+      await chrome.tabs.create({ url: "https://professor.see.pb.gov.br/auth" });
       sendResponse({ ok: true });
-    });
+    })().catch((erro) => sendResponse({ ok: false, erro: String(erro && erro.message || erro) }));
     return true;
   }
 });

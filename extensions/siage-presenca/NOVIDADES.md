@@ -1,3 +1,11 @@
+# Novidades: versão 4.9.15 (19/11/2026)
+
+- Os botões do Maestro entram no SIAGE com o CPF e a senha do perfil e seguem a função do clique: Ler turmas lê os alunos; Abrir SIAGE segue para a chamada e as notas.
+
+# Novidades: versão 4.9.14 (19/11/2026)
+
+- No outro computador, Trazer do SIAGE só abre o portal se a extensão está ativa e o perfil tem CPF e senha. A extensão escreve esses dados nos campos Usuário e Senha e segue o ACESSAR.
+
 # Novidades: versão 4.9.13 (19/11/2026)
 
 - O CPF e a senha do perfil entram no formulário real do SIAGE (login e password). O botão ACESSAR só envia esse formulário; preencher o campo na tela não bastava.
