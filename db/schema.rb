@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_18_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_19_140000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -58,6 +58,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_120000) do
     t.datetime "created_at", null: false
     t.text "description"
     t.date "due_date"
+    t.integer "exam_card_columns"
+    t.boolean "exam_sheets_locked", default: false, null: false
     t.integer "exam_version_count", default: 3, null: false
     t.string "grade_mode"
     t.text "instructions"

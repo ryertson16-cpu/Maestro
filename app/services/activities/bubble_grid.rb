@@ -3,9 +3,10 @@ module Activities
     CARD_W = 264.64
     CARD_H = 387.945
 
-    def initialize(question_count, letters)
+    def initialize(question_count, letters, columns: nil)
       @count = question_count.to_i
       @letters = Array(letters).map { |letter| letter.to_s.upcase }.presence || Question::LETTERS
+      @columns = columns.to_i if columns.present?
     end
 
     def fiducials
@@ -30,7 +31,8 @@ module Activities
     def bubbles
       return {} if @count <= 0
 
-      columns = self.class.columns_for(@count)
+      columns = @columns if @columns&.between?(1, 2)
+      columns ||= self.class.columns_for(@count)
       per_col = (@count / columns.to_f).ceil
       grid_height = CARD_H - 168.0
       row_h = [ [ grid_height / [ per_col + 1, 1 ].max, 9 ].max, 13 ].min

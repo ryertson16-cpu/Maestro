@@ -28,13 +28,20 @@ class PublicCorrectionsController < ApplicationController
     @score = @submission&.score
     @just_graded = params[:ok].present?
     @assignments_by_student = @activity.exam_assignments.index_by(&:student_id)
-    @assignment = @student && @assignments_by_student[@student.id]
-    @presented = Activities::ExamAssigner.new(@activity).presented_for(@student)
+    @assignment = paper_assignment_for(@student)
+    @presented = if @assignment
+      Activities::ExamAssigner.new(@activity).present(@assignment)
+    else
+      Activities::ExamAssigner.new(@activity).presented_for(@student)
+    end
     @lira_ready = Lira.llm_enabled?
-    objective_items = @items.select(&:objective?)
-    @bubble_question_count = objective_items.size
+    objective_items = Array(@presented).select { |row| row.item.objective? }.map(&:item)
+    objective_items = @items.select(&:objective?) if objective_items.empty?
+    @bubble_question_count = @activity.printed_objective_count
+    @bubble_question_count = objective_items.size if @bubble_question_count < 1
     letter_count = objective_items.map { |item| item.choice_pairs.size }.max.to_i
     @bubble_letter_count = letter_count.between?(2, 5) ? letter_count : 5
+    @bubble_columns = @activity.printed_card_columns(@bubble_question_count)
     apply_photo_preview
   end
 
@@ -66,7 +73,8 @@ class PublicCorrectionsController < ApplicationController
       student: student,
       overwrite: true,
       position_answers: params[:bubble_answers],
-      stable: params[:bubble_stable].to_s == "1"
+      stable: params[:bubble_stable].to_s == "1",
+      assignment: paper_assignment_for(student)
     )
 
     case result.status
@@ -77,7 +85,7 @@ class PublicCorrectionsController < ApplicationController
     when :review
       session[:gabarito_preview] = { "student_id" => student.id, "answers" => result.answers }
       redirect_to gabarito_aluno_path(@activity.correction_token, student),
-                  alert: "Confira a folha: verde é a certa desta versão e o X vermelho é a letra lida. Acerte o que estiver diferente e lance a nota."
+                  alert: "Compare o gabarito desta folha com a letra da foto. Acerte o que estiver diferente e lance a nota."
     when :lira_off
       redirect_to gabarito_aluno_path(@activity.correction_token, student),
                   alert: "Não li as bolhas neste cartão. Marque as letras na tela."
@@ -92,7 +100,7 @@ class PublicCorrectionsController < ApplicationController
     student = @activity.lesson.classroom.students.find(params[:student_id])
     answers = params[:answers].presence || {}
     answers = answers.to_unsafe_h if answers.respond_to?(:to_unsafe_h)
-    assignment = @activity.exam_assignments.find_by(student: student)
+    assignment = paper_assignment_for(student)
     score = Activities::Grader.new(@activity, assignment: assignment).score(answers)
 
     submission = ActivitySubmission.find_or_initialize_by(
@@ -121,6 +129,16 @@ class PublicCorrectionsController < ApplicationController
     return if @activity
 
     render :missing, status: :not_found
+  end
+
+  def paper_assignment_for(student)
+    return if student.blank?
+
+    own = @activity.exam_assignments.find_by(student: student)
+    slot = params[:folha].presence
+    return own if slot.blank? || own&.slot.to_s == slot.to_s
+
+    @activity.exam_assignments.find_by(slot: slot.to_i) || own
   end
 
   def apply_photo_preview

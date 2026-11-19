@@ -37,6 +37,13 @@ class Corrections::CardCodeTest < ActiveSupport::TestCase
     assert_match(/\AM\d{6}A#{student.id}\z/, payload)
     assert_equal activity.reload.correction_pin, parsed[:pin]
     assert_equal student.id, parsed[:student_id]
+    assert_nil parsed[:slot]
     assert_operator payload.length, :<, 20
+
+    marked = Corrections::CardCode.payload(activity, student, slot: 2)
+    marked_parsed = Corrections::CardCode.parse(marked)
+    assert_equal student.id, marked_parsed[:student_id]
+    assert_equal 2, marked_parsed[:slot]
+    assert_equal student.id, Corrections::CardCode.parse(payload)[:student_id]
   end
 end

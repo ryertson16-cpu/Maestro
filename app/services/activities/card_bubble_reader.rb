@@ -5,13 +5,13 @@ module Activities
     MAX_SIDE = 720
     DARK = 120
 
-    def self.read(path, question_count:, letters:)
-      new(path, question_count, letters).read
+    def self.read(path, question_count:, letters:, columns: nil)
+      new(path, question_count, letters, columns: columns).read
     end
 
-    def initialize(path, question_count, letters)
+    def initialize(path, question_count, letters, columns: nil)
       @path = path
-      @grid = BubbleGrid.new(question_count, letters)
+      @grid = BubbleGrid.new(question_count, letters, columns: columns)
     end
 
     def read

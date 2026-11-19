@@ -30,7 +30,7 @@ module Activities
 
     PhoneScan = Struct.new(:status, :score, :answers, :conflict, keyword_init: true)
 
-    def scan_for_student!(upload, student:, overwrite: true, position_answers: nil, stable: false)
+    def scan_for_student!(upload, student:, overwrite: true, position_answers: nil, stable: false, assignment: nil)
       return PhoneScan.new(status: :missing_photo) unless upload.respond_to?(:original_filename)
 
       path = persist_temp(upload)
@@ -38,7 +38,8 @@ module Activities
       local = Activities::CardBubbleReader.read(
         path,
         question_count: objective_count,
-        letters: bubble_letters
+        letters: bubble_letters,
+        columns: card_columns
       )
       scan = richer_scan(phone, local)
       if scan.nil?
@@ -51,7 +52,7 @@ module Activities
       end
       answers = scan&.answers || {}
       filled = scan&.filled_count.to_i
-      mapped = answers_for_grader(answers, student: student)
+      mapped = answers_for_grader(answers, student: student, assignment: assignment)
       conflict = conflicting_score?(student, mapped)
       status = filled.positive? ? :review : :empty
       PhoneScan.new(status: status, answers: mapped, conflict: conflict && filled.positive?)
@@ -113,9 +114,21 @@ module Activities
 
     def richer_scan(phone, local)
       return local if phone.nil?
-      return phone if local.nil? || local.filled_count <= phone.filled_count
+      return phone if local.nil?
 
-      local
+      answers = phone.answers.stringify_keys.dup
+      local.answers.stringify_keys.each do |number, letter|
+        next if answers[number].present?
+        next if letter.blank?
+
+        answers[number] = letter
+      end
+      AnswerCardVision::Result.new(
+        name: phone.name,
+        answers: answers,
+        source: phone.source,
+        bubbles: phone.bubbles.presence || local.bubbles
+      )
     end
 
     def vision_scan(path)
@@ -149,7 +162,8 @@ module Activities
       local = Activities::CardBubbleReader.read(
         path,
         question_count: objective_count,
-        letters: bubble_letters
+        letters: bubble_letters,
+        columns: card_columns
       )
       return local if local&.filled_count.to_i.positive?
 
@@ -268,10 +282,15 @@ module Activities
       nil
     end
 
-    def answers_for_grader(position_map, student: nil)
+    def card_columns
+      @activity.printed_card_columns(objective_count)
+    end
+
+    def answers_for_grader(position_map, student: nil, assignment: nil)
       mapped = {}
       raw = (position_map || {}).stringify_keys
-      rows = Activities::ExamAssigner.new(@activity).presented_for(student)
+      assigner = Activities::ExamAssigner.new(@activity)
+      rows = assignment ? assigner.present(assignment) : assigner.presented_for(student)
       rows = @activity.activity_questions.order(:position).map.with_index { |item, index|
         Activities::ExamAssigner::Presented.new(number: index + 1, item: item, pairs: item.choice_pairs, printed_correct: item.correct_letter, choice_map: {})
       } if rows.blank?
@@ -286,7 +305,7 @@ module Activities
     end
 
     def objective_count
-      @objective_count ||= @activity.activity_questions.reload.count(&:objective?)
+      @objective_count ||= @activity.printed_objective_count
     end
 
     def card_number_count

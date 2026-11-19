@@ -1,7 +1,8 @@
 <% reveal = local_assigns.fetch(:reveal, false) %>
 <% editable = local_assigns.fetch(:editable, false) %>
 <% rows = Array(@presented).select { |row| row.item.objective? } %>
-<% per_column = [ (rows.size / 2.0).ceil, 1 ].max %>
+<% column_count = @bubble_columns.to_i == 1 ? 1 : 2 %>
+<% per_column = column_count == 1 ? [ rows.size, 1 ].max : [ (rows.size / 2.0).ceil, 1 ].max %>
 <% columns = rows.each_slice(per_column).to_a %>
 <% objective_total = rows.sum { |row| row.item.points.to_f } %>
 <% ceiling = (@activity.maximum_score.presence || 10).to_f %>
@@ -47,7 +48,7 @@
               <% row.pairs.each do |letter, _text| %>
                 <% choice = letter.to_s.upcase %>
                 <% classes = [ "omr-bubble" ] %>
-                <% classes << "is-key" if reveal && choice == expected %>
+                <% classes << "is-key" if choice == expected %>
                 <% classes << "is-marked" if read == choice %>
                 <% classes << "is-wrong" if reveal && read == choice && choice != expected %>
                 <% if editable %>
@@ -61,14 +62,16 @@
               <% end %>
             </div>
             <p class="omr-status<%= " is-hit" if reveal && read.present? && read == expected %><%= " is-miss" if wrong %><%= " is-unread" if unread %>" data-omr-status>
-              <% if read.blank? %>
-                Não li esta questão
+              <% if read.blank? && !reveal %>
+                Gabarito <%= expected %>
+              <% elsif read.blank? %>
+                Gabarito <%= expected %> · a foto não leu esta questão
               <% elsif !reveal %>
-                Leu <%= read %>
+                Gabarito <%= expected %> · marcado <%= read %>
               <% elsif read == expected %>
-                Leu <%= read %>
+                Gabarito <%= expected %> · a foto leu igual
               <% else %>
-                Leu <%= read %> · certa <%= expected %>
+                Gabarito <%= expected %> · a foto leu <%= read %>
               <% end %>
             </p>
           </div>
@@ -78,8 +81,8 @@
   </div>
 
   <% if reveal %>
-    <p class="omr-legend">Verde: letra certa desta folha. Bolha marcada: o que foi lido. X vermelho: letra diferente. ! azul: não li a questão.</p>
+    <p class="omr-legend">Verde: gabarito desta folha. Bolha marcada: letra da foto. X vermelho: a foto diferiu do gabarito. ! azul: a foto não leu a questão.</p>
   <% else %>
-    <p class="omr-legend">Toque a letra pintada no cartão. A certa da folha aparece quando a leitura terminar.</p>
+    <p class="omr-legend">Verde: gabarito impresso nesta folha. Toque a letra pintada no cartão para comparar.</p>
   <% end %>
 </section>

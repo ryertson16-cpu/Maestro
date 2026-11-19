@@ -87,7 +87,7 @@ class Activities::ExamAssignerTest < ActiveSupport::TestCase
     refute_includes presented.map { |item| item.item.prompt }, "Variante"
   end
 
-  test "student sheets do not print the slot label" do
+  test "the question pages hide the sheet number and the card prints it" do
     Activities::ExamAssigner.new(@activity).ensure!([ @ana, @bia ])
     pdf = Documents::ActivitySheet.new(
       professor: @professor,
@@ -96,12 +96,47 @@ class Activities::ExamAssignerTest < ActiveSupport::TestCase
       student_url: ->(student) { "http://example.test/g/token/a/#{student.id}" }
     ).render
     reader = PDF::Reader.new(StringIO.new(pdf))
-    text = reader.pages.map(&:text).join(" ")
+    question = reader.pages.first.text
+    cards = reader.pages.last.text
 
-    assert_includes text, "Ana"
-    assert_match(/1\.\s*Quem\?|Q\.1/, text)
-    refute_match(/folha 1|variante|prova a\b/i, text)
+    assert_includes question, "Ana"
+    assert_match(/1\.\s*Quem\?|Q\.1/, question)
+    refute_match(/folha\s+\d+|variante|prova a\b/i, question)
+    assert_match(/Folha\s+\d+/, cards)
     assert_operator reader.page_count, :>=, 3
+  end
+
+  test "a printed sheet keeps its order when the class or the version count changes" do
+    @activity.update!(exam_version_count: 2)
+    assigner = Activities::ExamAssigner.new(@activity)
+    first = assigner.ensure!([ @ana, @bia ])
+    ana = first.find { |row| row.student_id == @ana.id }
+    @activity.update!(exam_sheets_locked: true, exam_version_count: 1)
+
+    caio = @professor.students.create!(name: "Caio")
+    Enrollment.create!(
+      professor: @professor,
+      student: caio,
+      classroom: @classroom,
+      enrolled_on: Date.current,
+      status: "active"
+    )
+    rows = Activities::ExamAssigner.new(@activity).ensure!([ @ana, @bia, caio ])
+    ana_again = rows.find { |row| row.student_id == @ana.id }
+    caio_row = rows.find { |row| row.student_id == caio.id }
+
+    assert_equal ana.slot, ana_again.slot
+    assert_equal ana.item_order, ana_again.item_order
+    assert_equal ana.choice_maps, ana_again.choice_maps
+    assert_equal ana.slot, caio_row.slot
+    assert_equal ana.item_order, caio_row.item_order
+  end
+
+  test "cards already printed stay in two columns" do
+    @activity.update!(exam_sheets_locked: true)
+
+    assert_equal 2, @activity.printed_card_columns(10)
+    assert_equal 1, Activities::BubbleGrid.columns_for(10)
   end
 
   test "ensure ignores duplicate students and extra choice letters" do

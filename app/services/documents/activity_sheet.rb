@@ -402,7 +402,7 @@ module Documents
       )
       pdf.fill_color "707891"
       pdf.text_box(
-        [ @activity.title, @lesson.course&.name, series_label ].compact.join("  ·  "),
+        [ @activity.title, @lesson.course&.name, series_label, sheet_label(student) ].compact.join("  ·  "),
         at: [ inset + 32, height - 31 ],
         width: width - inset - 68,
         height: 10,
@@ -415,7 +415,7 @@ module Documents
       grid_top = height - 88
       grid_bottom = qr_size + 22
       grid_height = grid_top - grid_bottom
-      columns = Activities::BubbleGrid.columns_for(rows.size)
+      columns = @activity.printed_card_columns(rows.size)
       per_col = (rows.size / columns.to_f).ceil
       row_h = [ grid_height / [ per_col + 1, 1 ].max, 9 ].max
       row_h = [ row_h, 13 ].min
@@ -595,8 +595,13 @@ module Documents
       ].compact.join("  ·  ")
     end
 
+    def sheet_label(student)
+      slot = @activity.exam_assignments.find_by(student: student)&.slot
+      "Folha #{slot}" if slot
+    end
+
     def omr_qr_url(student)
-      return Corrections::CardCode.payload(@activity, student) if @activity
+      return Corrections::CardCode.payload(@activity, student, slot: @activity.exam_assignments.find_by(student: student)&.slot) if @activity
 
       return @student_url.call(student).to_s if student && @student_url
 

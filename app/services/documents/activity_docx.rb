@@ -125,7 +125,7 @@ module Documents
     end
 
     def gabarito_table(rows)
-      columns = Activities::BubbleGrid.columns_for(rows.size)
+      columns = @activity.printed_card_columns(rows.size)
       per_column = (rows.size / columns.to_f).ceil
       groups = rows.each_slice(per_column).to_a
       height = groups.map(&:size).max.to_i

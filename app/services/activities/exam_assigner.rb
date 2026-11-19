@@ -21,6 +21,10 @@ module Activities
       return ActivityExamAssignment.none if items.empty? || roster.empty?
 
       versions = version_count(roster.size, items.size)
+      if @activity.exam_sheets_locked? && @activity.exam_assignments.exists?
+        return preserve!(roster, versions, items)
+      end
+
       if stale?(roster, items, versions)
         @activity.exam_assignments.delete_all
       end
@@ -89,6 +93,30 @@ module Activities
 
     def catalog
       @catalog ||= @activity.activity_questions.with_attached_image.to_a
+    end
+
+    def preserve!(roster, versions, items)
+      existing = @activity.exam_assignments.includes(:student).to_a
+      known = existing.index_by(&:student_id)
+      packs = {}
+      existing.each do |row|
+        packs[row.slot] ||= { item_order: row.item_order, choice_maps: row.choice_maps }
+      end
+
+      roster.sort_by { |student| [ student.name.to_s, student.id ] }.each_with_index do |student, index|
+        next if known[student.id]
+
+        slot = (index % versions) + 1
+        pack = packs[slot] || pack_for(slot, items)
+        packs[slot] ||= { item_order: pack[:item_order], choice_maps: pack[:choice_maps] }
+        known[student.id] = @activity.exam_assignments.create!(
+          student: student,
+          slot: slot,
+          item_order: pack[:item_order],
+          choice_maps: pack[:choice_maps]
+        )
+      end
+      @activity.exam_assignments.includes(:student).to_a
     end
 
     def stale?(roster, items, versions)

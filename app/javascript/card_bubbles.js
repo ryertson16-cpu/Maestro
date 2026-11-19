@@ -14,14 +14,16 @@ export function readPrintedCard(canvas, options = {}) {
   const qrSpan = qr ? Math.hypot(qr.corners[1][0] - qr.corners[0][0], qr.corners[1][1] - qr.corners[0][1]) : 0
   const qrWarp = qr && homography(qrCardCorners(qr.version), qr.corners)
   const snapped = qrWarp && snapFiducials(image, qrWarp, qrSpan)
-  const fromSnap = snapped && sampleGrid(image, snapped, questionCount, letterCount)
-  const fromQr = qrWarp && sampleGrid(image, qrWarp, questionCount, letterCount)
+  const columns = options.columns
+  const fromSnap = snapped && sampleGrid(image, snapped, questionCount, letterCount, columns)
+  const fromQr = qrWarp && sampleGrid(image, qrWarp, questionCount, letterCount, columns)
   const corners = findCorners(image)
   const fromCorners = corners && sampleGrid(
     image,
     homography(fiducials(), corners),
     questionCount,
-    letterCount
+    letterCount,
+    columns
   )
   const reading = fromSnap || richer(fromQr, fromCorners)
   if (!reading) return null
@@ -64,10 +66,10 @@ function agrees(first, second) {
   return same >= Math.ceil(keys.length * 0.8)
 }
 
-function sampleGrid(image, warp, questionCount, letterCount) {
+function sampleGrid(image, warp, questionCount, letterCount, columns) {
   if (!warp) return null
 
-  const mapped = bubblePoints(questionCount, letterCount)
+  const mapped = bubblePoints(questionCount, letterCount, columns)
   const aligned = alignGrid(image, warp, mapped)
   const answers = {}
   let covered = 0
@@ -167,11 +169,8 @@ function letterPitch(points) {
 function richer(first, second) {
   if (!first) return second
   if (!second) return first
-  const firstLetters = Object.keys(first.answers).length
-  const secondLetters = Object.keys(second.answers).length
-  if (secondLetters > firstLetters) return second
-  if (firstLetters > secondLetters) return first
-  return (second.covered || 0) > (first.covered || 0) ? second : first
+  if (Object.keys(first.answers).length > 0) return first
+  return second
 }
 
 function columnsFor(count) {
@@ -180,12 +179,13 @@ function columnsFor(count) {
   return count <= Math.max(oneColumn, 1) ? 1 : 2
 }
 
-function bubblePoints(count, letterCount) {
+function bubblePoints(count, letterCount, columns) {
   const letters = LETTERS.slice(0, letterCount)
-  const columns = columnsFor(count)
-  const perColumn = Math.ceil(count / columns)
+  const requested = Number(columns)
+  const columnCount = requested === 1 || requested === 2 ? requested : columnsFor(count)
+  const perColumn = Math.ceil(count / columnCount)
   const rowH = Math.min(Math.max((CARD_H - 168) / Math.max(perColumn + 1, 1), 9), 13)
-  const columnWidth = (CARD_W - 36) / columns
+  const columnWidth = (CARD_W - 36) / columnCount
   const step = (columnWidth - 8 - 18) / Math.max(letters.length, 1)
   const mapped = {}
 

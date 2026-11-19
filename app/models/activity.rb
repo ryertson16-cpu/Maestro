@@ -118,6 +118,32 @@ class Activity < ApplicationRecord
     title.to_s.match?(/\bprova\b/i)
   end
 
+  def printed_card_columns(question_count)
+    stored = exam_card_columns.to_i
+    return stored if stored.between?(1, 2)
+    return 2 if exam_sheets_locked?
+
+    Activities::BubbleGrid.columns_for(question_count)
+  end
+
+  def printed_objective_count
+    questions = activity_questions.to_a
+    if exam_sheets_locked? && exam_assignments.exists?
+      ids = Array(exam_assignments.pick(:item_order)).map(&:to_i)
+      return questions.count { |item| ids.include?(item.id) && item.objective? }
+    end
+
+    questions.count(&:objective?)
+  end
+
+  def lock_printed_sheets!(question_count)
+    columns = exam_card_columns.to_i
+    unless columns.between?(1, 2)
+      columns = exam_sheets_locked? ? 2 : Activities::BubbleGrid.columns_for(question_count)
+    end
+    update!(exam_sheets_locked: true, exam_card_columns: columns)
+  end
+
   def correction_closed?
     correction_closed_at.present?
   end

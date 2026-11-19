@@ -1,12 +1,15 @@
 module Corrections
   class CardCode
-    PATTERN = /\AM(\d{6})(?:A(\d+))?\z/i
+    PATTERN = /\AM(\d{6})(?:A(\d+))?(?:F(\d+))?\z/i
 
-    def self.payload(activity, student = nil)
+    def self.payload(activity, student = nil, slot: nil)
       pin = activity.ensure_correction_pin!
-      return "M#{pin}A#{student.id}" if student
+      return "M#{pin}" if student.nil?
 
-      "M#{pin}"
+      code = "M#{pin}A#{student.id}"
+      return code if slot.blank?
+
+      "#{code}F#{slot}"
     end
 
     def self.parse(text)
@@ -16,7 +19,8 @@ module Corrections
 
       {
         pin: match[1],
-        student_id: match[2].presence&.to_i
+        student_id: match[2].presence&.to_i,
+        slot: match[3].presence&.to_i
       }
     end
   end

@@ -2,9 +2,9 @@ import { readPrintedCard } from "card_bubbles"
 
 function cardCodeFromText(text) {
   const compact = (text || "").toUpperCase().replace(/[^A-Z0-9]/g, "")
-  const match = compact.match(/M(\d{6})(?:A(\d+))?/)
+  const match = compact.match(/M(\d{6})(?:A(\d+))?(?:F(\d+))?/)
   if (!match) return null
-  return { pin: match[1], studentId: match[2] || "", token: match[0] }
+  return { pin: match[1], studentId: match[2] || "", slot: match[3] || "", token: match[0] }
 }
 
 function tokenFromText(text) {
@@ -48,7 +48,8 @@ function openToken(token) {
   if (card?.studentId) {
     const base = window.location.pathname.replace(/\/a\/\d+.*$/, "")
     if (base.startsWith("/g/")) {
-      window.location.href = `${base}/a/${card.studentId}`
+      const folha = card.slot ? `?folha=${card.slot}` : ""
+      window.location.href = `${base}/a/${card.studentId}${folha}`
       return
     }
     window.location.href = `/c/${card.pin}`
@@ -381,7 +382,8 @@ function fileImageData(file) {
 function bubbleOptions(root) {
   return {
     questionCount: Number(root.getAttribute("data-question-count")) || 0,
-    letterCount: Number(root.getAttribute("data-letter-count")) || 5
+    letterCount: Number(root.getAttribute("data-letter-count")) || 5,
+    columns: Number(root.getAttribute("data-column-count")) || 0
   }
 }
 

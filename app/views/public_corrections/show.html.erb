@@ -19,7 +19,7 @@
     <p>Nota de <%= @student.name %></p>
     <strong><%= format("%.1f", @score).tr(".", ",") %></strong>
     <% if @assignment %>
-      <p>Folha <%= @assignment.slot %> desta aluna. A letra certa é a impressa na folha dela.</p>
+      <p>Folha <%= @assignment.slot %> de <%= @student.name %>. A nota usou o gabarito impresso nessa folha.</p>
     <% end %>
     <% if @presented&.any? %>
       <%= render "omr_sheet", reveal: true, editable: false %>
@@ -46,7 +46,12 @@
     <p class="correction-kicker">Aluno</p>
     <h2><%= @student.name %></h2>
     <% if @assignment %>
-      <p class="activity-type-hint">Folha <%= @assignment.slot %> · só o professor vê este grupo</p>
+      <% key_rows = Array(@presented).select { |row| row.item.objective? } %>
+      <p class="activity-type-hint">Folha <%= @assignment.slot %> · nome impresso no cartão</p>
+      <p class="activity-type-hint">
+        Gabarito desta prova:
+        <%= key_rows.map { |row| "#{row.number} #{row.printed_correct}" }.join(" · ") %>
+      </p>
     <% end %>
     <%= link_to "Trocar aluno", gabarito_path(@activity.correction_token), class: "correction-switch" %>
   </section>
@@ -59,7 +64,7 @@
         Toque em Fotografar cartão. A foto precisa mostrar a folha inteira,
         com os quatro quadrados pretos. Se a foto não ler as bolhas, use
         Leitura manual e marque as letras do cartão.
-        Folha <%= @assignment&.slot || "—" %>.
+        Folha <%= @assignment&.slot || "—" %>. O gabarito acima é o desta folha. Depois da foto, cada número mostra a letra do gabarito e a letra lida.
       </p>
       <div class="qr-scanner-card"
            data-qr-scanner
@@ -68,12 +73,14 @@
            data-correction-pin="<%= @activity.ensure_correction_pin! %>"
            data-question-count="<%= @bubble_question_count %>"
            data-letter-count="<%= @bubble_letter_count %>"
+           data-column-count="<%= @bubble_columns %>"
            data-student-id="<%= @student.id %>">
         <%= form_with url: gabarito_scan_path(@activity.correction_token),
                       method: :post,
                       local: true,
                       html: { multipart: true, class: "qr-photo-form" } do %>
           <%= hidden_field_tag :student_id, @student.id %>
+          <%= hidden_field_tag :folha, @assignment&.slot %>
           <label class="button button-primary button-block">
             Fotografar cartão
             <input class="visually-hidden"
@@ -99,7 +106,7 @@
   <% end %>
 
   <% if @photo_review %>
-    <p class="correction-flash is-warn">Confira a folha abaixo. Verde é a certa desta versão. O X vermelho é a letra lida. Acerte o que estiver diferente e toque em Lançar nota.</p>
+    <p class="correction-flash is-warn">Verde é o gabarito da Folha <%= @assignment&.slot || "—" %>. A bolha marcada é a letra da foto. Acerte o que estiver diferente e toque em Lançar nota.</p>
   <% end %>
 
   <%= form_with url: gabarito_grade_path(@activity.correction_token),
@@ -107,6 +114,7 @@
                 local: true,
                 class: "correction-form" do %>
     <%= hidden_field_tag :student_id, @student.id %>
+    <%= hidden_field_tag :folha, @assignment&.slot %>
 
     <%= render "omr_sheet", reveal: @photo_review || @score.present?, editable: true %>
 
@@ -150,6 +158,7 @@
          data-correction-pin="<%= @activity.ensure_correction_pin! %>"
          data-question-count="<%= @bubble_question_count %>"
          data-letter-count="<%= @bubble_letter_count %>"
+         data-column-count="<%= @bubble_columns %>"
          <% if @lira_ready %>
            data-qr-grade
            data-scan-url="<%= gabarito_scan_path(@activity.correction_token) %>"

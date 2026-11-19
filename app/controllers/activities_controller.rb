@@ -73,8 +73,12 @@ class ActivitiesController < ApplicationController
     chosen = Activities::ExamAssigner::DEFAULT_SLOTS if chosen < 1
     @activity.update!(exam_version_count: chosen.clamp(1, cap))
     Activities::ExamAssigner.new(@activity).ensure!(roster)
-    redirect_to assemble_activity_path(@activity),
-                notice: "A prova terá #{@activity.exam_version_count} versões. Cada uma troca a ordem das questões e das alternativas."
+    notice = if @activity.exam_sheets_locked?
+      "As folhas já impressas continuam iguais. A nova quantidade vale para quem ainda não tem folha."
+    else
+      "A prova terá #{@activity.exam_version_count} versões. Cada uma troca a ordem das questões e das alternativas."
+    end
+    redirect_to assemble_activity_path(@activity), notice: notice
   end
 
   def assemble
@@ -564,6 +568,10 @@ class ActivitiesController < ApplicationController
   def send_exam_file(mode)
     students = exam_roster
     Activities::ExamAssigner.new(@activity).ensure!(students)
+    if mode == :student
+      question_count = @activity.activity_questions.to_a.count(&:objective?)
+      @activity.lock_printed_sheets!(question_count)
+    end
     docx = params[:file].to_s == "docx"
     options = {
       professor: current_professor,

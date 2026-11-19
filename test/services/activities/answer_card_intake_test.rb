@@ -241,6 +241,33 @@ class Activities::AnswerCardIntakeTest < ActiveSupport::TestCase
     assert_nil ActivitySubmission.find_by(activity: @activity, student: @maria)
   end
 
+  test "a server reading with more bubbles does not replace the phone letter" do
+    intake = Activities::AnswerCardIntake.new(@activity, professor: @professor, vision: ->(_) { nil })
+    local = Activities::AnswerCardVision::Result.new(
+      name: nil,
+      answers: { "1" => "B", "2" => "C" },
+      source: "local",
+      bubbles: nil
+    )
+
+    reader = Activities::CardBubbleReader.singleton_class
+    reader.alias_method :read_before_phone_test, :read
+    Activities::CardBubbleReader.define_singleton_method(:read) { |*, **| local }
+    begin
+      result = intake.scan_for_student!(
+        upload("vanessa.jpg"),
+        student: @maria,
+        overwrite: true,
+        position_answers: { "1" => "A" }
+      )
+    ensure
+      reader.alias_method :read, :read_before_phone_test
+    end
+
+    assert_equal :review, result.status
+    assert_equal "A", result.answers[@item.id.to_s]
+  end
+
   test "a different stable reading does not replace the launched score" do
     ActivitySubmission.create!(
       activity: @activity,
