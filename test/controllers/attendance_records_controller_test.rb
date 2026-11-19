@@ -104,6 +104,33 @@ class AttendanceRecordsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_equal "late", AttendanceRecord.find_by!(enrollment: enrollment).status
+
+    post save_attendance_records_path, params: {
+      classroom_id: classroom.id,
+      attendance_date: "2026-10-09",
+      lessons: { "new" => { siage_time_slot: "1º tempo", theme: "Aula" } },
+      attendance: { "new" => { enrollment.id.to_s => { status: [ "absent", "present", "late" ] } } }
+    }
+
+    assert_equal "late", AttendanceRecord.find_by!(enrollment: enrollment).status
+
+    post save_attendance_records_path, params: {
+      classroom_id: classroom.id,
+      attendance_date: "2026-10-09",
+      lessons: { "new" => { siage_time_slot: "1º tempo", theme: "Aula" } },
+      attendance: { "new" => { enrollment.id.to_s => { status: [ "absent", "present", "justified" ] } } }
+    }
+
+    assert_equal "justified", AttendanceRecord.find_by!(enrollment: enrollment).status
+
+    post save_attendance_records_path, params: {
+      classroom_id: classroom.id,
+      attendance_date: "2026-10-09",
+      lessons: { "new" => { siage_time_slot: "1º tempo", theme: "Aula" } },
+      attendance: { "new" => { enrollment.id.to_s => { status: [ "absent" ] } } }
+    }
+
+    assert_equal "absent", AttendanceRecord.find_by!(enrollment: enrollment).status
   end
 
   test "diary pdf download uses official letterhead payload" do

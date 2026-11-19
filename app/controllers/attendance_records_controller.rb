@@ -389,7 +389,7 @@ class AttendanceRecordsController < ApplicationController
         record = AttendanceRecord.find_or_initialize_by(lookup)
 
         if values
-          record.status = values[:status]
+          record.status = attendance_status_from(values[:status])
           record.notes = values[:notes]
         elsif record.new_record?
           record.status = "present"
@@ -405,6 +405,16 @@ class AttendanceRecordsController < ApplicationController
     return if params[:export_lesson_id].blank?
 
     current_professor.lessons.find_by(id: params[:export_lesson_id])
+  end
+
+
+  def attendance_status_from(value)
+    statuses = Array(value).flatten.map(&:to_s)
+    return "justified" if statuses.include?("justified")
+    return "late" if statuses.include?("late")
+    return "absent" if statuses.include?("absent") && statuses.exclude?("present")
+
+    "present"
   end
 
   def build_attendance_summary(enrollments, attendance_records)
