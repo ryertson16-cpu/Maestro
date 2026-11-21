@@ -136,13 +136,13 @@ module Questions
             buffer_align = child_align
           else
             write_flow(pdf, buffer, size, buffer_align)
-            pdf.move_down 4 unless buffer.blank?
+            pdf.move_down 8 unless buffer.blank?
             buffer = text
             buffer_align = child_align
           end
         else
           write_flow(pdf, buffer, size, buffer_align)
-          pdf.move_down 4 unless buffer.blank?
+          pdf.move_down 8 unless buffer.blank?
           buffer = ""
           draw_structural(pdf, child, size)
         end
@@ -164,7 +164,7 @@ module Questions
           marker = name == "ol" ? "#{index + 1}. " : "• "
           text = inline(item).gsub(/\s+/, " ").strip
           pdf.text "#{marker}#{text}", size: size, leading: 2, inline_format: true
-          pdf.move_down 2
+          pdf.move_down 6
         end
       else
         draw_flow(pdf, node, prefix: "", size: size, align: alignment(node))
@@ -197,14 +197,40 @@ module Questions
       return true if buffer.match?(/\A\s*\d+\.\s*\z/)
       return false unless align == next_align
 
-      text.match?(/\A[[:lower:][:punct:]]/)
+      plain_next = text.gsub(/<[^>]+>/, "").lstrip
+      return true if plain_next.match?(/\A[[:lower:]]/)
+
+      plain = buffer.gsub(/<[^>]+>/, "")
+      return false if plain.match?(/[.!?]\s*\z/)
+
+      plain.length > 40
     end
 
     def self.write_flow(pdf, text, size, align)
       cleaned = text.to_s.gsub(/[ \t]{2,}/, " ").strip
       return if cleaned.blank?
 
-      pdf.text cleaned, size: size, leading: 2, align: align, inline_format: cleaned.match?(/<[a-z]/i)
+      caption, body = peel_aligned_body(cleaned, align)
+      pdf.text caption, size: size, leading: 2, align: align, inline_format: caption.match?(/<[a-z]/i)
+      return if body.blank?
+
+      pdf.move_down 8
+      pdf.text body, size: size, leading: 2, align: :left, inline_format: body.match?(/<[a-z]/i)
+    end
+
+    def self.peel_aligned_body(text, align)
+      return [text, nil] unless %i[right center].include?(align)
+
+      plain = text.gsub(/<[^>]+>/, "")
+      parts = plain.split(/(?<=\.)\s+(?=\p{Lu})/)
+      return [text, nil] if parts.size < 2
+
+      tail = parts.last
+      return [text, nil] if tail.length < 30
+      return [text, nil] if tail.match?(/https?:|Dispon[ií]vel|Acesso em|adaptado/i)
+      return [text, nil] unless text.end_with?(tail)
+
+      [text.sub(/\s*#{Regexp.escape(tail)}\z/, "").strip, tail]
     end
 
     def self.draw_table(pdf, node, size)
@@ -299,7 +325,7 @@ module Questions
 
     private_class_method :scrub, :style_declarations, :draw_flow, :draw_structural, :draw_table,
                          :draw_data_image, :inline, :inline_node, :inline_tag?, :paragraph_tag?,
-                         :complex_block?, :join_piece, :flow_continues?, :write_flow, :alignment,
+                         :complex_block?, :join_piece, :flow_continues?, :write_flow, :peel_aligned_body, :alignment,
                          :font_points, :style_value, :color_hex, :escape_inline
   end
 end

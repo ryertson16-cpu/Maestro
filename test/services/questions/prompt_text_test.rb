@@ -66,6 +66,54 @@ class Questions::PromptTextTest < ActiveSupport::TestCase
     assert_match(/•\s*Leia o texto inteiro/, text.gsub(/\s+/, " "))
   end
 
+  test "returns the question sentence to the left after a right aligned citation" do
+    pdf = Prawn::Document.new(page_size: "A4", margin: 36)
+    Documents::PdfFont.apply(pdf)
+    html = <<~HTML
+      <div>O manual explica as cores da impressão.</div>
+      <div style="text-align: right">ADOBE. Sobre cores. Disponível em: https://helpx.adobe.com/br/cores.html. Acesso em: 20 nov. 2026 (adaptado). Para o próximo cartaz, a medida que evita essa surpresa é</div>
+    HTML
+    Questions::PromptText.draw(pdf, html, prefix: "2. ", size: 10)
+    page = PDF::Reader.new(StringIO.new(pdf.render)).pages.first
+    runs = page.runs
+    citation = runs.find { |run| run.text.include?("ADOBE") }
+    question = runs.find { |run| run.text.include?("Para o próximo") }
+
+    assert citation
+    assert question
+    assert_operator question.x, :<, citation.x
+  end
+
+  test "keeps the exam letter alignments from the editor" do
+    pdf = Prawn::Document.new(page_size: "A4", margin: 36)
+    Documents::PdfFont.apply(pdf)
+    html = <<~HTML
+      <div style="text-align: center">Escola de Magia</div>
+      <div style="text-align: center">e Programação de Linguagem Web</div>
+      <div>Queridos bruxos e bruxas da Escola de Magia e Programação de</div>
+      <div>Linguagem Web, o ano foi intenso.</div>
+      <div style="text-align: center"><i>Que a magia do código esteja pra sempre com vocês!</i></div>
+      <div style="text-align: right"><b>Valter Machado</b></div>
+      <div style="text-align: right"><i>Diretor da Escola de Magia e Programação de Linguagem Web</i></div>
+    HTML
+    Questions::PromptText.draw(pdf, html, prefix: "", size: 10)
+    runs = PDF::Reader.new(StringIO.new(pdf.render)).pages.first.runs
+    title = runs.find { |run| run.text.include?("Escola de Magia e Programação") }
+    greeting = runs.find { |run| run.text.include?("Queridos bruxos") }
+    closing = runs.find { |run| run.text.include?("magia do código") }
+    name = runs.find { |run| run.text.include?("Valter Machado") }
+    role = runs.find { |run| run.text.include?("Diretor da Escola") }
+
+    assert title
+    assert_includes greeting.text, "Linguagem Web,"
+    assert closing
+    assert name
+    assert role
+    assert_operator title.x, :>, greeting.x
+    assert_operator name.x, :>, greeting.x
+    refute_equal name.y, role.y
+  end
+
   test "draws an image nested in the prompt" do
     png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
     pdf = Prawn::Document.new
