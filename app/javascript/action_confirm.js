@@ -219,7 +219,7 @@ document.addEventListener(
 
     confirmThen(event.submitter || form, () => {
       form.dataset.confirmed = "true"
-      if (form.getAttribute("data-turbo") || "").toLowerCase() === "false") {
+      if ((form.getAttribute("data-turbo") || "").toLowerCase() === "false") {
         form.submit()
         return
       }
