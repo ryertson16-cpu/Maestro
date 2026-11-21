@@ -10797,6 +10797,12 @@ html[data-theme="night"] .vitrine-extension-steps {
   min-width: 160px;
 }
 
+.exam-source-form textarea {
+  display: block;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
 .question-figure {
   margin: 10px 0 12px;
   max-width: 420px;

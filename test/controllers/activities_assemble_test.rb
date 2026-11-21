@@ -106,6 +106,19 @@ class ActivitiesAssembleTest < ActionDispatch::IntegrationTest
     assert_equal "A", submission.answers[item.id.to_s]
   end
 
+  test "saves the exam source text for every generated sheet" do
+    patch source_text_activity_path(@activity), params: {
+      source_text: "Leia o texto e responda as questoes."
+    }
+
+    assert_redirected_to assemble_activity_path(@activity)
+    assert_equal "Leia o texto e responda as questoes.", @activity.reload.source_text
+
+    get assemble_activity_path(@activity)
+    assert_includes response.body, "Texto da prova"
+    assert_includes response.body, "Leia o texto e responda as questoes."
+  end
+
   test "assemble qr page does not print the gabarito address" do
     get assemble_activity_path(@activity)
     token = @activity.reload.correction_token

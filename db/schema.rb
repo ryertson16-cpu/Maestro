@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_19_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_21_150000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -66,6 +66,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_140000) do
     t.integer "lesson_id", null: false
     t.decimal "maximum_score", precision: 6, scale: 2
     t.integer "parent_activity_id"
+    t.text "source_text"
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.decimal "weight", precision: 5, scale: 2, default: "1.0", null: false

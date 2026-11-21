@@ -100,6 +100,7 @@ module Lessons
         "due_date" => activity.due_date&.iso8601,
         "description" => activity.description,
         "instructions" => activity.instructions,
+        "source_text" => activity.source_text,
         "bimester" => activity.bimester,
         "weight" => activity.weight,
         "questions" => activity.activity_questions.sort_by(&:position).map { |item| dump_question(item) },

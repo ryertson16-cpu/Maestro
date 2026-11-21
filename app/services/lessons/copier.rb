@@ -72,6 +72,7 @@ module Lessons
         due_date: source.due_date + date_delta,
         description: source.description,
         instructions: source.instructions,
+        source_text: source.source_text,
         bimester: source.bimester,
         weight: source.weight,
         adapted: source.adapted?,

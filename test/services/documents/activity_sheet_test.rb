@@ -111,4 +111,20 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
     assert_includes last, "3º ano"
     refute_match(/\bNota\b/, last)
   end
+
+  test "personalized exam prints the same source text before each student's questions" do
+    @activity.update!(source_text: "Texto base da prova de quimica.")
+    Activities::ExamAssigner.new(@activity).ensure!([ @student ])
+    pdf = Documents::ActivitySheet.new(
+      professor: @professor,
+      activity: @activity,
+      students: [ @student ],
+      student_url: ->(student) { "http://example.test/g/token/a/#{student.id}" }
+    ).render
+    reader = PDF::Reader.new(StringIO.new(pdf))
+    questions = reader.pages[0...-1].map(&:text).join("\n")
+
+    assert_includes questions, "Texto"
+    assert_includes questions, "Texto base da prova de quimica."
+  end
 end

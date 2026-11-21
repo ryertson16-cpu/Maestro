@@ -157,6 +157,12 @@ class ActivitiesController < ApplicationController
                 notice: result.message
   end
 
+  def source_text
+    @activity.update!(source_text: params[:source_text].to_s.strip.presence)
+    redirect_to assemble_activity_path(@activity),
+                notice: "Texto da prova salvo. Ele entra em cada folha do aluno."
+  end
+
   def correct
     @activity.ensure_correction_token!
     if params[:t].present? && params[:t].to_s != @activity.correction_token
@@ -527,6 +533,7 @@ class ActivitiesController < ApplicationController
       weight: parent.weight,
       description: parent.description,
       instructions: parent.instructions,
+      source_text: parent.source_text,
       adaptation_kind: "reduced",
       grade_mode: "replaces"
     )

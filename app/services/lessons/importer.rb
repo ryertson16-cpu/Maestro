@@ -186,6 +186,7 @@ module Lessons
         due_date: due,
         description: entry["description"],
         instructions: entry["instructions"],
+        source_text: entry["source_text"],
         bimester: coerce_bimester(entry["bimester"], lesson.lesson_date),
         weight: entry["weight"].presence || 1
       }

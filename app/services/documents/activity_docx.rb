@@ -64,6 +64,7 @@ module Documents
       parts << paragraph(@activity.title.to_s, bold: true)
       parts << paragraph(student.name.to_s, bold: true)
       parts << paragraph(meta)
+      parts << source_text_xml
       presented.each { |row| parts << question_xml(row, show_key: false) }
       rows = omr_rows(presented)
       if rows.any?
@@ -89,6 +90,7 @@ module Documents
         parts << paragraph(@activity.title.to_s, bold: true)
         parts << paragraph("Folha #{slot}")
         parts << paragraph(names.join(", "))
+        parts << source_text_xml
         presented.each { |row| parts << question_xml(row, show_key: true) }
         omr = omr_rows(presented)
         parts << gabarito_table(omr) if omr.any?
@@ -147,6 +149,13 @@ module Documents
         letters = row.pairs.map(&:first).presence || Question::LETTERS
         { number: row.number, letters: letters }
       end
+    end
+
+    def source_text_xml
+      body = @activity.source_text.to_s.strip
+      return "" if body.blank?
+
+      [paragraph("Texto", bold: true), paragraph(body)].join
     end
 
     def paragraph(text, bold: false, rich: nil)

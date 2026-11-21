@@ -237,6 +237,7 @@ Rails.application.routes.draw do
       get :assemble, path: "montar"
       get :open_gabarito, path: "abrir-gabarito"
       post :build_exam, path: "montar/prova"
+      patch :source_text, path: "montar/texto"
       post :exam_versions, path: "montar/versoes"
       get :correct, path: "corrigir"
       post :grade, path: "corrigir"

@@ -40,6 +40,7 @@ module Documents
         if answer_key?
           draw_identification(document)
           draw_instructions(document)
+          draw_source_text(document)
           draw_professor_keys(document)
         elsif personalized_exams?
           draw_personalized_exams(document)
@@ -47,6 +48,7 @@ module Documents
           draw_identification(document)
           draw_student_line(document)
           draw_instructions(document)
+          draw_source_text(document)
           draw_questions(document)
           draw_omr_card(document)
         end
@@ -168,6 +170,19 @@ module Documents
         "Aluno(a): ________________________________  Nº: ________  Nota: ________",
         size: 10
       )
+      pdf.move_down 12
+    end
+
+    def draw_source_text(pdf)
+      body = @activity.source_text.to_s.strip
+      return if body.blank?
+
+      pdf.start_new_page if pdf.cursor < 80
+      pdf.fill_color "1F4E79"
+      pdf.text "Texto", size: 11, style: :bold
+      pdf.move_down 4
+      pdf.fill_color "20263D"
+      pdf.text body, size: 10, leading: 3
       pdf.move_down 12
     end
 
@@ -330,6 +345,7 @@ module Documents
           variant: :official
         )
         draw_named_header(pdf, student)
+        draw_source_text(pdf)
         presented = @assigner.presented_for(student)
         presented.each do |row|
           pdf.start_new_page if pdf.cursor < 72

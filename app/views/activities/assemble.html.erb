@@ -113,6 +113,24 @@
 </section>
 
 <section class="data-card">
+  <h2>Texto da prova</h2>
+  <p class="activity-type-hint">
+    Este texto entra igual em cada prova gerada, antes das questões.
+    Use quando o aluno precisar dele para responder.
+    <% if @activity.exam_sheets_locked? %>
+      As folhas já impressas não mudam; o texto entra na próxima prova gerada.
+    <% end %>
+  </p>
+  <%= form_with url: source_text_activity_path(@activity), method: :patch, local: true, class: "exam-source-form" do %>
+    <%= text_area_tag :source_text,
+                      @activity.source_text,
+                      rows: 8,
+                      placeholder: "Cole ou escreva o texto que os alunos vão usar para responder." %>
+    <%= submit_tag "Salvar texto", class: "button button-primary" %>
+  <% end %>
+</section>
+
+<section class="data-card">
   <h2>Questões desta atividade</h2>
   <p class="activity-type-hint">
     O PDF traz as questões e, à parte, o cartão-resposta com QR grande e bolhas vazias.
