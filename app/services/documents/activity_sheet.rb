@@ -210,9 +210,16 @@ module Documents
       pdf.fill_color "20263D"
 
       if assembled_items.any?
-        assembled_items.each_with_index do |item, index|
-          pdf.start_new_page if pdf.cursor < 110
-          draw_assembled_item(pdf, item, index)
+        if answer_key?
+          assembled_items.each_with_index do |item, index|
+            pdf.start_new_page if pdf.cursor < 110
+            draw_assembled_item(pdf, item, index)
+          end
+        else
+          draw_two_columns(pdf, assembled_items.each_with_index.to_a) do |document, pair|
+            item, index = pair
+            draw_assembled_item(document, item, index, break_page: false)
+          end
         end
       else
         question_lines.each_with_index do |line, index|
@@ -225,7 +232,7 @@ module Documents
       end
     end
 
-    def draw_assembled_item(pdf, item, index)
+    def draw_assembled_item(pdf, item, index, break_page: true)
       pdf.fill_color "20263D"
       Questions::PromptText.draw(pdf, item.prompt, prefix: "#{index + 1}. ", size: 10)
       if item.bncc_skill.present?
@@ -233,7 +240,7 @@ module Documents
         pdf.text "BNCC: #{item.bncc_skill}", size: 8
         pdf.fill_color "20263D"
       end
-      draw_item_image(pdf, item)
+      draw_item_image(pdf, item, break_page: break_page)
       pdf.move_down 6
 
       if item.objective?
@@ -254,11 +261,11 @@ module Documents
       end
     end
 
-    def draw_item_image(pdf, item)
+    def draw_item_image(pdf, item, break_page: true)
       file = question_image_file(picture_for(item))
       return unless file
 
-      pdf.start_new_page if pdf.cursor < 120
+      pdf.start_new_page if break_page && pdf.cursor < 120
       pdf.move_down 3
       pdf.image file.path, fit: [pdf.bounds.width * 0.55, 220]
       pdf.move_down 4
@@ -379,12 +386,89 @@ module Documents
         draw_named_header(pdf, student)
         draw_source_text(pdf)
         presented = @assigner.presented_for(student)
-        presented.each do |row|
-          pdf.start_new_page if pdf.cursor < 72
-          draw_presented_item(pdf, row, show_key: false)
+        draw_two_columns(pdf, presented) do |document, row|
+          draw_presented_item(document, row, show_key: false, break_page: false)
         end
       end
       draw_packed_omr_cards(pdf)
+    end
+
+    def draw_two_columns(pdf, items)
+      return if items.empty?
+
+      gap = 14
+      bottom = 20
+      width = (pdf.bounds.width - gap) / 2.0
+      gutter_x = width + (gap / 2.0)
+      page = column_page(pdf)
+
+      items.each do |item|
+        height = measure_column_item(width) { |probe| yield probe, item } + 8
+        if height > page[:top] - bottom
+          occupied = page[:left] < page[:top] - 0.5 || page[:used_right]
+          close_column_page(pdf, page, gutter_x)
+          pdf.start_new_page if occupied
+          yield pdf, item
+          pdf.move_down 8
+          page = column_page(pdf)
+          next
+        end
+
+        if page[:y] - height < bottom
+          if page[:side] == :left
+            page[:side] = :right
+            page[:y] = page[:right]
+          end
+          if page[:y] - height < bottom
+            close_column_page(pdf, page, gutter_x)
+            pdf.start_new_page
+            page = column_page(pdf)
+          end
+        end
+
+        x = page[:side] == :left ? 0 : width + gap
+        pdf.bounding_box([ x, page[:y] ], width: width) do
+          yield pdf, item
+        end
+        page[:y] -= height
+        if page[:side] == :left
+          page[:left] = page[:y]
+        else
+          page[:right] = page[:y]
+          page[:used_right] = true
+        end
+      end
+
+      close_column_page(pdf, page, gutter_x)
+    end
+
+    def column_page(pdf)
+      top = pdf.cursor
+      { top: top, left: top, right: top, y: top, side: :left, used_right: false }
+    end
+
+    def close_column_page(pdf, page, gutter_x)
+      low = [ page[:left], page[:right] ].min
+      if page[:used_right] && page[:top] - low > 8
+        pdf.stroke_color "D5D9E8"
+        pdf.line_width 0.6
+        pdf.stroke_vertical_line low, page[:top], at: gutter_x
+        pdf.stroke_color "000000"
+        pdf.line_width 1
+      end
+      pdf.move_cursor_to(low) if low < pdf.cursor
+      page
+    end
+
+    def measure_column_item(width)
+      height = 0
+      Prawn::Document.new(page_size: [ width, 8000 ], margin: 0) do |probe|
+        Documents::PdfFont.apply(probe)
+        top = probe.cursor
+        yield probe
+        height = (top - probe.cursor) + (8000 * (probe.page_count - 1))
+      end
+      height
     end
 
     def draw_packed_omr_cards(pdf)
@@ -593,7 +677,7 @@ module Documents
       pdf.move_down 10
     end
 
-    def draw_presented_item(pdf, presented, show_key:)
+    def draw_presented_item(pdf, presented, show_key:, break_page: true)
       item = presented.item
       pdf.fill_color "20263D"
       Questions::PromptText.draw(pdf, item.prompt, prefix: "#{presented.number}. ", size: 9)
@@ -602,7 +686,7 @@ module Documents
         pdf.text "BNCC: #{item.bncc_skill}", size: 7
         pdf.fill_color "20263D"
       end
-      draw_item_image(pdf, item)
+      draw_item_image(pdf, item, break_page: break_page)
 
       if item.objective?
         pdf.move_down 3

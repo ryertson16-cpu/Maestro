@@ -177,4 +177,42 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
     assert_includes reader.pages.map(&:text).join("\n"), "IBM"
     assert reader.pages.any? { |page| page.xobjects.any? }
   end
+
+  test "student sheet places questions down the left column and then the right" do
+    12.times do |index|
+      number = format("%02d", index + 1)
+      @activity.activity_questions.create!(
+        position: 10 + index,
+        prompt: "Questao #{number}. " + ("A liga quimica observada nesta amostra permanece estavel. " * 4),
+        kind: "objective",
+        choices: [
+          { "letter" => "A", "text" => "Ionica" },
+          { "letter" => "B", "text" => "Metalica" }
+        ],
+        correct_letter: "A",
+        points: 1
+      )
+    end
+    Activities::ExamAssigner.new(@activity).ensure!([ @student ])
+    pdf = Documents::ActivitySheet.new(
+      professor: @professor,
+      activity: @activity.reload,
+      students: [ @student ]
+    ).render
+    page = PDF::Reader.new(StringIO.new(pdf)).pages.first
+    questions = page.runs.filter_map do |run|
+      number = run.text[/\A(\d+)\. Questao /, 1]
+      next unless number
+
+      { number: number.to_i, x: run.x, y: run.y }
+    end
+    left = questions.select { |row| row[:x] < 160 }
+    right = questions.select { |row| row[:x] > 220 }
+
+    assert_operator left.size, :>=, 2
+    assert_operator right.size, :>=, 1
+    assert_operator right.map { |row| row[:number] }.min, :>, left.map { |row| row[:number] }.max
+    ordered = left.sort_by { |row| -row[:y] }
+    assert_equal ordered.map { |row| row[:number] }, ordered.map { |row| row[:number] }.sort
+  end
 end
