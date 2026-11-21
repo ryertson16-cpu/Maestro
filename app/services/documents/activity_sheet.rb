@@ -255,29 +255,62 @@ module Documents
     end
 
     def draw_item_image(pdf, item)
-      file = question_image_file(item.image)
+      file = question_image_file(picture_for(item))
       return unless file
 
       pdf.start_new_page if pdf.cursor < 120
       pdf.move_down 3
-      pdf.image file.path, fit: [pdf.bounds.width * 0.55, 110]
+      pdf.image file.path, fit: [pdf.bounds.width * 0.55, 220]
       pdf.move_down 4
     rescue StandardError
       nil
     end
 
+    def picture_for(item)
+      return item.image if item.respond_to?(:image) && item.image.attached?
+      return unless item.respond_to?(:question)
+
+      source = item.question
+      source.image if source&.image&.attached?
+    end
+
     def question_image_file(attachment)
       return unless attachment&.attached?
 
-      ext = attachment.content_type.to_s.include?("png") ? ".png" : ".jpg"
+      type = attachment.content_type.to_s
+      raw = attachment.blob.download
+      if type.include?("webp") || type.include?("gif")
+        raw = rasterize_for_pdf(raw, type)
+        return if raw.blank?
+
+        type = "image/png"
+      end
+      ext = type.include?("png") ? ".png" : ".jpg"
       tempfile = Tempfile.new(["maestro-question", ext])
       tempfile.binmode
-      tempfile.write(attachment.blob.download)
+      tempfile.write(raw)
       tempfile.flush
       @image_tempfiles << tempfile
       tempfile
     rescue StandardError
       nil
+    end
+
+    def rasterize_for_pdf(raw, type)
+      source = Tempfile.new(["maestro-source", type.include?("gif") ? ".gif" : ".webp"])
+      source.binmode
+      source.write(raw)
+      source.flush
+      pipeline = if defined?(ImageProcessing::Vips)
+        ImageProcessing::Vips.source(source.path)
+      else
+        ImageProcessing::MiniMagick.source(source.path)
+      end
+      converted = pipeline.convert("png").call
+      File.binread(converted.path)
+    ensure
+      source&.close
+      source&.unlink
     end
 
     def draw_omr_card(pdf, student: nil, presented: nil)

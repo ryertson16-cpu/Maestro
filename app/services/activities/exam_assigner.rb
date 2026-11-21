@@ -92,7 +92,10 @@ module Activities
     private
 
     def catalog
-      @catalog ||= @activity.activity_questions.with_attached_image.to_a
+      @catalog ||= @activity.activity_questions
+                             .with_attached_image
+                             .includes(question: { image_attachment: :blob })
+                             .to_a
     end
 
     def preserve!(roster, versions, items)

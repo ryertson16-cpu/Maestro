@@ -1,4 +1,5 @@
 require "test_helper"
+require "base64"
 
 class Documents::ActivitySheetTest < ActiveSupport::TestCase
   def load_fixtures(_config = ActiveRecord::Base)
@@ -141,5 +142,39 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
 
     assert_includes questions, "Agua fervente quente"
     refute_includes questions, "<b>"
+  end
+
+  test "prints the bank image when the activity copy has none" do
+    question = @professor.questions.create!(
+      prompt: "Logo da IBM",
+      kind: "objective",
+      choices: [
+        { "letter" => "A", "text" => "Listras" },
+        { "letter" => "B", "text" => "Círculo" }
+      ],
+      correct_letter: "A",
+      points: 1
+    )
+    png = Base64.decode64("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")
+    question.image.attach(io: StringIO.new(png), filename: "ibm.png", content_type: "image/png")
+    @activity.activity_questions.create!(
+      question: question,
+      position: 4,
+      prompt: "O logotipo da IBM foi redesenhado.",
+      kind: "objective",
+      choices: question.choices,
+      correct_letter: "A",
+      points: 1
+    )
+    Activities::ExamAssigner.new(@activity).ensure!([ @student ])
+    pdf = Documents::ActivitySheet.new(
+      professor: @professor,
+      activity: @activity.reload,
+      students: [ @student ]
+    ).render
+    reader = PDF::Reader.new(StringIO.new(pdf))
+
+    assert_includes reader.pages.map(&:text).join("\n"), "IBM"
+    assert reader.pages.any? { |page| page.xobjects.any? }
   end
 end

@@ -66,11 +66,7 @@ module Questions
         return
       end
 
-      pending = prefix.to_s
-      Nokogiri::HTML.fragment(html).children.each do |node|
-        pending = draw_block(pdf, node, prefix: pending, size: size)
-      end
-      pdf.text pending, size: size if pending.present?
+      draw_flow(pdf, Nokogiri::HTML.fragment(html), prefix: prefix.to_s, size: size, align: :left)
     end
 
     def self.scrub(html)
@@ -113,41 +109,102 @@ module Questions
       end
     end
 
-    def self.draw_block(pdf, node, prefix:, size:)
-      if node.text?
-        text = node.text.to_s
-        return prefix if text.strip.blank?
+    def self.draw_flow(pdf, node, prefix:, size:, align:)
+      buffer = prefix.to_s
+      buffer_align = align
+      node.children.each do |child|
+        name = child.name.to_s.downcase
+        if child.text? || inline_tag?(child)
+          piece = child.text? ? escape_inline(child.text.to_s) : inline_node(child)
+          buffer = join_piece(buffer, piece.gsub(/[ \t]*\n[ \t]*/, " "))
+        elsif name == "br"
+          write_flow(pdf, buffer, size, buffer_align)
+          buffer = ""
+          pdf.move_down 2
+        elsif paragraph_tag?(name) && !complex_block?(child)
+          text = inline(child).gsub(/\s+/, " ").strip
+          if text.blank?
+            write_flow(pdf, buffer, size, buffer_align)
+            buffer = ""
+            pdf.move_down 8
+            next
+          end
 
-        pdf.text "#{prefix}#{escape_inline(text)}", size: size, leading: 2
-        return ""
+          child_align = alignment(child)
+          if buffer.present? && flow_continues?(buffer, text, buffer_align, child_align)
+            buffer = "#{buffer.rstrip} #{text}"
+            buffer_align = child_align
+          else
+            write_flow(pdf, buffer, size, buffer_align)
+            pdf.move_down 4 unless buffer.blank?
+            buffer = text
+            buffer_align = child_align
+          end
+        else
+          write_flow(pdf, buffer, size, buffer_align)
+          pdf.move_down 4 unless buffer.blank?
+          buffer = ""
+          draw_structural(pdf, child, size)
+        end
       end
+      write_flow(pdf, buffer, size, buffer_align)
+    end
 
+    def self.draw_structural(pdf, node, size)
       name = node.name.to_s.downcase
       case name
       when "table"
-        pdf.text prefix, size: size if prefix.present?
         draw_table(pdf, node, size)
-        ""
       when "img"
-        pdf.text prefix, size: size if prefix.present?
         draw_data_image(pdf, node["src"])
-        ""
       when "ul", "ol"
-        pdf.text prefix, size: size if prefix.present?
-        node.css("li").each_with_index do |item, index|
+        node.element_children.each_with_index do |item, index|
+          next unless item.name.to_s.downcase == "li"
+
           marker = name == "ol" ? "#{index + 1}. " : "• "
-          pdf.text "#{marker}#{inline(item)}", size: size, leading: 2, inline_format: true
+          text = inline(item).gsub(/\s+/, " ").strip
+          pdf.text "#{marker}#{text}", size: size, leading: 2, inline_format: true
+          pdf.move_down 2
         end
-        ""
-      when "br"
-        pdf.move_down 4
-        prefix
       else
-        pdf.fill_color "20263D"
-        pdf.text "#{prefix}#{inline(node)}", size: size, leading: 2, align: alignment(node), inline_format: true
-        pdf.move_down 2
-        ""
+        draw_flow(pdf, node, prefix: "", size: size, align: alignment(node))
+        pdf.move_down 4
       end
+    end
+
+    def self.inline_tag?(node)
+      %w[span font b strong i em u s strike sub sup a].include?(node.name.to_s.downcase)
+    end
+
+    def self.paragraph_tag?(name)
+      %w[div p blockquote h1 h2 h3 h4 h5 h6].include?(name)
+    end
+
+    def self.complex_block?(node)
+      node.element_children.any? { |child| !inline_tag?(child) && child.name.to_s.downcase != "br" }
+    end
+
+    def self.join_piece(buffer, piece)
+      return buffer if piece.blank?
+      return piece if buffer.blank?
+      return buffer if piece.strip.blank? && buffer.end_with?(" ")
+
+      needs_space = !buffer.end_with?(" ", "\n") && !piece.start_with?(" ", "\n")
+      "#{buffer}#{needs_space ? ' ' : ''}#{piece}"
+    end
+
+    def self.flow_continues?(buffer, text, align, next_align)
+      return true if buffer.match?(/\A\s*\d+\.\s*\z/)
+      return false unless align == next_align
+
+      text.match?(/\A[[:lower:][:punct:]]/)
+    end
+
+    def self.write_flow(pdf, text, size, align)
+      cleaned = text.to_s.gsub(/[ \t]{2,}/, " ").strip
+      return if cleaned.blank?
+
+      pdf.text cleaned, size: size, leading: 2, align: align, inline_format: cleaned.match?(/<[a-z]/i)
     end
 
     def self.draw_table(pdf, node, size)
@@ -240,7 +297,9 @@ module Questions
       text.to_s.gsub("&", "&amp;").gsub("<", "&lt;").gsub(">", "&gt;")
     end
 
-    private_class_method :scrub, :style_declarations, :draw_block, :draw_table, :draw_data_image,
-                         :inline, :inline_node, :alignment, :font_points, :style_value, :color_hex, :escape_inline
+    private_class_method :scrub, :style_declarations, :draw_flow, :draw_structural, :draw_table,
+                         :draw_data_image, :inline, :inline_node, :inline_tag?, :paragraph_tag?,
+                         :complex_block?, :join_piece, :flow_continues?, :write_flow, :alignment,
+                         :font_points, :style_value, :color_hex, :escape_inline
   end
 end
