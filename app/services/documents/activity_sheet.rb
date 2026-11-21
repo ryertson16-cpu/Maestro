@@ -16,6 +16,7 @@ module Documents
       @assigner = Activities::ExamAssigner.new(activity)
       @columns = columns.to_i == 2 ? 2 : 1
       @image_tempfiles = []
+      @question_images = {}
     end
 
     def render
@@ -289,6 +290,10 @@ module Documents
     def question_image_file(attachment)
       return unless attachment&.attached?
 
+      @question_images[attachment.blob.id] ||= store_question_image(attachment)
+    end
+
+    def store_question_image(attachment)
       type = attachment.content_type.to_s
       raw = attachment.blob.download
       if type.include?("webp") || type.include?("gif")
@@ -415,7 +420,7 @@ module Documents
       page = column_page(pdf)
 
       items.each do |item|
-        height = measure_column_item(width) { |probe| yield probe, item } + 8
+        height = estimate_column_item(pdf, item, width) + 12
         if height > page[:top] - bottom
           occupied = page[:left] < page[:top] - 0.5 || page[:used_right]
           close_column_page(pdf, page, gutter_x)
@@ -472,15 +477,91 @@ module Documents
       page
     end
 
-    def measure_column_item(width)
-      height = 0
-      Prawn::Document.new(page_size: [ width, 8000 ], margin: 0) do |probe|
-        Documents::PdfFont.apply(probe)
-        top = probe.cursor
-        yield probe
-        height = (top - probe.cursor) + (8000 * (probe.page_count - 1))
+    def estimate_column_item(pdf, item, width)
+      if item.is_a?(Array)
+        question, index = item
+        prompt = "#{index + 1}. #{Questions::PromptText.plain(question.prompt)}"
+        height = wrapped_height(pdf, prompt, width, size: 10, leading: 2)
+        height += wrapped_height(pdf, "BNCC: #{question.bncc_skill}", width, size: 8, leading: 1) if question.bncc_skill.present?
+        height += image_block_height(width, question)
+        height += 6
+        if question.objective?
+          question.choice_pairs.each do |letter, text|
+            height += wrapped_height(pdf, "#{letter}) #{text}", width, size: 10, leading: 2)
+          end
+          height += 10
+        else
+          height += 36
+        end
+      else
+        question = item.item
+        prompt = "#{item.number}. #{Questions::PromptText.plain(question.prompt)}"
+        height = wrapped_height(pdf, prompt, width, size: 9, leading: 2)
+        height += image_block_height(width, question)
+        if question.objective?
+          height += 3
+          item.pairs.each do |letter, text|
+            height += wrapped_height(pdf, "#{letter}) #{text}", width, size: 9, leading: 1.5)
+          end
+          height += 6
+        else
+          height += 36
+        end
       end
-      height
+      height * 1.12
+    end
+
+    def wrapped_height(pdf, text, width, size:, leading:)
+      value = text.to_s.strip
+      return 0 if value.blank?
+
+      pdf.height_of(value, size: size, width: width, leading: leading) + 2
+    rescue StandardError
+      48
+    end
+
+    def image_block_height(column_width, item)
+      file = question_image_file(picture_for(item))
+      return 0 unless file
+
+      max_width = column_width * 0.55
+      max_height = 220
+      pixels_w, pixels_h = image_pixels(file.path)
+      return 227 if pixels_w.to_i <= 0 || pixels_h.to_i <= 0
+
+      scale = [ max_width / pixels_w.to_f, max_height / pixels_h.to_f ].min
+      7 + (pixels_h * scale)
+    end
+
+    def image_pixels(path)
+      File.open(path, "rb") do |file|
+        header = file.read(32).to_s
+        return header.byteslice(16, 8).unpack("NN") if header.start_with?("\x89PNG".b)
+        return jpeg_pixels(file) if header.start_with?("\xFF\xD8".b)
+      end
+      [ 0, 0 ]
+    rescue StandardError
+      [ 0, 0 ]
+    end
+
+    def jpeg_pixels(file)
+      file.rewind
+      file.read(2)
+      while !file.eof?
+        marker = file.read(2)
+        break unless marker&.start_with?("\xFF".b)
+
+        code = marker.getbyte(1)
+        length = file.read(2)&.unpack1("n").to_i
+        break if length < 2
+        if [ 0xC0, 0xC1, 0xC2 ].include?(code)
+          file.read(1)
+          height, width = file.read(4).unpack("nn")
+          return [ width, height ]
+        end
+        file.seek(length - 2, IO::SEEK_CUR)
+      end
+      [ 0, 0 ]
     end
 
     def draw_packed_omr_cards(pdf)
