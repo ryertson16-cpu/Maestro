@@ -125,7 +125,8 @@
     <%= text_area_tag :source_text,
                       @activity.source_text,
                       rows: 8,
-                      placeholder: "Cole ou escreva o texto que os alunos vão usar para responder." %>
+                      placeholder: "Cole ou escreva o texto que os alunos vão usar para responder.",
+                      data: { prompt_source: true } %>
     <%= submit_tag "Salvar texto", class: "button button-primary" %>
   <% end %>
 </section>

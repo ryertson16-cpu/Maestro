@@ -116,7 +116,19 @@ class ActivitiesAssembleTest < ActionDispatch::IntegrationTest
 
     get assemble_activity_path(@activity)
     assert_includes response.body, "Texto da prova"
+    assert_includes response.body, "data-prompt-source"
     assert_includes response.body, "Leia o texto e responda as questoes."
+  end
+
+  test "keeps the exam source formatting and drops scripts" do
+    patch source_text_activity_path(@activity), params: {
+      source_text: '<p style="text-align: center"><b>Agua</b></p><script>alert(1)</script>'
+    }
+
+    stored = @activity.reload.source_text
+    assert_includes stored, "<b>Agua</b>"
+    assert_includes stored, "text-align: center"
+    refute_includes stored, "script"
   end
 
   test "assemble qr page does not print the gabarito address" do

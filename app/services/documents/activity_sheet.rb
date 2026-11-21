@@ -174,15 +174,14 @@ module Documents
     end
 
     def draw_source_text(pdf)
-      body = @activity.source_text.to_s.strip
-      return if body.blank?
+      body = @activity.source_text.to_s
+      return if Questions::PromptText.plain(body).blank?
 
       pdf.start_new_page if pdf.cursor < 80
       pdf.fill_color "1F4E79"
       pdf.text "Texto", size: 11, style: :bold
       pdf.move_down 4
-      pdf.fill_color "20263D"
-      pdf.text body, size: 10, leading: 3
+      Questions::PromptText.draw(pdf, body, prefix: "", size: 10)
       pdf.move_down 12
     end
 

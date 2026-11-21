@@ -10797,10 +10797,13 @@ html[data-theme="night"] .vitrine-extension-steps {
   min-width: 160px;
 }
 
-.exam-source-form textarea {
-  display: block;
+.exam-source-form .prompt-editor {
   width: 100%;
   margin-bottom: 12px;
+}
+
+.exam-source-form .prompt-surface {
+  min-height: 180px;
 }
 
 .question-figure {

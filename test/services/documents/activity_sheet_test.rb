@@ -127,4 +127,19 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
     assert_includes questions, "Texto"
     assert_includes questions, "Texto base da prova de quimica."
   end
+
+  test "personalized exam prints the formatted source text" do
+    @activity.update!(source_text: '<p style="text-align: center"><b>Agua</b> fervente</p>')
+    Activities::ExamAssigner.new(@activity).ensure!([ @student ])
+    pdf = Documents::ActivitySheet.new(
+      professor: @professor,
+      activity: @activity,
+      students: [ @student ],
+      student_url: ->(student) { "http://example.test/g/token/a/#{student.id}" }
+    ).render
+    questions = PDF::Reader.new(StringIO.new(pdf)).pages[0...-1].map(&:text).join("\n")
+
+    assert_includes questions, "Agua fervente"
+    refute_includes questions, "<b>"
+  end
 end

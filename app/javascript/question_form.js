@@ -151,7 +151,7 @@ function mountPromptEditor(source) {
   image.type = "button"
   image.className = "prompt-tool"
   image.textContent = "Imagem"
-  image.title = "Inserir imagem no enunciado"
+  image.title = "Inserir imagem"
   const file = document.createElement("input")
   file.type = "file"
   file.accept = "image/png,image/jpeg,image/webp,image/gif"

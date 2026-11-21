@@ -152,8 +152,8 @@ module Documents
     end
 
     def source_text_xml
-      body = @activity.source_text.to_s.strip
-      return "" if body.blank?
+      body = @activity.source_text.to_s
+      return "" if Questions::PromptText.plain(body).blank?
 
       [paragraph("Texto", bold: true), paragraph(body)].join
     end

@@ -158,7 +158,9 @@ class ActivitiesController < ApplicationController
   end
 
   def source_text
-    @activity.update!(source_text: params[:source_text].to_s.strip.presence)
+    cleaned = Questions::PromptText.sanitized(params[:source_text].to_s)
+    cleaned = nil if Questions::PromptText.plain(cleaned).blank?
+    @activity.update!(source_text: cleaned)
     redirect_to assemble_activity_path(@activity),
                 notice: "Texto da prova salvo. Ele entra em cada folha do aluno."
   end
