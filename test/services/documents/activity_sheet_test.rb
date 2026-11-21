@@ -129,7 +129,7 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
   end
 
   test "personalized exam prints the formatted source text" do
-    @activity.update!(source_text: '<p style="text-align: center"><b>Agua</b> fervente</p>')
+    @activity.update!(source_text: '<p style="text-align: center"><b>Agua</b> <i>fervente</i> <b><i>quente</i></b></p>')
     Activities::ExamAssigner.new(@activity).ensure!([ @student ])
     pdf = Documents::ActivitySheet.new(
       professor: @professor,
@@ -139,7 +139,7 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
     ).render
     questions = PDF::Reader.new(StringIO.new(pdf)).pages[0...-1].map(&:text).join("\n")
 
-    assert_includes questions, "Agua fervente"
+    assert_includes questions, "Agua fervente quente"
     refute_includes questions, "<b>"
   end
 end

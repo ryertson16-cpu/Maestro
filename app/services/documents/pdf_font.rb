@@ -9,12 +9,16 @@ module Documents
     def apply(pdf)
       regular = file("DejaVuSans.ttf")
       bold = file("DejaVuSans-Bold.ttf")
+      italic = file("DejaVuSans-Oblique.ttf")
+      bold_italic = file("DejaVuSans-BoldOblique.ttf")
       return unless regular && bold
 
       pdf.font_families.update(
         FAMILY => {
           normal: regular.to_s,
-          bold: bold.to_s
+          bold: bold.to_s,
+          italic: (italic || regular).to_s,
+          bold_italic: (bold_italic || bold).to_s
         }
       )
       pdf.font FAMILY
