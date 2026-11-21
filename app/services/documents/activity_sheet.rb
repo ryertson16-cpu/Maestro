@@ -213,7 +213,7 @@ module Documents
 
     def draw_assembled_item(pdf, item, index)
       pdf.fill_color "20263D"
-      pdf.text "#{index + 1}. #{Questions::PromptText.prawn(item.prompt)}", size: 10, leading: 3, inline_format: Questions::PromptText.rich?(item.prompt)
+      Questions::PromptText.draw(pdf, item.prompt, prefix: "#{index + 1}. ", size: 10)
       if item.bncc_skill.present?
         pdf.fill_color "707891"
         pdf.text "BNCC: #{item.bncc_skill}", size: 8
@@ -548,7 +548,7 @@ module Documents
     def draw_presented_item(pdf, presented, show_key:)
       item = presented.item
       pdf.fill_color "20263D"
-      pdf.text "#{presented.number}. #{Questions::PromptText.prawn(item.prompt)}", size: 9, leading: 2, inline_format: Questions::PromptText.rich?(item.prompt)
+      Questions::PromptText.draw(pdf, item.prompt, prefix: "#{presented.number}. ", size: 9)
       if show_key && item.bncc_skill.present?
         pdf.fill_color "707891"
         pdf.text "BNCC: #{item.bncc_skill}", size: 7
