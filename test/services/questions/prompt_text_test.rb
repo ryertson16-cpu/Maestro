@@ -114,6 +114,45 @@ class Questions::PromptTextTest < ActiveSupport::TestCase
     refute_equal name.y, role.y
   end
 
+  test "returns the question sentence to the left when the citation is italic" do
+    pdf = Prawn::Document.new(page_size: "A4", margin: 36)
+    Documents::PdfFont.apply(pdf)
+    html = <<~HTML
+      <div style="text-align: right"><i>ADOBE. Sobre cores. Disponível em: https://helpx.adobe.com/br/cores.html. Acesso em: 20 nov. 2026 (adaptado). Para o próximo cartaz, a medida que evita essa surpresa é</i></div>
+    HTML
+    Questions::PromptText.draw(pdf, html, prefix: "2. ", size: 10)
+    runs = PDF::Reader.new(StringIO.new(pdf.render)).pages.first.runs
+    citation = runs.find { |run| run.text.include?("ADOBE") }
+    question = runs.find { |run| run.text.include?("Para o próximo") }
+
+    assert citation
+    assert question
+    assert_operator question.x, :<, citation.x
+  end
+
+  test "keeps the editor alignment when the letter is wrapped in a table" do
+    pdf = Prawn::Document.new(page_size: "A4", margin: 36)
+    Documents::PdfFont.apply(pdf)
+    html = <<~HTML
+      <table><tr><td>
+        <div style="text-align: center"><i>Escola de Magia<br>e Programação de Linguagem Web</i></div>
+        <div>Queridos bruxos e bruxas da Escola de Magia e Programação de<br>Linguagem Web, o ano foi intenso.</div>
+        <div style="text-align: right"><b>Valter Machado</b></div>
+      </td></tr></table>
+    HTML
+    Questions::PromptText.draw(pdf, html, prefix: "", size: 10)
+    runs = PDF::Reader.new(StringIO.new(pdf.render)).pages.first.runs
+    title = runs.find { |run| run.text.include?("Escola de Magia e Programação") }
+    greeting = runs.find { |run| run.text.include?("Queridos bruxos") }
+    name = runs.find { |run| run.text.include?("Valter Machado") }
+
+    assert title
+    assert_includes greeting.text, "Linguagem Web,"
+    assert name
+    assert_operator title.x, :>, greeting.x
+    assert_operator name.x, :>, greeting.x
+  end
+
   test "draws an image nested in the prompt" do
     png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
     pdf = Prawn::Document.new

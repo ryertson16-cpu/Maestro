@@ -118,11 +118,9 @@ module Questions
           piece = child.text? ? escape_inline(child.text.to_s) : inline_node(child)
           buffer = join_piece(buffer, piece.gsub(/[ \t]*\n[ \t]*/, " "))
         elsif name == "br"
-          write_flow(pdf, buffer, size, buffer_align)
-          buffer = ""
-          pdf.move_down 2
+          buffer = join_piece(buffer, "\n")
         elsif paragraph_tag?(name) && !complex_block?(child)
-          text = inline(child).gsub(/\s+/, " ").strip
+          text = inline(child).gsub(/[ \t]*\n[ \t]*/, "\n").gsub(/[ \t]{2,}/, " ").strip
           if text.blank?
             write_flow(pdf, buffer, size, buffer_align)
             buffer = ""
@@ -207,37 +205,85 @@ module Questions
     end
 
     def self.write_flow(pdf, text, size, align)
-      cleaned = text.to_s.gsub(/[ \t]{2,}/, " ").strip
-      return if cleaned.blank?
+      chunks = []
+      text.to_s.split("\n").each do |line|
+        cleaned = line.gsub(/[ \t]{2,}/, " ").strip
+        next if cleaned.blank?
 
-      caption, body = peel_aligned_body(cleaned, align)
-      pdf.text caption, size: size, leading: 2, align: align, inline_format: caption.match?(/<[a-z]/i)
-      return if body.blank?
+        if chunks.last && flow_continues?(chunks.last, cleaned, align, align)
+          chunks[-1] = "#{chunks.last.rstrip} #{cleaned}"
+        else
+          chunks << cleaned
+        end
+      end
 
-      pdf.move_down 8
-      pdf.text body, size: size, leading: 2, align: :left, inline_format: body.match?(/<[a-z]/i)
+      chunks.each_with_index do |chunk, index|
+        pdf.move_down 8 if index.positive?
+        caption, body = peel_aligned_body(chunk, align)
+        pdf.text caption, size: size, leading: 2, align: align, inline_format: caption.match?(/<[a-z]/i)
+        next if body.blank?
+
+        pdf.move_down 8
+        pdf.text body, size: size, leading: 2, align: :left, inline_format: body.match?(/<[a-z]/i)
+      end
     end
 
     def self.peel_aligned_body(text, align)
       return [text, nil] unless %i[right center].include?(align)
 
       plain = text.gsub(/<[^>]+>/, "")
-      parts = plain.split(/(?<=\.)\s+(?=\p{Lu})/)
-      return [text, nil] if parts.size < 2
+      cut = plain.rindex(/\.\s+(?=\p{Lu})/)
+      return [text, nil] unless cut
 
-      tail = parts.last
+      tail = plain[(cut + 1)..].to_s.strip
       return [text, nil] if tail.length < 30
       return [text, nil] if tail.match?(/https?:|Dispon[ií]vel|Acesso em|adaptado/i)
-      return [text, nil] unless text.end_with?(tail)
 
-      [text.sub(/\s*#{Regexp.escape(tail)}\z/, "").strip, tail]
+      head = slice_plain(text, 0, cut + 1).strip
+      body = slice_plain(text, cut + 1, plain.length).strip
+      return [text, nil] if head.blank? || body.blank?
+
+      [head, body]
+    end
+
+    def self.slice_plain(text, start_plain, end_plain)
+      plain_index = 0
+      pieces = text.to_s.scan(/<[^>]+>|[^<]+/).filter_map do |piece|
+        if piece.start_with?("<")
+          piece
+        else
+          kept = +""
+          piece.each_char do |char|
+            kept << char if plain_index >= start_plain && plain_index < end_plain
+            plain_index += 1
+          end
+          kept
+        end
+      end
+      pieces.join.gsub(/<(?!\/)[^>]*>\s*<\/[^>]+>/, "").strip
+    end
+
+    def self.rich_cell?(cell)
+      return true if alignment(cell) != :left
+
+      cell.css("div, p, ul, ol, blockquote, h1, h2, h3, h4, h5, h6").any? ||
+        cell.css("[align], [style]").any? { |node| alignment(node) != :left }
     end
 
     def self.draw_table(pdf, node, size)
-      rows = node.css("tr").filter_map do |row|
-        cells = row.css("th, td").map { |cell| inline(cell).presence || " " }
+      row_nodes = node.css("tr").filter_map do |row|
+        cells = row.css("th, td").to_a
         cells if cells.any?
       end
+      if row_nodes.all?(&:one?) && row_nodes.any? { |row| rich_cell?(row.first) }
+        row_nodes.each do |row|
+          draw_flow(pdf, row.first, prefix: "", size: size, align: alignment(row.first))
+          pdf.move_down 4
+        end
+        return
+      end
+
+      rows = row_nodes.map { |row| row.map { |cell| inline(cell).gsub(/\s+/, " ").strip.presence || " " } }
       return if rows.empty?
 
       width = rows.map(&:size).max
@@ -325,7 +371,8 @@ module Questions
 
     private_class_method :scrub, :style_declarations, :draw_flow, :draw_structural, :draw_table,
                          :draw_data_image, :inline, :inline_node, :inline_tag?, :paragraph_tag?,
-                         :complex_block?, :join_piece, :flow_continues?, :write_flow, :peel_aligned_body, :alignment,
+                         :complex_block?, :join_piece, :flow_continues?, :write_flow, :peel_aligned_body,
+                         :slice_plain, :rich_cell?, :alignment,
                          :font_points, :style_value, :color_hex, :escape_inline
   end
 end
