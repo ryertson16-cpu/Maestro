@@ -296,7 +296,7 @@ module Questions
       encoded = src.to_s.split(",", 2).last
       return if encoded.blank?
 
-      pdf.image StringIO.new(Base64.decode64(encoded)), fit: [ pdf.bounds.width, 220 ]
+      pdf.image StringIO.new(Base64.decode64(encoded)), fit: [ pdf.bounds.width, 320 ]
       pdf.move_down 6
     rescue StandardError
       nil

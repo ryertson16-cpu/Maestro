@@ -1,5 +1,6 @@
 require "test_helper"
 require "base64"
+require "zlib"
 
 class Documents::ActivitySheetTest < ActiveSupport::TestCase
   def load_fixtures(_config = ActiveRecord::Base)
@@ -247,5 +248,92 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
 
     assert_operator marks.size, :>=, 2
     assert marks.all? { |run| run.x < 80 }
+  end
+
+  test "a question after a long text stays inside a column" do
+    @activity.update!(source_text: ("O texto da prova ocupa a largura da pagina e deixa pouca sobra. " * 90))
+    @activity.activity_questions.create!(
+      position: 40,
+      prompt: "Questao depois do texto. " + ("A resposta observa a cor impressa. " * 8),
+      kind: "objective",
+      choices: [
+        { "letter" => "A", "text" => "Sim" },
+        { "letter" => "B", "text" => "Nao" }
+      ],
+      correct_letter: "A",
+      points: 1
+    )
+    Activities::ExamAssigner.new(@activity).ensure!([ @student ])
+    pdf = Documents::ActivitySheet.new(
+      professor: @professor,
+      activity: @activity.reload,
+      students: [ @student ],
+      columns: 2
+    ).render
+    mark = PDF::Reader.new(StringIO.new(pdf)).pages.flat_map(&:runs).find { |run| run.text.include?("Questao depois do texto") }
+
+    assert mark
+    assert_operator mark.width, :<, 340
+  end
+
+  test "a wide table uses the page width and the next question stays below it" do
+    question = @professor.questions.create!(
+      prompt: "Quadro largo da questao.",
+      kind: "objective",
+      choices: [
+        { "letter" => "A", "text" => "Linha" },
+        { "letter" => "B", "text" => "Coluna" }
+      ],
+      correct_letter: "A",
+      points: 1
+    )
+    question.image.attach(io: StringIO.new(sample_png(900, 160)), filename: "quadro.png", content_type: "image/png")
+    @activity.activity_questions.create!(
+      question: question,
+      position: 50,
+      prompt: question.prompt,
+      kind: "objective",
+      choices: question.choices,
+      correct_letter: "A",
+      points: 1
+    )
+    @activity.activity_questions.create!(
+      position: 51,
+      prompt: "Questao apos o quadro.",
+      kind: "objective",
+      choices: [
+        { "letter" => "A", "text" => "Sim" },
+        { "letter" => "B", "text" => "Nao" }
+      ],
+      correct_letter: "B",
+      points: 1
+    )
+    Activities::ExamAssigner.new(@activity).ensure!([ @student ])
+    pdf = Documents::ActivitySheet.new(
+      professor: @professor,
+      activity: @activity.reload,
+      students: [ @student ],
+      columns: 2
+    ).render
+    runs = PDF::Reader.new(StringIO.new(pdf)).pages.flat_map(&:runs)
+    table = runs.find { |run| run.text.include?("Quadro largo") }
+    following = runs.find { |run| run.text.include?("Questao apos o quadro") }
+
+    assert table
+    assert following
+    beside = runs.select do |run|
+      run.text.match?(/\A\d+\./) && (run.y - table.y).abs < 24 && run.x > table.x + 160
+    end
+    assert_empty beside
+    assert_operator following.y, :<, table.y - 80
+  end
+
+  def sample_png(width, height)
+    raw = Array.new(height) { "\x00".b + ("\x80".b * (width * 3)) }.join
+    chunk = lambda do |type, data|
+      [ data.bytesize ].pack("N") + type + data + [ Zlib.crc32(type + data) ].pack("N")
+    end
+    ihdr = [ width, height, 8, 2, 0, 0, 0 ].pack("NNCCCCC")
+    "\x89PNG\r\n\x1A\n".b + chunk.call("IHDR", ihdr) + chunk.call("IDAT", Zlib::Deflate.deflate(raw)) + chunk.call("IEND", "")
   end
 end

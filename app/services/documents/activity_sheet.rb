@@ -273,7 +273,8 @@ module Documents
 
       pdf.start_new_page if break_page && pdf.cursor < 120
       pdf.move_down 3
-      pdf.image file.path, fit: [pdf.bounds.width * 0.55, 220]
+      fit_width, fit_height = image_fit(pdf.bounds.width)
+      pdf.image file.path, fit: [ fit_width, fit_height ]
       pdf.move_down 4
     rescue StandardError
       nil
@@ -420,13 +421,14 @@ module Documents
       page = column_page(pdf)
 
       items.each do |item|
-        height = estimate_column_item(pdf, item, width) + 12
-        if height > page[:top] - bottom
+        height = estimate_column_item(pdf, item, width) + 16
+        column_capacity = pdf.bounds.top - bottom
+        if height > column_capacity || wide_table?(item, width)
           occupied = page[:left] < page[:top] - 0.5 || page[:used_right]
           close_column_page(pdf, page, gutter_x)
           pdf.start_new_page if occupied
           yield pdf, item
-          pdf.move_down 8
+          pdf.move_down 10
           page = column_page(pdf)
           next
         end
@@ -483,7 +485,6 @@ module Documents
         prompt = "#{index + 1}. #{Questions::PromptText.plain(question.prompt)}"
         height = wrapped_height(pdf, prompt, width, size: 10, leading: 2)
         height += wrapped_height(pdf, "BNCC: #{question.bncc_skill}", width, size: 8, leading: 1) if question.bncc_skill.present?
-        height += image_block_height(width, question)
         height += 6
         if question.objective?
           question.choice_pairs.each do |letter, text|
@@ -497,7 +498,6 @@ module Documents
         question = item.item
         prompt = "#{item.number}. #{Questions::PromptText.plain(question.prompt)}"
         height = wrapped_height(pdf, prompt, width, size: 9, leading: 2)
-        height += image_block_height(width, question)
         if question.objective?
           height += 3
           item.pairs.each do |letter, text|
@@ -508,7 +508,53 @@ module Documents
           height += 36
         end
       end
-      height * 1.12
+      height *= 1.22
+      height + prompt_image_height(prompt_source(item), width) + image_block_height(width, question_record(item)) + 8
+    end
+
+    def prompt_source(item)
+      question_record(item).prompt.to_s
+    end
+
+    def question_record(item)
+      item.is_a?(Array) ? item.first : item.item
+    end
+
+    def wide_table?(item, column_width)
+      max_width, max_height = image_fit(column_width)
+      image_dimensions(question_record(item)).any? do |pixels_w, pixels_h|
+        next false if pixels_w.to_i <= 0 || pixels_h.to_i <= 0
+
+        shown = fitted_height(pixels_w, pixels_h, max_width, max_height)
+        pixels_w > pixels_h && shown < 130
+      end
+    end
+
+    def image_dimensions(question)
+      sizes = []
+      file = question_image_file(picture_for(question))
+      sizes << image_pixels(file.path) if file
+      question.prompt.to_s.scan(/src=(['"])(data:image\/[^'"]+)\1/i) do |_quote, src|
+        sizes << data_image_pixels(src)
+      end
+      sizes
+    end
+
+    def prompt_image_height(raw, column_width)
+      max_width, max_height = image_fit(column_width)
+      raw.to_s.scan(/src=(['"])(data:image\/[^'"]+)\1/i).sum do |_quote, src|
+        pixels_w, pixels_h = data_image_pixels(src)
+        fitted_height(pixels_w, pixels_h, max_width, max_height) + 10
+      end
+    end
+
+    def data_image_pixels(src)
+      encoded = src.to_s.split(",", 2).last
+      return [ 0, 0 ] if encoded.blank?
+
+      image_pixels_from(Base64.decode64(encoded))
+    rescue StandardError
+      [ 0, 0 ]
     end
 
     def wrapped_height(pdf, text, width, size:, leading:)
@@ -524,21 +570,39 @@ module Documents
       file = question_image_file(picture_for(item))
       return 0 unless file
 
-      max_width = column_width * 0.55
-      max_height = 220
+      max_width, max_height = image_fit(column_width)
       pixels_w, pixels_h = image_pixels(file.path)
-      return 227 if pixels_w.to_i <= 0 || pixels_h.to_i <= 0
+      return max_height + 7 if pixels_w.to_i <= 0 || pixels_h.to_i <= 0
 
-      scale = [ max_width / pixels_w.to_f, max_height / pixels_h.to_f ].min
-      7 + (pixels_h * scale)
+      7 + fitted_height(pixels_w, pixels_h, max_width, max_height)
+    end
+
+    def image_fit(bounds_width)
+      if bounds_width < 420
+        [ bounds_width, 300 ]
+      else
+        [ bounds_width * 0.9, 380 ]
+      end
+    end
+
+    def fitted_height(pixels_w, pixels_h, max_width, max_height)
+      return 0 if pixels_w.to_i <= 0 || pixels_h.to_i <= 0
+
+      scale = [ max_width / pixels_w.to_f, max_height / pixels_h.to_f, 1 ].min
+      pixels_h * scale
     end
 
     def image_pixels(path)
-      File.open(path, "rb") do |file|
-        header = file.read(32).to_s
-        return header.byteslice(16, 8).unpack("NN") if header.start_with?("\x89PNG".b)
-        return jpeg_pixels(file) if header.start_with?("\xFF\xD8".b)
-      end
+      image_pixels_from(File.binread(path, 512_000))
+    rescue StandardError
+      [ 0, 0 ]
+    end
+
+    def image_pixels_from(bytes)
+      header = bytes.to_s.b
+      return header.byteslice(16, 8).unpack("NN") if header.start_with?("\x89PNG".b)
+      return jpeg_pixels(StringIO.new(header)) if header.start_with?("\xFF\xD8".b)
+
       [ 0, 0 ]
     rescue StandardError
       [ 0, 0 ]
