@@ -31,18 +31,50 @@ const PROMPT_COMMANDS = [
 
 const RICH_MARK = /<\s*\/?\s*(?:b|strong|i|em|u|s|strike|sub|sup|br|p|div|ul|ol|li|span|font|table|thead|tbody|tr|td|th|img)\b/i
 
-function toolButton(command, label, title, surface) {
+const TOGGLE_COMMANDS = new Set([
+  "bold",
+  "italic",
+  "underline",
+  "strikeThrough",
+  "subscript",
+  "superscript",
+  "insertUnorderedList",
+  "insertOrderedList",
+  "justifyLeft",
+  "justifyCenter",
+  "justifyRight",
+  "justifyFull"
+])
+
+function refreshPromptTools(toolbar) {
+  toolbar.querySelectorAll(".prompt-tool[data-command]").forEach((button) => {
+    const command = button.dataset.command
+    if (!TOGGLE_COMMANDS.has(command)) return
+    let active = false
+    try {
+      active = document.queryCommandState(command)
+    } catch (_error) {
+      active = false
+    }
+    button.classList.toggle("is-active", active)
+    button.setAttribute("aria-pressed", active ? "true" : "false")
+  })
+}
+
+function toolButton(command, label, title, surface, toolbar) {
   const button = document.createElement("button")
   button.type = "button"
   button.className = "prompt-tool"
   button.dataset.command = command
   button.textContent = label
   button.title = title
+  if (TOGGLE_COMMANDS.has(command)) button.setAttribute("aria-pressed", "false")
   button.addEventListener("mousedown", (event) => event.preventDefault())
   button.addEventListener("click", () => {
     surface.focus()
     document.execCommand(command, false, null)
     surface.dispatchEvent(new Event("input", { bubbles: true }))
+    refreshPromptTools(toolbar)
   })
   return button
 }
@@ -66,7 +98,7 @@ function mountPromptEditor(source) {
   else surface.innerText = source.value
 
   PROMPT_COMMANDS.forEach(([command, label, title]) => {
-    toolbar.append(toolButton(command, label, title, surface))
+    toolbar.append(toolButton(command, label, title, surface, toolbar))
   })
 
   const color = document.createElement("input")
@@ -156,7 +188,15 @@ function mountPromptEditor(source) {
   const sync = () => {
     source.value = RICH_MARK.test(surface.innerHTML) ? surface.innerHTML : surface.innerText
   }
+  const refresh = () => {
+    const selection = document.getSelection()
+    if (!selection?.anchorNode || !surface.contains(selection.anchorNode)) return
+    refreshPromptTools(toolbar)
+  }
   surface.addEventListener("input", sync)
+  surface.addEventListener("keyup", refresh)
+  surface.addEventListener("mouseup", refresh)
+  document.addEventListener("selectionchange", refresh)
   source.closest("form")?.addEventListener("submit", sync)
 }
 

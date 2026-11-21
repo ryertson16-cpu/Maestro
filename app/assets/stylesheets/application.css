@@ -1535,8 +1535,8 @@ label {
   font-weight: 700;
 }
 
-input:not([type="submit"]):not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]),
-select,
+input:not([type="submit"]):not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not(.prompt-tool-color),
+select:not(.prompt-tool-size),
 textarea {
   width: 100%;
   min-height: 44px;
@@ -11911,28 +11911,64 @@ a.exam-item-stat:focus {
   border-bottom: 1px solid #eceaf6;
 }
 
-.prompt-tool,
-.prompt-tool-size {
+.prompt-toolbar .prompt-tool,
+.prompt-toolbar .prompt-tool-size {
+  width: auto;
   min-width: 32px;
+  min-height: 32px;
   height: 32px;
+  padding: 0 10px;
   border: 0;
   border-radius: 8px;
-  background: #f4f2fb;
+  background: linear-gradient(180deg, #7a6cf0 0%, #5b4bdb 55%, #4638c4 100%);
+  color: #ffffff;
+  box-shadow: none;
+  transform: none;
   font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
   cursor: pointer;
 }
 
-.prompt-tool-size {
-  padding: 0 8px;
+.prompt-toolbar .prompt-tool:hover,
+.prompt-toolbar .prompt-tool-size:hover,
+.prompt-toolbar .prompt-tool:focus-visible,
+.prompt-toolbar .prompt-tool-size:focus-visible {
+  background: linear-gradient(180deg, #8476f4 0%, #5b4bdb 55%, #4638c4 100%);
+  color: #ffffff;
+  box-shadow: none;
+  transform: none;
 }
 
-.prompt-tool-color {
+.prompt-toolbar .prompt-tool.is-active,
+.prompt-toolbar .prompt-tool.is-active:hover,
+.prompt-toolbar .prompt-tool.is-active:focus-visible {
+  background: #f4f2fb;
+  color: #241f33;
+  box-shadow: inset 0 0 0 1px #d9d6ea;
+  transform: none;
+}
+
+.prompt-toolbar .prompt-tool-size {
+  max-width: 7.5rem;
+}
+
+.prompt-toolbar .prompt-tool-size option {
+  background: #ffffff;
+  color: #241f33;
+}
+
+.prompt-toolbar .prompt-tool-color {
   width: 32px;
+  min-width: 32px;
+  max-width: 32px;
   height: 32px;
-  padding: 0;
+  min-height: 32px;
+  padding: 3px;
   border: 0;
   border-radius: 8px;
-  background: #f4f2fb;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px #d9d6ea;
   cursor: pointer;
 }
 
