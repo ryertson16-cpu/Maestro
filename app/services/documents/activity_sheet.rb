@@ -2,7 +2,7 @@ module Documents
   class ActivitySheet
     BLANK_QUESTION_COUNT = 8
 
-    def initialize(professor:, activity:, correction_url: nil, students: [], student_url: nil, mode: :student)
+    def initialize(professor:, activity:, correction_url: nil, students: [], student_url: nil, mode: :student, columns: 1)
       @professor = professor
       @activity = activity
       @lesson = activity.lesson
@@ -14,6 +14,7 @@ module Documents
       @letterhead = Letterhead.new(professor)
       @qr = QrMark.new(correction_url)
       @assigner = Activities::ExamAssigner.new(activity)
+      @columns = columns.to_i == 2 ? 2 : 1
       @image_tempfiles = []
     end
 
@@ -83,6 +84,10 @@ module Documents
 
     def personalized_exams?
       student_copy? && assembled_items.any? && @students.any?
+    end
+
+    def two_columns?
+      @columns == 2 && !answer_key?
     end
 
     def sheet_heading
@@ -210,15 +215,15 @@ module Documents
       pdf.fill_color "20263D"
 
       if assembled_items.any?
-        if answer_key?
-          assembled_items.each_with_index do |item, index|
-            pdf.start_new_page if pdf.cursor < 110
-            draw_assembled_item(pdf, item, index)
-          end
-        else
+        if two_columns?
           draw_two_columns(pdf, assembled_items.each_with_index.to_a) do |document, pair|
             item, index = pair
             draw_assembled_item(document, item, index, break_page: false)
+          end
+        else
+          assembled_items.each_with_index do |item, index|
+            pdf.start_new_page if pdf.cursor < 110
+            draw_assembled_item(pdf, item, index)
           end
         end
       else
@@ -386,8 +391,15 @@ module Documents
         draw_named_header(pdf, student)
         draw_source_text(pdf)
         presented = @assigner.presented_for(student)
-        draw_two_columns(pdf, presented) do |document, row|
-          draw_presented_item(document, row, show_key: false, break_page: false)
+        if two_columns?
+          draw_two_columns(pdf, presented) do |document, row|
+            draw_presented_item(document, row, show_key: false, break_page: false)
+          end
+        else
+          presented.each do |row|
+            pdf.start_new_page if pdf.cursor < 72
+            draw_presented_item(pdf, row, show_key: false)
+          end
         end
       end
       draw_packed_omr_cards(pdf)

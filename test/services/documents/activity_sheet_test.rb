@@ -193,13 +193,18 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
         points: 1
       )
     end
+    @activity.update!(source_text: "Texto base da campanha de doacao.")
     Activities::ExamAssigner.new(@activity).ensure!([ @student ])
     pdf = Documents::ActivitySheet.new(
       professor: @professor,
       activity: @activity.reload,
-      students: [ @student ]
+      students: [ @student ],
+      columns: 2
     ).render
     page = PDF::Reader.new(StringIO.new(pdf)).pages.first
+    source = page.runs.find { |run| run.text.include?("Texto base") }
+    assert source
+    assert_operator source.x, :<, 80
     questions = page.runs.filter_map do |run|
       number = run.text[/\A(\d+)\. Questao /, 1]
       next unless number
@@ -214,5 +219,33 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
     assert_operator right.map { |row| row[:number] }.min, :>, left.map { |row| row[:number] }.max
     ordered = left.sort_by { |row| -row[:y] }
     assert_equal ordered.map { |row| row[:number] }, ordered.map { |row| row[:number] }.sort
+  end
+
+  test "student sheet keeps one column when the professor does not ask for two" do
+    8.times do |index|
+      @activity.activity_questions.create!(
+        position: 20 + index,
+        prompt: "Questao unica #{index}. " + ("A amostra permanece estavel no laboratorio. " * 3),
+        kind: "objective",
+        choices: [
+          { "letter" => "A", "text" => "Sim" },
+          { "letter" => "B", "text" => "Nao" }
+        ],
+        correct_letter: "A",
+        points: 1
+      )
+    end
+    Activities::ExamAssigner.new(@activity).ensure!([ @student ])
+    pdf = Documents::ActivitySheet.new(
+      professor: @professor,
+      activity: @activity.reload,
+      students: [ @student ],
+      columns: 1
+    ).render
+    page = PDF::Reader.new(StringIO.new(pdf)).pages.first
+    marks = page.runs.select { |run| run.text.include?("Questao unica") }
+
+    assert_operator marks.size, :>=, 2
+    assert marks.all? { |run| run.x < 80 }
   end
 end

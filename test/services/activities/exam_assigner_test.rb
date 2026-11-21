@@ -196,6 +196,28 @@ class Activities::ExamAssignerTest < ActiveSupport::TestCase
       assert_includes xml, "Ana"
       assert_includes xml, "(A)"
       assert_includes xml, "(B)"
+      refute_includes xml, 'w:cols w:num="2"'
+    end
+  end
+
+  test "word file puts only the questions in two columns" do
+    @activity.update!(source_text: "Texto base da prova.")
+    Activities::ExamAssigner.new(@activity).ensure!([ @ana ])
+    binary = Documents::ActivityDocx.new(
+      professor: @professor,
+      activity: @activity,
+      students: [ @ana ],
+      columns: 2
+    ).render
+    Zip::File.open_buffer(binary) do |zip|
+      raw = zip.read("word/document.xml")
+      xml = raw.is_a?(String) ? raw : raw.read
+      source_at = xml.index("Texto base")
+      questions_at = xml.index('w:cols w:num="2"')
+
+      assert source_at
+      assert questions_at
+      assert_operator source_at, :<, questions_at
     end
   end
 end

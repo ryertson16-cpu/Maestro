@@ -11906,6 +11906,13 @@ a.exam-item-stat:focus {
   align-items: center;
 }
 
+.sheet-export select {
+  width: auto;
+  min-width: 8.5rem;
+  min-height: 36px;
+  padding: 6px 12px;
+}
+
 .prompt-editor {
   border: 1px solid #d9d6ea;
   border-radius: 12px;

@@ -2,13 +2,14 @@ require "zip"
 
 module Documents
   class ActivityDocx
-    def initialize(professor:, activity:, correction_url: nil, students: [], student_url: nil, mode: :student)
+    def initialize(professor:, activity:, correction_url: nil, students: [], student_url: nil, mode: :student, columns: 1)
       @professor = professor
       @activity = activity
       @lesson = activity.lesson
       @classroom = @lesson.classroom
       @students = Array(students)
       @mode = mode.to_s == "answer_key" ? :answer_key : :student
+      @columns = columns.to_i == 2 ? 2 : 1
       @assigner = Activities::ExamAssigner.new(activity)
     end
 
@@ -40,8 +41,8 @@ module Documents
           <w:body>
             #{body}
             <w:sectPr>
-              <w:pgSz w:w="11906" w:h="16838"/>
-              <w:pgMar w:top="794" w:right="794" w:bottom="794" w:left="794"/>
+              #{page_setup}
+              <w:cols w:num="#{final_columns}" w:space="400"/>
             </w:sectPr>
           </w:body>
         </w:document>
@@ -52,10 +53,12 @@ module Documents
       return key_body if answer_key?
       return blank_body if @students.empty?
 
-      @students.map.with_index { |student, index| student_body(student, page_break: index.positive?) }.join
+      @students.map.with_index do |student, index|
+        student_body(student, page_break: index.positive?, last: index == @students.size - 1)
+      end.join
     end
 
-    def student_body(student, page_break:)
+    def student_body(student, page_break:, last:)
       presented = @assigner.presented_for(student)
       parts = []
       parts << page_break_xml if page_break
@@ -65,14 +68,66 @@ module Documents
       parts << paragraph(student.name.to_s, bold: true)
       parts << paragraph(meta)
       parts << source_text_xml
-      presented.each { |row| parts << question_xml(row, show_key: false) }
-      rows = omr_rows(presented)
-      if rows.any?
-        parts << paragraph("Gabarito", bold: true)
-        parts << gabarito_table(rows)
-        parts << paragraph("Pinte um círculo por questão.")
+      questions = presented.map { |row| question_xml(row, show_key: false) }
+      card = card_xml(presented)
+      if two_columns? && questions.any?
+        parts << section_xml(1)
+        parts.concat(questions)
+        if card.present? || !last
+          parts << section_xml(2)
+          parts << card
+        end
+      else
+        parts.concat(questions)
+        parts << card
       end
       parts.join
+    end
+
+    def card_xml(presented)
+      rows = omr_rows(presented)
+      return "" if rows.empty?
+
+      [
+        paragraph("Gabarito", bold: true),
+        gabarito_table(rows),
+        paragraph("Pinte um círculo por questão.")
+      ].join
+    end
+
+    def two_columns?
+      @columns == 2 && !answer_key?
+    end
+
+    def final_columns
+      return 1 unless two_columns?
+
+      last = @students.last
+      return 1 unless last
+
+      presented = @assigner.presented_for(last)
+      presented.any? && omr_rows(presented).empty? ? 2 : 1
+    end
+
+    def section_xml(columns)
+      <<~XML
+        <w:p>
+          <w:pPr>
+            <w:sectPr>
+              <w:type w:val="continuous"/>
+              #{page_setup}
+              <w:cols w:num="#{columns}" w:space="400"/>
+            </w:sectPr>
+          </w:pPr>
+        </w:p>
+      XML
+    end
+
+    def page_setup
+      <<~XML
+        <w:pgSz w:w="11906" w:h="16838"/>
+        <w:pgMar w:top="794" w:right="794" w:bottom="794" w:left="794"/>
+      XML
     end
 
     def key_body

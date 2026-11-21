@@ -591,6 +591,7 @@ class ActivitiesController < ApplicationController
       options[:correction_url] = gabarito_public_url(@activity)
       options[:students] = students
       options[:student_url] = ->(student) { gabarito_student_url(@activity, student) }
+      options[:columns] = params[:columns].to_i == 2 ? 2 : 1
     end
     data = if docx
              Documents::ActivityDocx.new(**options).render

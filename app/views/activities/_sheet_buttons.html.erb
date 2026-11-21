@@ -4,6 +4,10 @@
     Arquivo
     <%= select_tag :file, options_for_select([["PDF", "pdf"], ["Word", "docx"]], "pdf") %>
   </label>
+  <label class="sheet-export-file" title="Vale para a folha do aluno. O texto inicial continua na largura da página.">
+    Colunas
+    <%= select_tag :columns, options_for_select([["Uma coluna", "1"], ["Duas colunas", "2"]], "1") %>
+  </label>
   <%= submit_tag "Folha do aluno", class: css_class, title: "Cada aluno recebe questões e alternativas em ordem diferente." %>
   <%= submit_tag "Gabarito do professor", class: css_class, formaction: key_sheet_activity_path(activity) %>
 <% end %>
