@@ -360,6 +360,29 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
     assert_operator (titles[0].y - titles[1].y).abs, :>, 70
   end
 
+  test "a class sheet is built one student at a time and still includes everyone" do
+    other = @professor.students.create!(name: "JOAO SOUZA")
+    Enrollment.create!(
+      professor: @professor,
+      student: other,
+      classroom: @classroom,
+      enrolled_on: Date.current,
+      status: "active"
+    )
+    Activities::ExamAssigner.new(@activity).ensure!([ @student, other ])
+    pdf = Documents::ActivitySheet.new(
+      professor: @professor,
+      activity: @activity.reload,
+      students: [ @student, other ],
+      columns: 2
+    ).render
+    text = PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
+
+    assert_includes text, "MARIA SILVA"
+    assert_includes text, "JOAO SOUZA"
+    assert_operator PDF::Reader.new(StringIO.new(pdf)).page_count, :>=, 2
+  end
+
   def sample_png(width, height)
     raw = Array.new(height) { "\x00".b + ("\x80".b * (width * 3)) }.join
     chunk = lambda do |type, data|

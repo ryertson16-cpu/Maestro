@@ -14,9 +14,10 @@ module Documents
         return
       end
 
+      image_object, info = pdf.build_image_object(path)
       regions(pixels_w, count).each_with_index do |(left, slice_px), index|
         continuation(pdf) if index.positive?
-        draw_slice(pdf, path, pixels_w, pixels_h, left, slice_px)
+        draw_slice(pdf, image_object, info, pixels_w, pixels_h, left, slice_px)
       end
     end
 
@@ -50,7 +51,7 @@ module Documents
       end
     end
 
-    def self.draw_slice(pdf, path, pixels_w, pixels_h, left, slice_px)
+    def self.draw_slice(pdf, image_object, info, pixels_w, pixels_h, left, slice_px)
       column_width = pdf.bounds.width
       scale = column_width / slice_px.to_f
       display_h = pixels_h * scale
@@ -58,7 +59,7 @@ module Documents
         pdf.save_graphics_state do
           pdf.rectangle [ 0, 0 ], column_width, display_h
           pdf.add_content "W n"
-          pdf.image path, width: pixels_w * scale, at: [ -(left * scale), pdf.bounds.top ]
+          pdf.embed_image image_object, info, width: pixels_w * scale, at: [ -(left * scale), pdf.bounds.top ]
         end
       end
     end

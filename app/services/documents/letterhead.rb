@@ -1,4 +1,5 @@
 require "tempfile"
+require "chunky_png"
 
 module Documents
   class Letterhead
@@ -163,15 +164,36 @@ module Documents
     def image_file(attachment)
       return unless attachment&.attached?
 
+      @files ||= {}
+      return @files[attachment.blob.id] if @files.key?(attachment.blob.id)
+
       ext = attachment.content_type.to_s.include?("png") ? ".png" : ".jpg"
       tempfile = Tempfile.new(["maestro-doc", ext])
       tempfile.binmode
       tempfile.write(attachment.blob.download)
       tempfile.flush
       @tempfiles << tempfile
-      tempfile
+      @files[attachment.blob.id] = shrink_mark(tempfile)
     rescue StandardError
       nil
+    end
+
+    def shrink_mark(file)
+      image = ChunkyPNG::Image.from_file(file.path)
+      return file if image.width <= 280 && image.height <= 280
+
+      scale = 280.0 / [ image.width, image.height ].max
+      small = image.resample_bilinear(
+        [ 1, (image.width * scale).round ].max,
+        [ 1, (image.height * scale).round ].max
+      )
+      out = Tempfile.new([ "maestro-crest", ".png" ])
+      out.binmode
+      small.save(out.path)
+      @tempfiles << out
+      out
+    rescue StandardError
+      file
     end
   end
 end

@@ -2,7 +2,7 @@ module Documents
   class ActivitySheet
     BLANK_QUESTION_COUNT = 8
 
-    def initialize(professor:, activity:, correction_url: nil, students: [], student_url: nil, mode: :student, columns: 1)
+    def initialize(professor:, activity:, correction_url: nil, students: [], student_url: nil, mode: :student, columns: 1, part: false, cards_only: false)
       @professor = professor
       @activity = activity
       @lesson = activity.lesson
@@ -15,12 +15,20 @@ module Documents
       @qr = QrMark.new(correction_url)
       @assigner = Activities::ExamAssigner.new(activity)
       @columns = columns.to_i == 2 ? 2 : 1
+      @part = part
+      @cards_only = cards_only
       @image_tempfiles = []
       @question_images = {}
       @column_heights = {}
     end
 
     def render
+      return render_in_parts if !@part && personalized_exams? && @students.size > 1
+
+      render_document
+    end
+
+    def render_document
       previous_sheet = Thread.current[:maestro_sheet]
       Thread.current[:maestro_sheet] = self
       pdf = Prawn::Document.new(
@@ -42,7 +50,9 @@ module Documents
           )
         end
 
-        if answer_key?
+        if @cards_only
+          draw_packed_omr_cards(document)
+        elsif answer_key?
           draw_identification(document)
           draw_instructions(document)
           draw_source_text(document)
@@ -71,6 +81,51 @@ module Documents
       rescue StandardError
         nil
       end
+    end
+
+    def render_in_parts
+      files = []
+      @students.each do |student|
+        bytes = self.class.new(**part_arguments, students: [ student ], part: true).render
+        files << stash_pdf(bytes)
+        bytes = nil
+        GC.start
+      end
+      if packed_cards?
+        bytes = self.class.new(**part_arguments, students: @students, part: true, cards_only: true).render
+        files << stash_pdf(bytes)
+      end
+      Documents::PdfMerger.join(files.map(&:path))
+    ensure
+      Array(files).each do |file|
+        file.close
+        file.unlink
+      rescue StandardError
+        nil
+      end
+    end
+
+    def part_arguments
+      {
+        professor: @professor,
+        activity: @activity,
+        correction_url: @correction_url,
+        student_url: @student_url,
+        mode: @mode,
+        columns: @columns
+      }
+    end
+
+    def stash_pdf(bytes)
+      file = Tempfile.new([ "maestro-folha", ".pdf" ])
+      file.binmode
+      file.write(bytes)
+      file.flush
+      file
+    end
+
+    def packed_cards?
+      @students.any? { |student| omr_rows(@assigner.presented_for(student)).any? }
     end
 
     private
@@ -411,7 +466,7 @@ module Documents
           end
         end
       end
-      draw_packed_omr_cards(pdf)
+      draw_packed_omr_cards(pdf) unless @part
     end
 
     def draw_two_columns(pdf, items)
@@ -570,7 +625,7 @@ module Documents
       pack = @students.select { |student| omr_rows(@assigner.presented_for(student)).any? }
       return if pack.empty?
 
-      pdf.start_new_page
+      pdf.start_new_page unless @cards_only && pdf.page_count == 1
       columns = 2
       rows_on_page = 2
       gap = 10

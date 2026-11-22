@@ -82,6 +82,7 @@ gem "rubyzip", "~> 3.2"
 
 gem "prawn", "~> 2.5"
 gem "prawn-table", "~> 0.2"
+gem "combine_pdf", "~> 1.0"
 gem "rqrcode", "~> 2.2"
 
 gem "pdf-reader", "~> 2.12"
