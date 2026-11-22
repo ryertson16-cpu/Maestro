@@ -20,6 +20,14 @@ module Documents
       end
     end
 
+    def self.reserved_height(path, column_width)
+      reserved_for(*pixels(path), column_width.to_f)
+    end
+
+    def self.reserved_bytes(bytes, column_width)
+      reserved_for(*pixels_from(bytes), column_width.to_f)
+    end
+
     def self.slice_count(pixels_w, pixels_h, column_width)
       return 1 if pixels_w.to_i <= 0 || pixels_h.to_i <= 0
       return 1 if column_width.to_f >= 420
@@ -67,6 +75,22 @@ module Documents
       width.to_f < 420 ? [ width, 260 ] : [ width, 420 ]
     end
 
+    def self.reserved_for(pixels_w, pixels_h, column_width)
+      count = slice_count(pixels_w, pixels_h, column_width)
+      if count <= 1
+        max_w, max_h = fit_box(column_width)
+        return max_h if pixels_w.to_i <= 0 || pixels_h.to_i <= 0
+
+        scale = [ max_w / pixels_w.to_f, max_h / pixels_h.to_f, 1 ].min
+        return pixels_h * scale
+      end
+
+      body = regions(pixels_w, count).sum do |_left, slice_px|
+        pixels_h * (column_width / slice_px.to_f)
+      end
+      body + ((count - 1) * 14)
+    end
+
     def self.materialize(pdf, source)
       return source.to_s if path_source?(source)
 
@@ -100,7 +124,13 @@ module Documents
     end
 
     def self.pixels(path)
-      header = File.binread(path, 524_288).to_s.b
+      pixels_from(File.binread(path, 524_288))
+    rescue StandardError
+      [ 0, 0 ]
+    end
+
+    def self.pixels_from(bytes)
+      header = bytes.to_s.b
       return header.byteslice(16, 8).unpack("NN") if header.start_with?("\x89PNG".b)
       return jpeg_pixels(StringIO.new(header)) if header.start_with?("\xFF\xD8".b)
 
@@ -129,6 +159,6 @@ module Documents
       [ 0, 0 ]
     end
 
-    private_class_method :draw_slice, :continuation, :fit_box, :materialize, :path_source?, :pixels, :jpeg_pixels
+    private_class_method :draw_slice, :continuation, :fit_box, :reserved_for, :materialize, :path_source?, :pixels, :pixels_from, :jpeg_pixels
   end
 end

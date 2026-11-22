@@ -424,7 +424,7 @@ module Documents
       page = column_page(pdf)
 
       items.each do |item|
-        height = column_item_height(item, width) { |probe| yield probe, item } + 14
+        height = estimate_column_item(pdf, item, width)
         if page[:y] - height < bottom
           if page[:side] == :left
             page[:side] = :right
@@ -479,20 +479,41 @@ module Documents
       page
     end
 
-    def column_item_height(item, width)
+    def estimate_column_item(pdf, item, width)
       key = column_height_key(item, width)
       return @column_heights[key] if @column_heights.key?(key)
 
-      measured = 0
-      Prawn::Document.new(page_size: [ width, 1600 ], margin: 0) do |probe|
-        Documents::PdfFont.apply(probe)
-        top = probe.cursor
-        yield probe
-        measured = (top - probe.cursor) + (1600 * (probe.page_count - 1))
+      @column_heights[key] = measured_column_item(pdf, item, width) + 18
+    end
+
+    def measured_column_item(pdf, item, width)
+      if item.is_a?(Array)
+        question, index = item
+        height = wrapped_height(pdf, "#{index + 1}. #{Questions::PromptText.plain(question.prompt)}", width, size: 10, leading: 2)
+        height += wrapped_height(pdf, "BNCC: #{question.bncc_skill}", width, size: 8, leading: 1) if question.bncc_skill.present?
+        height += block_padding(question.prompt) + image_reserve(question, width) + 6
+        if question.objective?
+          question.choice_pairs.each do |letter, text|
+            height += wrapped_height(pdf, "#{letter}) #{text}", width, size: 10, leading: 2)
+          end
+          height + 10
+        else
+          height + 44
+        end
+      else
+        question = item.item
+        height = wrapped_height(pdf, "#{item.number}. #{Questions::PromptText.plain(question.prompt)}", width, size: 9, leading: 2)
+        height += block_padding(question.prompt) + image_reserve(question, width)
+        if question.objective?
+          height += 3
+          item.pairs.each do |letter, text|
+            height += wrapped_height(pdf, "#{letter}) #{text}", width, size: 9, leading: 1.5)
+          end
+          height + 6
+        else
+          height + 36
+        end
       end
-      @column_measures = @column_measures.to_i + 1
-      GC.start if (@column_measures % 12).zero?
-      @column_heights[key] = measured
     end
 
     def column_height_key(item, width)
@@ -501,6 +522,42 @@ module Documents
         [ question.id, index, width.round, question.choice_pairs ]
       else
         [ item.item.id, item.number, width.round, item.pairs ]
+      end
+    end
+
+    def wrapped_height(pdf, text, width, size:, leading:)
+      value = text.to_s.strip
+      return 0 if value.blank?
+
+      pdf.height_of(value, size: size, width: width, leading: leading) + 2
+    rescue StandardError
+      48
+    end
+
+    def block_padding(raw)
+      text = raw.to_s
+      text.scan(/<br\b|<\/(?:p|div|li|h[1-6])>/i).size * 8 + text.scan(/<\/tr>/i).size * 18
+    end
+
+    def image_reserve(question, width)
+      height = 0
+      file = question_image_file(picture_for(question))
+      height += 7 + Documents::ColumnImage.reserved_height(file.path, width) if file
+      height + prompt_image_reserve(question.prompt, width)
+    end
+
+    def prompt_image_reserve(raw, width)
+      text = raw.to_s
+      return 0 unless text.include?("data:image")
+
+      @prompt_image_reserves ||= {}
+      key = [ text.hash, width.round ]
+      return @prompt_image_reserves[key] if @prompt_image_reserves.key?(key)
+
+      @prompt_image_reserves[key] = text.scan(/src=(['"])(data:image\/[^'"]+)\1/i).sum do |_quote, src|
+        encoded = src.split(",", 2).last.to_s
+        sample = Base64.decode64(encoded.byteslice(0, 80_000).to_s)
+        Documents::ColumnImage.reserved_bytes(sample, width) + 10
       end
     end
 
