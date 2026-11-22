@@ -22,10 +22,16 @@ module Documents
       @column_heights = {}
     end
 
-    def render
-      return render_in_parts if !@part && personalized_exams? && @students.size > 1
+    def self.generation_lock
+      @generation_lock ||= Mutex.new
+    end
 
-      render_document
+    def render
+      if !@part && personalized_exams? && @students.size > 1
+        self.class.generation_lock.synchronize { render_in_parts }
+      else
+        render_document
+      end
     end
 
     def render_document
@@ -85,24 +91,66 @@ module Documents
 
     def render_in_parts
       files = []
+      Thread.current[:maestro_image_cache] = {}
       @students.each do |student|
         bytes = self.class.new(**part_arguments, students: [ student ], part: true).render
         files << stash_pdf(bytes)
         bytes = nil
-        GC.start
+        release_heap
       end
       if packed_cards?
         bytes = self.class.new(**part_arguments, students: @students, part: true, cards_only: true).render
         files << stash_pdf(bytes)
+        bytes = nil
+        release_heap
       end
       Documents::PdfMerger.join(files.map(&:path))
     ensure
+      clear_image_cache
       Array(files).each do |file|
         file.close
         file.unlink
       rescue StandardError
         nil
       end
+    end
+
+    def release_heap
+      GC.start
+      GC.compact if GC.respond_to?(:compact)
+      self.class.malloc_trim
+    end
+
+    def clear_image_cache
+      Array(Thread.current[:maestro_image_cache]&.values).each do |file|
+        file.close
+        file.unlink
+      rescue StandardError
+        nil
+      end
+      Thread.current[:maestro_image_cache] = nil
+    end
+
+    def self.malloc_trim
+      @malloc_trim ||= malloc_trim_function
+      @malloc_trim&.call(0)
+    rescue StandardError
+      nil
+    end
+
+    def self.malloc_trim_function
+      require "fiddle"
+      pointer = nil
+      [ nil, "libc.so.6", "libc.so" ].each do |library|
+        handle = library ? Fiddle.dlopen(library) : Fiddle::Handle::DEFAULT
+        pointer = handle["malloc_trim"]
+        break if pointer
+      rescue StandardError
+        next
+      end
+      pointer && Fiddle::Function.new(pointer, [ Fiddle::TYPE_INT ], Fiddle::TYPE_INT)
+    rescue StandardError
+      nil
     end
 
     def part_arguments
@@ -353,6 +401,10 @@ module Documents
     end
 
     def store_question_image(attachment)
+      cache = Thread.current[:maestro_image_cache]
+      cached = cache&.[](attachment.blob.id)
+      return cached if cached
+
       type = attachment.content_type.to_s
       raw = attachment.blob.download
       if type.include?("webp") || type.include?("gif")
@@ -366,7 +418,11 @@ module Documents
       tempfile.binmode
       tempfile.write(raw)
       tempfile.flush
-      keep_image_file(tempfile)
+      if cache
+        cache[attachment.blob.id] = tempfile
+      else
+        keep_image_file(tempfile)
+      end
       tempfile
     rescue StandardError
       nil

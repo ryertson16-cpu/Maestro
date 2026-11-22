@@ -164,6 +164,10 @@ module Documents
     def image_file(attachment)
       return unless attachment&.attached?
 
+      cache = Thread.current[:maestro_image_cache]
+      cached = cache&.[](attachment.blob.id)
+      return cached if cached
+
       @files ||= {}
       return @files[attachment.blob.id] if @files.key?(attachment.blob.id)
 
@@ -172,8 +176,15 @@ module Documents
       tempfile.binmode
       tempfile.write(attachment.blob.download)
       tempfile.flush
-      @tempfiles << tempfile
-      @files[attachment.blob.id] = shrink_mark(tempfile)
+      stored = shrink_mark(tempfile)
+      tempfile.close! if stored.path != tempfile.path
+      if cache
+        cache[attachment.blob.id] = stored
+      else
+        @tempfiles << stored
+        @files[attachment.blob.id] = stored
+      end
+      stored
     rescue StandardError
       nil
     end
@@ -190,7 +201,6 @@ module Documents
       out = Tempfile.new([ "maestro-crest", ".png" ])
       out.binmode
       small.save(out.path)
-      @tempfiles << out
       out
     rescue StandardError
       file
