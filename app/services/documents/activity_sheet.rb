@@ -17,9 +17,12 @@ module Documents
       @columns = columns.to_i == 2 ? 2 : 1
       @image_tempfiles = []
       @question_images = {}
+      @column_heights = {}
     end
 
     def render
+      previous_sheet = Thread.current[:maestro_sheet]
+      Thread.current[:maestro_sheet] = self
       pdf = Prawn::Document.new(
         page_size: "A4",
         page_layout: :portrait,
@@ -59,6 +62,7 @@ module Documents
 
       pdf.render
     ensure
+      Thread.current[:maestro_sheet] = previous_sheet
       @letterhead.cleanup
       @qr.cleanup
       Array(@image_tempfiles).each do |file|
@@ -273,8 +277,7 @@ module Documents
 
       pdf.start_new_page if break_page && pdf.cursor < 120
       pdf.move_down 3
-      fit_width, fit_height = image_fit(pdf.bounds.width)
-      pdf.image file.path, fit: [ fit_width, fit_height ]
+      Documents::ColumnImage.draw(pdf, file.path)
       pdf.move_down 4
     rescue StandardError
       nil
@@ -308,7 +311,7 @@ module Documents
       tempfile.binmode
       tempfile.write(raw)
       tempfile.flush
-      @image_tempfiles << tempfile
+      keep_image_file(tempfile)
       tempfile
     rescue StandardError
       nil
@@ -415,24 +418,13 @@ module Documents
       return if items.empty?
 
       gap = 14
-      bottom = 20
+      bottom = 22
       width = (pdf.bounds.width - gap) / 2.0
       gutter_x = width + (gap / 2.0)
       page = column_page(pdf)
 
       items.each do |item|
-        height = estimate_column_item(pdf, item, width) + 16
-        column_capacity = pdf.bounds.top - bottom
-        if height > column_capacity || wide_table?(item, width)
-          occupied = page[:left] < page[:top] - 0.5 || page[:used_right]
-          close_column_page(pdf, page, gutter_x)
-          pdf.start_new_page if occupied
-          yield pdf, item
-          pdf.move_down 10
-          page = column_page(pdf)
-          next
-        end
-
+        height = column_item_height(item, width) { |probe| yield probe, item } + 14
         if page[:y] - height < bottom
           if page[:side] == :left
             page[:side] = :right
@@ -446,10 +438,18 @@ module Documents
         end
 
         x = page[:side] == :left ? 0 : width + gap
+        pages_before = pdf.page_count
+        drawn = 0
         pdf.bounding_box([ x, page[:y] ], width: width) do
           yield pdf, item
+          drawn = pdf.bounds.height
         end
-        page[:y] -= height
+        if pdf.page_count != pages_before
+          page = column_page(pdf)
+          next
+        end
+
+        page[:y] -= (drawn.positive? ? drawn : height) + 12
         if page[:side] == :left
           page[:left] = page[:y]
         else
@@ -479,153 +479,34 @@ module Documents
       page
     end
 
-    def estimate_column_item(pdf, item, width)
+    def column_item_height(item, width)
+      key = column_height_key(item, width)
+      return @column_heights[key] if @column_heights.key?(key)
+
+      measured = 0
+      Prawn::Document.new(page_size: [ width, 1600 ], margin: 0) do |probe|
+        Documents::PdfFont.apply(probe)
+        top = probe.cursor
+        yield probe
+        measured = (top - probe.cursor) + (1600 * (probe.page_count - 1))
+      end
+      @column_measures = @column_measures.to_i + 1
+      GC.start if (@column_measures % 12).zero?
+      @column_heights[key] = measured
+    end
+
+    def column_height_key(item, width)
       if item.is_a?(Array)
         question, index = item
-        prompt = "#{index + 1}. #{Questions::PromptText.plain(question.prompt)}"
-        height = wrapped_height(pdf, prompt, width, size: 10, leading: 2)
-        height += wrapped_height(pdf, "BNCC: #{question.bncc_skill}", width, size: 8, leading: 1) if question.bncc_skill.present?
-        height += 6
-        if question.objective?
-          question.choice_pairs.each do |letter, text|
-            height += wrapped_height(pdf, "#{letter}) #{text}", width, size: 10, leading: 2)
-          end
-          height += 10
-        else
-          height += 36
-        end
+        [ question.id, index, width.round, question.choice_pairs ]
       else
-        question = item.item
-        prompt = "#{item.number}. #{Questions::PromptText.plain(question.prompt)}"
-        height = wrapped_height(pdf, prompt, width, size: 9, leading: 2)
-        if question.objective?
-          height += 3
-          item.pairs.each do |letter, text|
-            height += wrapped_height(pdf, "#{letter}) #{text}", width, size: 9, leading: 1.5)
-          end
-          height += 6
-        else
-          height += 36
-        end
-      end
-      height *= 1.22
-      height + prompt_image_height(prompt_source(item), width) + image_block_height(width, question_record(item)) + 8
-    end
-
-    def prompt_source(item)
-      question_record(item).prompt.to_s
-    end
-
-    def question_record(item)
-      item.is_a?(Array) ? item.first : item.item
-    end
-
-    def wide_table?(item, column_width)
-      max_width, max_height = image_fit(column_width)
-      image_dimensions(question_record(item)).any? do |pixels_w, pixels_h|
-        next false if pixels_w.to_i <= 0 || pixels_h.to_i <= 0
-
-        shown = fitted_height(pixels_w, pixels_h, max_width, max_height)
-        pixels_w > pixels_h && shown < 130
+        [ item.item.id, item.number, width.round, item.pairs ]
       end
     end
 
-    def image_dimensions(question)
-      sizes = []
-      file = question_image_file(picture_for(question))
-      sizes << image_pixels(file.path) if file
-      question.prompt.to_s.scan(/src=(['"])(data:image\/[^'"]+)\1/i) do |_quote, src|
-        sizes << data_image_pixels(src)
-      end
-      sizes
-    end
-
-    def prompt_image_height(raw, column_width)
-      max_width, max_height = image_fit(column_width)
-      raw.to_s.scan(/src=(['"])(data:image\/[^'"]+)\1/i).sum do |_quote, src|
-        pixels_w, pixels_h = data_image_pixels(src)
-        fitted_height(pixels_w, pixels_h, max_width, max_height) + 10
-      end
-    end
-
-    def data_image_pixels(src)
-      encoded = src.to_s.split(",", 2).last
-      return [ 0, 0 ] if encoded.blank?
-
-      image_pixels_from(Base64.decode64(encoded))
-    rescue StandardError
-      [ 0, 0 ]
-    end
-
-    def wrapped_height(pdf, text, width, size:, leading:)
-      value = text.to_s.strip
-      return 0 if value.blank?
-
-      pdf.height_of(value, size: size, width: width, leading: leading) + 2
-    rescue StandardError
-      48
-    end
-
-    def image_block_height(column_width, item)
-      file = question_image_file(picture_for(item))
-      return 0 unless file
-
-      max_width, max_height = image_fit(column_width)
-      pixels_w, pixels_h = image_pixels(file.path)
-      return max_height + 7 if pixels_w.to_i <= 0 || pixels_h.to_i <= 0
-
-      7 + fitted_height(pixels_w, pixels_h, max_width, max_height)
-    end
-
-    def image_fit(bounds_width)
-      if bounds_width < 420
-        [ bounds_width, 300 ]
-      else
-        [ bounds_width * 0.9, 380 ]
-      end
-    end
-
-    def fitted_height(pixels_w, pixels_h, max_width, max_height)
-      return 0 if pixels_w.to_i <= 0 || pixels_h.to_i <= 0
-
-      scale = [ max_width / pixels_w.to_f, max_height / pixels_h.to_f, 1 ].min
-      pixels_h * scale
-    end
-
-    def image_pixels(path)
-      image_pixels_from(File.binread(path, 512_000))
-    rescue StandardError
-      [ 0, 0 ]
-    end
-
-    def image_pixels_from(bytes)
-      header = bytes.to_s.b
-      return header.byteslice(16, 8).unpack("NN") if header.start_with?("\x89PNG".b)
-      return jpeg_pixels(StringIO.new(header)) if header.start_with?("\xFF\xD8".b)
-
-      [ 0, 0 ]
-    rescue StandardError
-      [ 0, 0 ]
-    end
-
-    def jpeg_pixels(file)
-      file.rewind
-      file.read(2)
-      while !file.eof?
-        marker = file.read(2)
-        break unless marker&.start_with?("\xFF".b)
-
-        code = marker.getbyte(1)
-        length = file.read(2)&.unpack1("n").to_i
-        break if length < 2
-        if [ 0xC0, 0xC1, 0xC2 ].include?(code)
-          file.read(1)
-          height, width = file.read(4).unpack("nn")
-          return [ width, height ]
-        end
-        file.seek(length - 2, IO::SEEK_CUR)
-      end
-      [ 0, 0 ]
+    def keep_image_file(file)
+      @image_tempfiles << file
+      file
     end
 
     def draw_packed_omr_cards(pdf)

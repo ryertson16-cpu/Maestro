@@ -283,20 +283,38 @@ module Questions
         return
       end
 
-      rows = row_nodes.map { |row| row.map { |cell| inline(cell).gsub(/\s+/, " ").strip.presence || " " } }
+      rows = row_nodes.map { |row| row.map { |cell| table_cell(cell) } }
       return if rows.empty?
 
       width = rows.map(&:size).max
       rows.each { |row| row << " " while row.size < width }
-      pdf.table(rows, width: pdf.bounds.width, cell_style: { inline_format: true, size: size, padding: [3, 4] })
+      pdf.table(
+        rows,
+        width: pdf.bounds.width,
+        cell_style: {
+          inline_format: true,
+          size: size,
+          padding: [3, 4],
+          border_width: 0.6,
+          border_color: "C9C4DE",
+          valign: :center
+        }
+      )
       pdf.move_down 6
+    end
+
+    def self.table_cell(cell)
+      text = inline(cell).gsub(/\s+/, " ").strip.presence || " "
+      return text unless cell.name.to_s.casecmp("th").zero?
+
+      { content: "<b>#{text}</b>", background_color: "F4F2FB" }
     end
 
     def self.draw_data_image(pdf, src)
       encoded = src.to_s.split(",", 2).last
       return if encoded.blank?
 
-      pdf.image StringIO.new(Base64.decode64(encoded)), fit: [ pdf.bounds.width, 320 ]
+      Documents::ColumnImage.draw(pdf, Base64.decode64(encoded))
       pdf.move_down 6
     rescue StandardError
       nil
@@ -370,7 +388,7 @@ module Questions
     end
 
     private_class_method :scrub, :style_declarations, :draw_flow, :draw_structural, :draw_table,
-                         :draw_data_image, :inline, :inline_node, :inline_tag?, :paragraph_tag?,
+                         :table_cell, :draw_data_image, :inline, :inline_node, :inline_tag?, :paragraph_tag?,
                          :complex_block?, :join_piece, :flow_continues?, :write_flow, :peel_aligned_body,
                          :slice_plain, :rich_cell?, :alignment,
                          :font_points, :style_value, :color_hex, :escape_inline

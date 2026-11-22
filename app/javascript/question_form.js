@@ -79,6 +79,90 @@ function toolButton(command, label, title, surface, toolbar) {
   return button
 }
 
+function clampCount(value, fallback, max) {
+  const number = Number.parseInt(value, 10)
+  if (!Number.isFinite(number)) return fallback
+  return Math.min(max, Math.max(1, number))
+}
+
+function quadroHtml(rows, columns, header) {
+  const cells = []
+  for (let row = 0; row < rows; row += 1) {
+    const tag = header && row === 0 ? "th" : "td"
+    const line = []
+    for (let column = 0; column < columns; column += 1) line.push(`<${tag}><br></${tag}>`)
+    cells.push(`<tr>${line.join("")}</tr>`)
+  }
+  return `<table>${cells.join("")}</table>`
+}
+
+function quadroTool(surface) {
+  const wrap = document.createElement("span")
+  wrap.className = "prompt-quadro"
+  const toggle = document.createElement("button")
+  toggle.type = "button"
+  toggle.className = "prompt-tool"
+  toggle.textContent = "Quadro"
+  toggle.title = "Inserir um quadro com texto"
+  toggle.setAttribute("aria-expanded", "false")
+
+  const panel = document.createElement("div")
+  panel.className = "prompt-quadro-panel"
+  panel.hidden = true
+  panel.innerHTML = [
+    '<label>Linhas <input class="prompt-quadro-count" type="number" min="1" max="12" value="3" data-quadro-rows></label>',
+    '<label>Colunas <input class="prompt-quadro-count" type="number" min="1" max="8" value="3" data-quadro-cols></label>',
+    '<label class="prompt-quadro-check"><input type="checkbox" data-quadro-header checked> Primeira linha é o título</label>',
+    '<button type="button" class="prompt-tool" data-quadro-insert>Inserir quadro</button>'
+  ].join("")
+
+  let savedRange = null
+  const rememberSelection = () => {
+    const selection = document.getSelection()
+    if (!selection?.rangeCount || !surface.contains(selection.anchorNode)) return
+    savedRange = selection.getRangeAt(0).cloneRange()
+  }
+  const restoreSelection = () => {
+    surface.focus()
+    if (!savedRange) return
+    const selection = document.getSelection()
+    selection.removeAllRanges()
+    selection.addRange(savedRange)
+  }
+
+  toggle.addEventListener("mousedown", (event) => {
+    event.preventDefault()
+    rememberSelection()
+  })
+  toggle.addEventListener("click", () => {
+    panel.hidden = !panel.hidden
+    toggle.setAttribute("aria-expanded", panel.hidden ? "false" : "true")
+    if (!panel.hidden) panel.querySelector("[data-quadro-rows]")?.focus()
+  })
+  panel.addEventListener("mousedown", (event) => {
+    if (event.target.closest("[data-quadro-insert]")) event.preventDefault()
+  })
+  panel.querySelector("[data-quadro-insert]").addEventListener("click", () => {
+    const rows = clampCount(panel.querySelector("[data-quadro-rows]").value, 3, 12)
+    const columns = clampCount(panel.querySelector("[data-quadro-cols]").value, 3, 8)
+    const header = panel.querySelector("[data-quadro-header]").checked
+    restoreSelection()
+    document.execCommand("insertHTML", false, quadroHtml(rows, columns, header))
+    surface.dispatchEvent(new Event("input", { bubbles: true }))
+    panel.hidden = true
+    toggle.setAttribute("aria-expanded", "false")
+  })
+  document.addEventListener("mousedown", (event) => {
+    if (!wrap.contains(event.target)) {
+      panel.hidden = true
+      toggle.setAttribute("aria-expanded", "false")
+    }
+  })
+
+  wrap.append(toggle, panel)
+  return wrap
+}
+
 function mountPromptEditor(source) {
   if (source.dataset.promptReady === "1") return
   source.dataset.promptReady = "1"
@@ -134,18 +218,7 @@ function mountPromptEditor(source) {
   })
   toolbar.append(size)
 
-  const table = document.createElement("button")
-  table.type = "button"
-  table.className = "prompt-tool"
-  table.textContent = "Tabela"
-  table.title = "Inserir tabela"
-  table.addEventListener("mousedown", (event) => event.preventDefault())
-  table.addEventListener("click", () => {
-    surface.focus()
-    document.execCommand("insertHTML", false, "<table><tr><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td></tr></table>")
-    surface.dispatchEvent(new Event("input", { bubbles: true }))
-  })
-  toolbar.append(table)
+  toolbar.append(quadroTool(surface))
 
   const image = document.createElement("button")
   image.type = "button"

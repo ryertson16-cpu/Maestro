@@ -42,6 +42,24 @@ class Questions::PromptTextTest < ActiveSupport::TestCase
     assert_includes text, "Hidrogenio"
   end
 
+  test "draws a quadro as text that stays readable in a narrow column" do
+    pdf = Prawn::Document.new(page_size: [ 320, 500 ], margin: 28)
+    Documents::PdfFont.apply(pdf)
+    Questions::PromptText.draw(
+      pdf,
+      "<table><tr><th>Elemento</th><th>Massa</th><th>Carga</th></tr><tr><td>Hidrogenio</td><td>1</td><td>+1</td></tr></table>",
+      prefix: "3. ",
+      size: 9
+    )
+    page = PDF::Reader.new(StringIO.new(pdf.render)).pages.first
+    text = page.text.gsub(/\s+/, " ")
+
+    assert_includes text, "Elemento"
+    assert_includes text, "Hidrogenio"
+    assert_includes text, "+1"
+    assert_empty page.xobjects
+  end
+
   test "keeps a sentence on the same line when the editor split it" do
     pdf = Prawn::Document.new(page_size: "A4", margin: 36)
     Questions::PromptText.draw(

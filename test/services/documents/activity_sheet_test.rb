@@ -276,7 +276,7 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
     assert_operator mark.width, :<, 340
   end
 
-  test "a wide table uses the page width and the next question stays below it" do
+  test "a wide table stays in a column and the next question does not cover it" do
     question = @professor.questions.create!(
       prompt: "Quadro largo da questao.",
       kind: "objective",
@@ -288,7 +288,7 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
       points: 1
     )
     question.image.attach(io: StringIO.new(sample_png(900, 160)), filename: "quadro.png", content_type: "image/png")
-    @activity.activity_questions.create!(
+    wide = @activity.activity_questions.create!(
       question: question,
       position: 50,
       prompt: question.prompt,
@@ -297,7 +297,7 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
       correct_letter: "A",
       points: 1
     )
-    @activity.activity_questions.create!(
+    following_item = @activity.activity_questions.create!(
       position: 51,
       prompt: "Questao apos o quadro.",
       kind: "objective",
@@ -309,6 +309,7 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
       points: 1
     )
     Activities::ExamAssigner.new(@activity).ensure!([ @student ])
+    @activity.exam_assignments.find_by!(student: @student).update!(item_order: [ wide.id, following_item.id ])
     pdf = Documents::ActivitySheet.new(
       professor: @professor,
       activity: @activity.reload,
@@ -321,11 +322,42 @@ class Documents::ActivitySheetTest < ActiveSupport::TestCase
 
     assert table
     assert following
-    beside = runs.select do |run|
-      run.text.match?(/\A\d+\./) && (run.y - table.y).abs < 24 && run.x > table.x + 160
+    assert_operator (table.x - following.x).abs, :<, 40
+    assert_operator following.y, :<, table.y - 180
+    content = PDF::Reader.new(StringIO.new(pdf)).pages.map(&:raw_content).join
+    assert_operator content.scan(%r{/I\d+ Do}).size, :>=, 2
+    drawn_heights = content.scan(/[\d.]+ 0(?:\.0)? 0(?:\.0)? ([\d.]+) /).map { |match| match.first.to_f }
+    assert drawn_heights.any? { |height| height > 80 }
+  end
+
+  test "questions stacked in one column keep their letters apart" do
+    marks = 2.times.map do |index|
+      @activity.activity_questions.create!(
+        position: 70 + index,
+        prompt: "Marca #{index}<br>" + ([ "A letra desta linha permanece inteira." ] * 6).join("<br>"),
+        kind: "objective",
+        choices: [
+          { "letter" => "A", "text" => "Primeira" },
+          { "letter" => "B", "text" => "Segunda" }
+        ],
+        correct_letter: "A",
+        points: 1
+      )
     end
-    assert_empty beside
-    assert_operator following.y, :<, table.y - 80
+    Activities::ExamAssigner.new(@activity).ensure!([ @student ])
+    @activity.exam_assignments.find_by!(student: @student).update!(item_order: marks.map(&:id))
+    pdf = Documents::ActivitySheet.new(
+      professor: @professor,
+      activity: @activity.reload,
+      students: [ @student ],
+      columns: 2
+    ).render
+    runs = PDF::Reader.new(StringIO.new(pdf)).pages.flat_map(&:runs)
+    titles = runs.select { |run| run.text.include?("Marca") }
+
+    assert_equal 2, titles.size
+    assert_operator (titles[0].x - titles[1].x).abs, :<, 40
+    assert_operator (titles[0].y - titles[1].y).abs, :>, 70
   end
 
   def sample_png(width, height)
