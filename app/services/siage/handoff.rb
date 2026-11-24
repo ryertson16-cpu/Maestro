@@ -22,6 +22,7 @@ module Siage
       {
         "cpf" => professor.cpf.to_s,
         "senha" => professor.siage_password.to_s,
+        "escola" => professor.school&.name.to_s,
         "origin" => origin,
         "token" => dados["token"],
         "job" => dados,
@@ -54,6 +55,7 @@ module Siage
       {
         "cpf" => professor.cpf.to_s,
         "senha" => professor.siage_password.to_s,
+        "escola" => professor.school&.name.to_s,
         "origin" => origin,
         "token" => token,
         "mode" => "roster",

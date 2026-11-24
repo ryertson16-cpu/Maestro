@@ -167,11 +167,10 @@ function wireTurboConfirm() {
     return accepted
   }
 
-  if (window.Turbo?.session) {
-    window.Turbo.config = window.Turbo.config || {}
-    window.Turbo.config.forms = window.Turbo.config.forms || {}
-    window.Turbo.config.forms.confirm = confirmFn
-  }
+  try {
+    const forms = window.Turbo?.config?.forms
+    if (forms) forms.confirm = confirmFn
+  } catch (e) {}
 
   if (typeof window.Turbo?.setConfirmMethod === "function") {
     window.Turbo.setConfirmMethod(confirmFn)

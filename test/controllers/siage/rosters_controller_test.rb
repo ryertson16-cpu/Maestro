@@ -27,6 +27,7 @@ class Siage::RostersControllerTest < ActionDispatch::IntegrationTest
 
   test "open page exposes roster handoff" do
     @professor.update!(cpf: "52998224725", siage_password: "portal-siage")
+    School.create!(professor: @professor, name: "ECI Est Marcelo P Carvalheira")
 
     get siage_roster_path
 
@@ -37,6 +38,7 @@ class Siage::RostersControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "portal-siage"
     payload = JSON.parse(css_handoff)
     assert_equal "roster", payload["mode"]
+    assert_equal "ECI Est Marcelo P Carvalheira", payload["escola"]
     assert_equal "roster", payload.dig("job", "kind")
   end
 

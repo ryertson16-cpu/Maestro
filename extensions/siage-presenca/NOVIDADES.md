@@ -1,3 +1,9 @@
+# Novidades: versão 4.9.18 (24/11/2026)
+
+- O login no SIAGE preenche o campo de CPF sem gravar o formulário inteiro, espera o botão ACESSAR e não trava se o portal recusar o valor.
+- Com mais de uma matrícula, a extensão escolhe a escola do perfil. Se nenhuma bater, pede para o professor escolher uma vez e lembra essa escolha.
+- A extensão só conversa com cadernomaestro.com.br, o caderno local e o SIAGE. A senha fica na sessão do Chrome, não no armazenamento permanente.
+
 # Novidades: versão 4.9.17 (24/11/2026)
 
 - Depois do login, a extensão aperta Selecionar na tela de ano letivo e matrícula. Antes o clique não chegava ao botão e a leitura das turmas parava nessa tela.

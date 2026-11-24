@@ -189,28 +189,69 @@
     })[0] || null;
   }
 
-  async function escolherAnoEMatricula() {
-    await pedirPaginaDetalhe("confirmarAno", {}, 4000);
+  function textoDaMatricula() {
+    return q("input").filter((el) => visivel(el) && el.type !== "hidden" && el.type !== "password" && !el.closest("#siage-fila-painel"))
+      .map((el) => (el.value || "").trim())
+      .find((valor) => valor && !/^20\d{2}$/.test(valor) && valor.length > 4) || "";
+  }
+
+  async function escolaSalva(handoff) {
+    try {
+      const guardada = (await chrome.storage.local.get("siageEscola")).siageEscola;
+      if (guardada) return String(guardada);
+    } catch (e) {}
+    return String((handoff && handoff.escola) || "");
+  }
+
+  async function lembrarEscolaVista() {
+    const texto = textoDaMatricula();
+    if (!texto) return;
+    try { await chrome.storage.local.set({ siageEscola: texto }); } catch (e) {}
+  }
+
+  async function pedirEscolhaDaMatricula(job) {
+    desenharPainel(job, "Você tem mais de uma matrícula. Escolha a escola na tela do SIAGE uma vez.");
+    let escolhida = textoDaMatricula();
+    await aguardar(() => {
+      const agora = textoDaMatricula();
+      if (agora) escolhida = agora;
+      return !ehTelaAnoLetivo();
+    }, 180000);
+    if (escolhida) {
+      try { await chrome.storage.local.set({ siageEscola: escolhida }); } catch (e) {}
+    }
+  }
+
+  async function escolherAnoEMatricula(handoff) {
+    const escola = await escolaSalva(handoff);
+    const resposta = await pedirPaginaDetalhe("confirmarAno", { escola }, 4000);
+    if (resposta && resposta.aviso === "escolher-matricula") return "escolher-matricula";
     await esperar(500);
-    if (!ehTelaAnoLetivo()) return;
+    if (!ehTelaAnoLetivo()) {
+      await lembrarEscolaVista();
+      return;
+    }
     const pronto = botaoSelecionarAno();
     if (pronto) {
+      await lembrarEscolaVista();
       clicarNativo(pronto);
       return;
     }
-    const combos = q(".p-dropdown, p-dropdown, .p-select, p-select, ng-select, p-autocomplete").filter(visivel);
+    const combos = q(".p-dropdown, p-dropdown, .p-select, p-select, ng-select, .p-autocomplete, p-autocomplete").filter(visivel);
     for (const combo of combos) {
       const rotulo = norm(combo.innerText || "");
       if (/20\d{2}/.test(rotulo) && !/selecione|escolha/.test(rotulo)) continue;
       if (rotulo.length > 12 && !/selecione|escolha|ano letivo|matricula/.test(rotulo)) continue;
-      const gatilho = combo.querySelector(".p-dropdown-trigger, .p-select-dropdown, .ng-arrow-wrapper, .p-dropdown-label") || combo;
+      const gatilho = combo.querySelector(".p-autocomplete-dropdown, .p-dropdown-trigger, .p-select-dropdown, .ng-arrow-wrapper, .p-dropdown-label") || combo;
       clicarNativo(gatilho);
       await esperar(450);
-      const painelLista = q(".p-dropdown-panel, .p-select-overlay, .ng-dropdown-panel, .p-dropdown-items").filter(visivel).pop();
+      const painelLista = q(".p-autocomplete-panel, .p-dropdown-panel, .p-select-overlay, .ng-dropdown-panel, .p-dropdown-items").filter(visivel).pop();
       if (!painelLista) continue;
-      const opcoes = q("li, .p-dropdown-item, .p-select-option, .ng-option", painelLista).filter(visivel);
+      const opcoes = q("li, .p-autocomplete-item, .p-dropdown-item, .p-select-option, .ng-option", painelLista).filter(visivel);
+      const daEscola = escola && opcoes.find((opcao) => norm(opcao.textContent).includes(norm(escola)));
       const anos = opcoes.filter((opcao) => /20\d{2}/.test(opcao.textContent || ""));
-      const alvo = (anos.length ? anos : opcoes).slice().sort((a, b) => {
+      if (!daEscola && !anos.length && opcoes.length > 1) return "escolher-matricula";
+      const alvo = daEscola || (anos.length ? anos : opcoes).slice().sort((a, b) => {
         const anoA = Number((String(a.textContent).match(/20\d{2}/) || ["0"])[0]);
         const anoB = Number((String(b.textContent).match(/20\d{2}/) || ["0"])[0]);
         return anoB - anoA;
@@ -306,6 +347,14 @@
     if (!senhas) return false;
     const t = norm(textoDaPagina(3000));
     return /informe uma nova senha|nova senha|senha atual/.test(t);
+  }
+
+  let loginEmAndamento = null;
+  function loginUnico(handoff) {
+    if (!loginEmAndamento) {
+      loginEmAndamento = preencherLogin(handoff).finally(() => { loginEmAndamento = null; });
+    }
+    return loginEmAndamento;
   }
 
   async function preencherLogin(handoff) {
@@ -479,7 +528,7 @@
     return ehListagemTurmas() || ehPaginaTurmaAberta() || naPaginaDeFrequencia() || naLista() || naTelaDeCadastro() || ehTelaDeAvaliacoes();
   }
 
-  async function entrarNoDiario() {
+  async function entrarNoDiario(handoff) {
     for (let i = 0; i < 24; i++) {
       if (ehTelaDeLogin()) return "login";
       if (ehTrocaDeSenha()) return "definir-senha";
@@ -491,7 +540,8 @@
       }
 
       if (ehTelaAnoLetivo()) {
-        await escolherAnoEMatricula();
+        const escolha = await escolherAnoEMatricula(handoff);
+        if (escolha === "escolher-matricula") return "escolher-matricula";
         await aguardar(() => !ehTelaAnoLetivo() || ehHubDiario() || chegouNoDiario(), 12000);
         await esperar(400);
         continue;
@@ -2188,7 +2238,7 @@
       await gravarRosterJob(job);
       if (ehTelaDeLogin()) {
         desenharPainel(job, "Entrando no SIAGE com o CPF e a senha do perfil…");
-        const entrou = await preencherLogin(handoff || { cpf: "" });
+        const entrou = await loginUnico(handoff || { cpf: "" });
         job = await lerRosterJob() || job;
         if (entrou === "definir-senha") {
           job.status = "parado";
@@ -2218,7 +2268,11 @@
       }
       if (job.status !== "rodando") return;
       desenharPainel(job, "Entrando no SIAGE: ano letivo, matrícula e Visualizar Minhas Turmas…");
-      const entrada = await entrarNoDiario();
+      const entrada = await entrarNoDiario(handoff);
+      if (entrada === "escolher-matricula") {
+        await pedirEscolhaDaMatricula(job);
+        return;
+      }
       if (entrada === "definir-senha") {
         job.status = "parado";
         await gravarRosterJob(job);
@@ -2358,7 +2412,7 @@
       const precisaLogin = !!(handoff || (job && job.status !== "concluido" && job.status !== "parado"));
       if ((ehTelaDeLogin() || ehTrocaDeSenha()) && precisaLogin) {
         if (job) desenharPainel(job, "Entrando com o CPF e a senha do perfil. Em seguida, a chamada e as notas.");
-        const entrou = await preencherLogin(handoff || { cpf: "" });
+        const entrou = await loginUnico(handoff || { cpf: "" });
         if (entrou === "definir-senha") {
           if (job) desenharPainel(job, "A senha do perfil entrou em Senha Atual. Crie a senha nova no SIAGE, salve a mesma no perfil do Maestro e abra o portal de novo.");
           return;
@@ -2373,20 +2427,24 @@
       }
       if (!job || job.kind === "roster" || !Array.isArray(job.grupos)) return;
       if (job.status !== "rodando") {
-        if (!chegouNoDiario()) await entrarNoDiario();
+        if (!chegouNoDiario()) await entrarNoDiario(handoff);
         return;
       }
       const trabalhou = true;
       while (job && job.status === "rodando") {
         if (ehTelaAnoLetivo()) desenharPainel(job, "Selecionando ano letivo e matrícula…");
-        const entrada = await entrarNoDiario();
+        const entrada = await entrarNoDiario(handoff);
+        if (entrada === "escolher-matricula") {
+          await pedirEscolhaDaMatricula(job);
+          return;
+        }
         if (entrada === "definir-senha") {
           desenharPainel(job, "A senha do perfil entrou em Senha Atual. Crie a senha nova no SIAGE, salve a mesma no perfil do Maestro e abra o portal de novo.");
           return;
         }
         if (entrada === "login") {
           if (!precisaLogin) return;
-          const entrou = await preencherLogin(handoff || { cpf: "" });
+          const entrou = await loginUnico(handoff || { cpf: "" });
           if (entrou === "definir-senha") {
             desenharPainel(job, "A senha do perfil entrou em Senha Atual. Crie a senha nova no SIAGE, salve a mesma no perfil do Maestro e abra o portal de novo.");
             return;
