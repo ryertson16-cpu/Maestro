@@ -256,6 +256,15 @@ function atualizarPrevia() {
   return { grupos, erros, token, origin };
 }
 
+function mostrarCaixaDaPlanilha() {
+  $("lista").hidden = !$("lista").value.trim();
+}
+
+$("mostrarLista").addEventListener("click", () => {
+  $("lista").hidden = false;
+  $("lista").focus();
+});
+
 $("arquivo").addEventListener("change", async () => {
   const files = [...($("arquivo").files || [])];
   if (!files.length) { linhasDoArquivo = null; atualizarPrevia(); return; }
@@ -264,6 +273,7 @@ $("arquivo").addEventListener("change", async () => {
     for (const f of files) blocos.push(await linhasDoArquivoEscolhido(f));
     linhasDoArquivo = mesclarPlanilhas(blocos);
     $("lista").value = "";
+    $("lista").hidden = true;
   } catch (e) {
     linhasDoArquivo = null;
     mostrar("Não consegui ler a planilha: " + e.message, "erro");
@@ -582,6 +592,7 @@ chrome.storage.local.get(["lista", "teste", "periodo", "de"], (cfg) => {
   $("de").value = cfg.de || "";
   $("ate").value = hoje();
   $("lista").value = cfg.lista || "";
+  mostrarCaixaDaPlanilha();
   $("teste").checked = !!cfg.teste;
   $("periodo").value = cfg.periodo || "auto";
   atualizarPrevia();

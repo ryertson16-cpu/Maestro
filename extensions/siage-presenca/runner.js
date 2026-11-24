@@ -314,11 +314,11 @@
       if (box) box.remove();
       box = document.createElement("div");
       box.id = "siage-login-senha";
-      box.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:2147483647;width:340px;background:#fff;color:#1f2937;border:1px solid #d1d5db;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.2);font:13px system-ui,sans-serif;padding:12px";
+      box.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:2147483647;width:340px;background:#fff;color:#20263d;border:1px solid rgba(91,75,219,.18);border-radius:18px;box-shadow:0 14px 32px rgba(91,75,219,.12);font:13px Inter,system-ui,sans-serif;padding:14px";
       box.innerHTML = `<b>Senha do SIAGE</b>
-        <p style="margin:6px 0;color:#4b5563">A senha do perfil do Maestro não veio nesta abertura. Digite a senha do SIAGE para entrar. Depois, salve a mesma senha no perfil para a próxima vez.</p>
-        <input id="siage-login-campo" type="password" autocomplete="off" style="width:100%;box-sizing:border-box;padding:8px;margin:4px 0 8px">
-        <button type="button" id="siage-login-ok" style="width:100%;padding:8px;border:0;border-radius:8px;background:#15803d;color:#fff;font-weight:600;cursor:pointer">Entrar no SIAGE</button>`;
+        <p style="margin:6px 0;color:#707891">A senha do perfil do Maestro não veio nesta abertura. Digite a senha do SIAGE para entrar. Depois, salve a mesma senha no perfil para a próxima vez.</p>
+        <input id="siage-login-campo" type="password" autocomplete="off" style="width:100%;box-sizing:border-box;padding:8px 10px;margin:4px 0 8px;border:1px solid rgba(91,75,219,.2);border-radius:10px">
+        <button type="button" id="siage-login-ok" style="width:100%;padding:10px;border:0;border-radius:12px;background:#5b4bdb;color:#fff;font-weight:600;cursor:pointer">Entrar no SIAGE</button>`;
       document.body.appendChild(box);
       const campo = box.querySelector("#siage-login-campo");
       const enviar = async () => {
@@ -656,28 +656,50 @@
     grupo.estado = turmaJaConhecida(grupo, job) ? "ja" : "lida";
   }
 
+  const ESTILO_PAINEL = "position:fixed;right:16px;bottom:16px;z-index:2147483647;width:360px;max-height:70vh;overflow:auto;background:#fff;color:#20263d;border:1px solid rgba(91,75,219,.18);border-radius:18px;box-shadow:0 14px 32px rgba(91,75,219,.12);font:13px Inter,system-ui,sans-serif;padding:14px;pointer-events:none";
+
+  function botaoPainel(rodando) {
+    const borda = rodando ? "#d84d68" : "#707891";
+    const cor = rodando ? "#d84d68" : "#20263d";
+    return `<button type="button" id="siage-fila-botao" style="pointer-events:auto;border:1.5px solid ${borda};color:${cor};background:#fff;border-radius:9px;padding:6px 14px;font-weight:600;cursor:pointer">${rodando ? "Parar" : "Fechar"}</button>`;
+  }
+
+  function barraPainel(feitas, total) {
+    const pct = total ? Math.min(100, Math.round((feitas / total) * 100)) : 0;
+    return `<div style="height:8px;background:#eeecff;border-radius:6px;overflow:hidden;margin:8px 0 6px"><div style="height:100%;width:${pct}%;background:#5b4bdb"></div></div>
+      <div style="margin-bottom:8px;font-size:12px;color:#707891"><b style="color:#20263d">${feitas}</b> de <b style="color:#20263d">${total}</b></div>`;
+  }
+
+  function pontoPainel(cor) {
+    return `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${cor};flex:none"></span>`;
+  }
+
+  function faixaPainel(atual) {
+    return atual ? `<div style="color:#4638b5;margin-bottom:8px;line-height:1.4">${escHtml(atual)}</div>` : "";
+  }
+
+  function vazioPainel() {
+    return `<div style="border:1.5px dashed rgba(91,75,219,.28);border-radius:14px;padding:18px 14px;text-align:center;color:#707891;line-height:1.5">O andamento aparece aqui</div>`;
+  }
+
   function desenharPainelRoster(job, atual) {
     const rodando = job.status === "rodando";
     const turmas = job.turmas || [];
     const feitas = turmas.filter((t) => t.estado === "lida" || t.estado === "ja").length;
+    const corEstado = { ja: "#5b4bdb", lida: "#159570", lendo: "#2563eb" };
+    const textoEstado = { ja: "já no SIAGE", lida: "lida", lendo: "lendo" };
     const linhas = turmas.map((t) => {
       const nome = escHtml(nomeTurmaPainel(t));
-      if (t.estado === "ja") {
-        return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid #f3f4f6"><span>${nome}</span><b style="color:#5b4bdb;white-space:nowrap">turma já lida</b></div>`;
-      }
-      if (t.estado === "lida") {
-        return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid #f3f4f6"><span>${nome}</span><b style="color:#15803d;white-space:nowrap">lida ✓</b></div>`;
-      }
-      if (t.estado === "lendo") {
-        return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid #f3f4f6"><span>${nome}</span><span style="color:#1d4ed8">lendo…</span></div>`;
-      }
-      return `<div style="padding:4px 0;border-top:1px solid #f3f4f6;color:#6b7280">${nome}</div>`;
+      const cor = corEstado[t.estado] || "#c5c8d8";
+      const texto = textoEstado[t.estado] || "";
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(91,75,219,.08)">${pontoPainel(cor)}<span style="flex:1">${nome}</span>${texto ? `<b style="color:${cor};white-space:nowrap;font-size:12px">${texto}</b>` : ""}</div>`;
     }).join("");
-    painel.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    painel.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
       <b>${rodando ? "Lendo turmas" : job.status === "concluido" ? "Concluído" : "Parado"}</b>
-      <button type="button" id="siage-fila-botao" style="pointer-events:auto;border:1px solid ${rodando ? "#b91c1c" : "#6b7280"};color:${rodando ? "#b91c1c" : "#374151"};background:#fff;border-radius:6px;padding:2px 8px;cursor:pointer">${rodando ? "Parar" : "Fechar"}</button></div>
-      <div style="margin-bottom:6px;font-size:12px;color:#374151"><b>${feitas}</b> de <b>${turmas.length}</b> turma(s)</div>
-      <div style="color:#1d4ed8;margin-bottom:6px">${escHtml(atual || "")}</div>${linhas}`;
+      ${botaoPainel(rodando)}</div>
+      ${barraPainel(feitas, turmas.length)}
+      ${faixaPainel(atual)}
+      ${linhas || vazioPainel()}`;
     painel.querySelector("#siage-fila-botao").onclick = async () => {
       if (rodando) {
         const j = await lerRosterJob();
@@ -694,7 +716,7 @@
     if (!painel || !document.body.contains(painel)) {
       painel = document.createElement("div");
       painel.id = "siage-fila-painel";
-      painel.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:2147483647;width:360px;max-height:70vh;overflow:auto;background:#fff;color:#1f2937;border:1px solid #d1d5db;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.2);font:13px system-ui,sans-serif;padding:12px;pointer-events:none";
+      painel.style.cssText = ESTILO_PAINEL;
       document.body.appendChild(painel);
     }
     if (job && job.kind === "roster") {
@@ -710,21 +732,24 @@
       const inc = g.aulas.filter((a) => a.estado === "incompativel").length;
       const falta = g.aulas.filter((a) => a.estado === "pendente").length;
       const nome = g.turma ? `${g.turma}${g.componente ? " · " + g.componente : ""}` : "Turma aberta";
-      return `<div style="padding:3px 0;border-top:1px solid #f3f4f6">${nome}: <b style="color:#15803d">${ok} feitas</b>${ja ? ` · <b style="color:#5b4bdb">${ja} já no SIAGE</b>` : ""}${inc ? ` · <b style="color:#ea580c">${inc} professor incompatível</b>` : ""}${falta ? ` · <b>${falta} faltam</b>` : ""}${erro ? ` · <b style="color:#b91c1c">${erro} falhou</b>` : ""} <span style="color:#6b7280">/ ${g.aulas.length}</span></div>`;
+      const cor = erro ? "#d84d68" : inc ? "#b47b10" : falta ? "#2563eb" : ok ? "#159570" : ja ? "#5b4bdb" : "#c5c8d8";
+      return `<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-top:1px solid rgba(91,75,219,.08)">${pontoPainel(cor)}<div>${escHtml(nome)}: <b style="color:#159570">${ok} feitas</b>${ja ? ` · <b style="color:#5b4bdb">${ja} já no SIAGE</b>` : ""}${inc ? ` · <b style="color:#b47b10">${inc} professor incompatível</b>` : ""}${falta ? ` · <b>${falta} faltam</b>` : ""}${erro ? ` · <b style="color:#d84d68">${erro} falhou</b>` : ""} <span style="color:#707891">/ ${g.aulas.length}</span></div></div>`;
     }).join("");
     const faltaTxt = c.falta.slice(0, 6).map((a) => dataBR(a.data) + (a.tempos && a.tempos.length ? " t." + a.tempos.join(",") : "")).join(" · ");
     const erros = job.grupos.flatMap((g) => g.aulas.filter((a) => a.estado === "erro").map((a) => `${g.turma || ""} ${dataBR(a.data)}: ${a.msg}`)).slice(-8);
     const incAvisos = job.grupos.flatMap((g) => g.aulas.filter((a) => a.estado === "incompativel").map((a) => `${g.turma || ""} ${dataBR(a.data)}: professor incompatível`)).slice(-8);
     const jaAvisos = job.grupos.flatMap((g) => g.aulas.filter((a) => a.estado === "ja").map((a) => `${g.turma || ""} ${dataBR(a.data)}: ${a.msg || "já consta na Frequência"}`)).slice(-8);
-    painel.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    painel.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
       <b>${rodando ? "Frequência" : job.status === "concluido" ? "Concluído" : "Parado"}</b>
-      <button type="button" id="siage-fila-botao" style="pointer-events:auto;border:1px solid ${rodando ? "#b91c1c" : "#6b7280"};color:${rodando ? "#b91c1c" : "#374151"};background:#fff;border-radius:6px;padding:2px 8px;cursor:pointer">${rodando ? "Parar" : "Fechar"}</button></div>
-      <div style="margin-bottom:6px;font-size:12px;color:#374151"><b>${c.ok + c.ja}</b> de <b>${c.total}</b> · ${c.ok} feitas agora · ${c.ja} já estavam · ${c.falta.length} faltam${c.incompativel ? ` · <b style="color:#ea580c">${c.incompativel} professor incompatível</b>` : ""}</div>
-      <div style="color:#1d4ed8;margin-bottom:6px">${atual || ""}</div>${linhas}
-      ${c.falta.length ? `<div style="margin-top:6px;color:#4b5563;font-size:12px">Ainda faltam: ${faltaTxt}${c.falta.length > 6 ? "…" : ""}</div>` : ""}
-      ${incAvisos.length ? `<div style="margin-top:6px;color:#ea580c;font-size:12px">${incAvisos.map((e) => "● " + e.replace(/</g, "&lt;")).join("<br>")}</div>` : ""}
-      ${jaAvisos.length ? `<div style="margin-top:6px;color:#5b4bdb;font-size:12px">${jaAvisos.map((e) => "● " + e.replace(/</g, "&lt;")).join("<br>")}</div>` : ""}
-      ${erros.length ? `<div style="margin-top:6px;color:#b91c1c;font-size:12px">${erros.map((e) => "✖ " + e.replace(/</g, "&lt;")).join("<br>")}</div>` : ""}`;
+      ${botaoPainel(rodando)}</div>
+      ${barraPainel(c.ok + c.ja, c.total)}
+      <div style="margin:-2px 0 8px;font-size:12px;color:#707891">${c.ok} feitas agora · ${c.ja} já estavam · ${c.falta.length} faltam${c.incompativel ? ` · <b style="color:#b47b10">${c.incompativel} professor incompatível</b>` : ""}</div>
+      ${faixaPainel(atual)}
+      ${linhas || vazioPainel()}
+      ${c.falta.length ? `<div style="margin-top:8px;color:#707891;font-size:12px">Ainda faltam: ${faltaTxt}${c.falta.length > 6 ? "…" : ""}</div>` : ""}
+      ${incAvisos.length ? `<div style="margin-top:8px;color:#b47b10;font-size:12px">${incAvisos.map((e) => "● " + e.replace(/</g, "&lt;")).join("<br>")}</div>` : ""}
+      ${jaAvisos.length ? `<div style="margin-top:8px;color:#5b4bdb;font-size:12px">${jaAvisos.map((e) => "● " + e.replace(/</g, "&lt;")).join("<br>")}</div>` : ""}
+      ${erros.length ? `<div style="margin-top:8px;color:#d84d68;font-size:12px">${erros.map((e) => "✖ " + e.replace(/</g, "&lt;")).join("<br>")}</div>` : ""}`;
     painel.querySelector("#siage-fila-botao").onclick = async () => {
       if (rodando) { const j = await lerJob(); j.status = "parado"; await gravarJob(j); desenharPainel(j, "Parando depois da aula atual…"); }
       else painel.remove();

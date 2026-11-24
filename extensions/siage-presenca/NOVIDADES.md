@@ -1,3 +1,7 @@
+# Novidades: versão 4.9.19 (24/11/2026)
+
+- O popup e o painel no SIAGE passam a usar o cartão, a barra de andamento e as cores do Maestro. A planilha, a senha, o modo teste, as notas e a lista por turma continuam iguais.
+
 # Novidades: versão 4.9.18 (24/11/2026)
 
 - O login no SIAGE preenche o campo de CPF sem gravar o formulário inteiro, espera o botão ACESSAR e não trava se o portal recusar o valor.
