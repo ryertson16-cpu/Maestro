@@ -2416,7 +2416,9 @@
     const jobAtual = extra.job;
     const rosterJob = extra.rosterJob;
     const pediuLista = !!(extra.rosterHandoff || (extra.handoff && extra.handoff.mode === "roster"));
-    if (rosterAtivo(rosterJob) || pediuLista) {
+    const pediuChamada = chamadaAtiva(jobAtual) || temAulasPendentes(jobAtual) ||
+      (jobAtual && jobAtual.kind !== "roster" && (jobAtual.status === "rodando" || jobAtual.status === "aguardando-login"));
+    if ((rosterAtivo(rosterJob) || pediuLista) && !pediuChamada) {
       return trabalharRoster();
     }
     if (chamadaAtiva(jobAtual) || temAulasPendentes(jobAtual)) {

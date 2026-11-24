@@ -1,4 +1,4 @@
-# SIAGE Presença Automática (versão 4.9.19) — como instalar e usar
+# SIAGE Presença Automática (versão 4.9.20) — como instalar e usar
 
 ## Instalar / atualizar
 1. Baixe o ZIP em https://cadernomaestro.com.br/baixar (botão da extensão SIAGE) e extraia. Use a pasta `siage-presenca` que contém o `manifest.json`.

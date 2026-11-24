@@ -1,3 +1,7 @@
+# Novidades: versão 4.9.20 (24/11/2026)
+
+- Abrir SIAGE volta a levar a senha do perfil até o login e segue para a chamada. Uma leitura de turmas antiga não toma mais o lugar desse pedido.
+
 # Novidades: versão 4.9.19 (24/11/2026)
 
 - O popup e o painel no SIAGE passam a usar o cartão, a barra de andamento e as cores do Maestro. A planilha, a senha, o modo teste, as notas e a lista por turma continuam iguais.
