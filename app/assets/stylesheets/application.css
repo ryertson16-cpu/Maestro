@@ -7938,6 +7938,25 @@ html[data-theme="night"] .auth-mark-wrap {
   height: auto;
 }
 
+.auth-alert {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid #f87171;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: left;
+}
+
+html[data-theme="night"] .auth-alert {
+  background: #3f1212;
+  border-color: #f87171;
+  color: #fecaca;
+}
+
 .auth-card h1 {
   margin: 0 0 6px;
   font-size: 2rem;

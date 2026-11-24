@@ -53,6 +53,27 @@
       </div>
     </div>
 
+    <div class="auth-field">
+      <%= f.label :password_confirmation, "Confirmar senha", class: "visually-hidden" %>
+      <div class="auth-input">
+        <%= maestro_icon :lock, size: :sm, html_class: "auth-input-icon" %>
+        <%= f.password_field :password_confirmation,
+                             autocomplete: "new-password",
+                             required: true,
+                             placeholder: "Confirmar senha",
+                             id: "professor_password_confirmation" %>
+        <button
+          type="button"
+          class="auth-password-toggle"
+          data-password-toggle="professor_password_confirmation"
+          aria-label="Mostrar confirmação da senha"
+        >
+          <%= maestro_icon :eye, size: :sm, html_class: "auth-eye" %>
+          <%= maestro_icon :eye_off, size: :sm, html_class: "auth-eye-off" %>
+        </button>
+      </div>
+    </div>
+
     <%= f.button class: "auth-submit" do %>
       <span>Criar conta</span>
       <%= maestro_icon :arrow, size: :sm %>

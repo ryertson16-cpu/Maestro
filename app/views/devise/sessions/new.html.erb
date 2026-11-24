@@ -6,6 +6,12 @@
   <h1>Bem-vindo de volta</h1>
   <p class="auth-lead">Entre para continuar</p>
 
+  <% login_alert = @login_alert.presence || flash[:alert].presence %>
+  <% flash.delete(:alert) if login_alert.present? %>
+  <% if login_alert.present? %>
+    <p class="auth-alert" role="alert"><%= login_alert %></p>
+  <% end %>
+
   <%= form_for(resource, as: resource_name, url: session_path(resource_name), html: { class: "auth-form" }) do |f| %>
     <div class="auth-field">
       <%= f.label :email, "E-mail", class: "visually-hidden" %>

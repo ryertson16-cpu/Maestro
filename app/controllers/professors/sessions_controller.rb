@@ -2,6 +2,8 @@ module Professors
   class SessionsController < Devise::SessionsController
     def new
       hide_redirect_prompt
+      @login_alert = flash[:alert].presence
+      flash.delete(:alert) if @login_alert
       super
     end
 

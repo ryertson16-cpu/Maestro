@@ -115,6 +115,7 @@ pt-BR:
       not_saved:
         one: "Não foi possível salvar %{resource}: 1 erro."
         other: "Não foi possível salvar %{resource}: %{count} erros."
+      confirmation: "não confere com %{attribute}"
 
       restrict_dependent_destroy:
         has_many: "Não é possível remover este registro porque existem %{record} vinculados a ele."
