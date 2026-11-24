@@ -1,3 +1,7 @@
+# Novidades: versão 4.9.16 (24/11/2026)
+
+- Ler turmas no SIAGE grava o pedido da lista e segue o login. Antes a extensão parava nessa gravação e o portal ficava na tela inicial, sem preencher a senha nem clicar em ACESSAR.
+
 # Novidades: versão 4.9.15 (19/11/2026)
 
 - Os botões do Maestro entram no SIAGE com o CPF e a senha do perfil e seguem a função do clique: Ler turmas lê os alunos; Abrir SIAGE segue para a chamada e as notas.

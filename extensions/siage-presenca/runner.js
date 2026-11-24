@@ -54,7 +54,7 @@
   const lerJob = async () => (await chrome.storage.local.get("job")).job;
   const gravarJob = (job) => chrome.storage.local.set({ job });
   const lerRosterJob = async () => (await chrome.storage.local.get("rosterJob")).rosterJob;
-  const gravarRosterJob = (job) => chrome.storage.local.set({ rosterJob });
+  const gravarRosterJob = (rosterJob) => chrome.storage.local.set({ rosterJob });
 
   function temAulasPendentes(job) {
     return !!(job && job.kind !== "roster" && Array.isArray(job.grupos) &&
