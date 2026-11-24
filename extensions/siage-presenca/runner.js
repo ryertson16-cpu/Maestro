@@ -141,7 +141,9 @@
 
   function clicarNativo(el) {
     if (!el) return false;
-    const alvo = el.closest("button, a, [role=button]") || el;
+    const ancestral = el.closest("button, a, [role=button], input[type=submit]");
+    const interno = el.querySelector("button, a, [role=button], input[type=submit]");
+    const alvo = ancestral || interno || el;
     try {
       alvo.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
       alvo.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true }));
@@ -179,10 +181,24 @@
     return true;
   }
 
+  function botaoSelecionarAno() {
+    return q("button, a, [role=button], input[type=submit], .p-button, p-button").filter((el) => {
+      if (!visivel(el) || el.closest("#siage-fila-painel")) return false;
+      if (el.disabled || el.getAttribute("aria-disabled") === "true" || el.classList.contains("p-disabled")) return false;
+      return /^selecionar$/.test(norm(el.innerText || el.value || el.getAttribute("aria-label") || ""));
+    })[0] || null;
+  }
+
   async function escolherAnoEMatricula() {
-    const resposta = await pedirPaginaDetalhe("confirmarAno", {}, 4000);
-    if (resposta && resposta.ok) return;
-    const combos = q(".p-dropdown, p-dropdown, .p-select, p-select, ng-select").filter(visivel);
+    await pedirPaginaDetalhe("confirmarAno", {}, 4000);
+    await esperar(500);
+    if (!ehTelaAnoLetivo()) return;
+    const pronto = botaoSelecionarAno();
+    if (pronto) {
+      clicarNativo(pronto);
+      return;
+    }
+    const combos = q(".p-dropdown, p-dropdown, .p-select, p-select, ng-select, p-autocomplete").filter(visivel);
     for (const combo of combos) {
       const rotulo = norm(combo.innerText || "");
       if (/20\d{2}/.test(rotulo) && !/selecione|escolha/.test(rotulo)) continue;

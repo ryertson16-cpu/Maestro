@@ -1,3 +1,7 @@
+# Novidades: versão 4.9.17 (24/11/2026)
+
+- Depois do login, a extensão aperta Selecionar na tela de ano letivo e matrícula. Antes o clique não chegava ao botão e a leitura das turmas parava nessa tela.
+
 # Novidades: versão 4.9.16 (24/11/2026)
 
 - Ler turmas no SIAGE grava o pedido da lista e segue o login. Antes a extensão parava nessa gravação e o portal ficava na tela inicial, sem preencher a senha nem clicar em ACESSAR.

@@ -981,23 +981,70 @@
     return { ok: false, aviso: "O SIAGE não aceitou o CPF ou a senha no formulário." };
   }
 
+  function controleDoFormulario(form, nomes) {
+    if (!form || typeof form.get !== "function") return null;
+    const chaves = form.controls ? Object.keys(form.controls) : [];
+    const nome = chaves.find((chave) => nomes.some((pedido) => nrm(chave).includes(pedido)));
+    return nome ? form.get(nome) : null;
+  }
+
+  function itemCombina(item, texto) {
+    if (!item) return false;
+    const nome = nrm([ item.nome, item.descricao, item.label, item.matricula, item.codigo ].filter(Boolean).join(" "));
+    const alvo = nrm(texto);
+    if (!nome || !alvo) return false;
+    return nome.includes(alvo.slice(0, 18)) || alvo.includes(nome.slice(0, 18));
+  }
+
+  function clicarBotaoSelecionar() {
+    const btn = [ ...document.querySelectorAll("button, a, [role=button], input[type=submit]") ].find((el) => {
+      if (!visivel(el) || el.closest("#siage-fila-painel")) return false;
+      if (el.disabled || el.getAttribute("aria-disabled") === "true" || el.classList.contains("p-disabled")) return false;
+      return /^selecionar$/.test(nrm(el.innerText || el.value || el.getAttribute("aria-label") || ""));
+    });
+    if (!btn) return false;
+    clickEl(btn);
+    return true;
+  }
+
   function confirmarAnoMatricula() {
-    const cmp = componenteAngular("app-selecionar-ano-matricula");
-    if (!cmp || typeof cmp.next !== "function") return { ok: false, aviso: "tela-ausente" };
-    const ano = cmp.form.get("anoLetivo");
-    const matricula = cmp.form.get("matricula");
+    let cmp = null;
+    for (const seletor of [ "app-selecionar-ano-matricula", "app-selecao-ano-matricula", "app-ano-matricula" ]) {
+      cmp = componenteAngular(seletor);
+      if (cmp) break;
+    }
+    if (!cmp || !cmp.form) {
+      return { ok: clicarBotaoSelecionar(), aviso: cmp ? "" : "tela-ausente" };
+    }
+    const ano = controleDoFormulario(cmp.form, [ "anoletivo", "ano" ]);
+    const matricula = controleDoFormulario(cmp.form, [ "matricula" ]);
     const anos = Array.isArray(cmp.anosLetivosAutocomplete) ? cmp.anosLetivosAutocomplete : [];
     const matriculas = Array.isArray(cmp.matriculasAutocomplete) ? cmp.matriculasAutocomplete : [];
+    const host = document.querySelector("app-selecionar-ano-matricula, app-selecao-ano-matricula, app-ano-matricula");
+    const inputs = host ? [ ...host.querySelectorAll("input") ].filter((el) => visivel(el) && el.type !== "hidden") : [];
     if (ano && !ano.value && anos.length) {
       const atual = String(new Date().getFullYear());
-      ano.setValue(anos.find((item) => String(item.nome) === atual || String(item.descricao) === atual) || anos[0]);
+      const visto = inputs[0] && inputs[0].value;
+      ano.setValue(anos.find((item) => itemCombina(item, visto) || String(item.nome) === atual || String(item.descricao) === atual) || anos[0]);
+      if (typeof ano.markAsDirty === "function") ano.markAsDirty();
+      if (typeof ano.updateValueAndValidity === "function") ano.updateValueAndValidity();
     }
-    if (matricula && !matricula.value && matriculas.length === 1) {
-      matricula.setValue(matriculas[0]);
+    if (matricula && !matricula.value && matriculas.length) {
+      const visto = (inputs[1] && inputs[1].value) || "";
+      const escolhida = matriculas.find((item) => itemCombina(item, visto)) || (matriculas.length === 1 ? matriculas[0] : null);
+      if (escolhida) {
+        matricula.setValue(escolhida);
+        if (typeof matricula.markAsDirty === "function") matricula.markAsDirty();
+        if (typeof matricula.updateValueAndValidity === "function") matricula.updateValueAndValidity();
+      }
     }
-    if (!cmp.form.valid) return { ok: false, aviso: "aguardando" };
-    cmp.next();
-    return { ok: true };
+    if (typeof cmp.form.updateValueAndValidity === "function") cmp.form.updateValueAndValidity();
+    const metodo = [ "next", "selecionar", "confirmar", "submit", "onSubmit" ].find((nome) => typeof cmp[nome] === "function");
+    if (cmp.form.valid && metodo) {
+      try { cmp[metodo](); } catch (e) {}
+    }
+    const clicou = clicarBotaoSelecionar();
+    return { ok: !!(cmp.form.valid || clicou), aviso: cmp.form.valid || clicou ? "" : "aguardando" };
   }
 
   window.addEventListener("message", (ev) => {
